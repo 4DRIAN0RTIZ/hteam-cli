@@ -6,8 +6,8 @@ use tokio::sync::Mutex;
 
 use crate::config::Config;
 use crate::models::{
-    Card, CardDetail, CheckInResult, Label, List, ProjectMilestone, ProjectTasksResponse,
-    Reminder, UserSuggestion, WorkingOnStatus,
+    Card, CardDetail, CheckInResult, Comment, CommentsResponse, Label, List, ProjectMilestone,
+    ProjectTasksResponse, Reminder, UserSuggestion, WorkingOnStatus,
 };
 
 const BASE_URL: &str = "https://hteam.mx/api";
@@ -180,6 +180,26 @@ impl HteamClient {
 
         let detail: CardDetail = response.json().await?;
         Ok(detail)
+    }
+
+    pub async fn get_card_comments(&self, card_id: u64) -> Result<Vec<Comment>> {
+        let config = self.config.lock().await;
+        let url = format!("{}/comments/api/processes-task/{}/", SITE_URL, card_id);
+        let headers = self.build_headers(&config)?;
+
+        let response = self.client
+            .get(&url)
+            .headers(headers)
+            .send()
+            .await
+            .context("Error al obtener comentarios")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+        }
+
+        let resp: CommentsResponse = response.json().await?;
+        Ok(resp.results)
     }
 
     pub async fn get_board_id(&self) -> Result<u64> {

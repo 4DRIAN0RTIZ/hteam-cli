@@ -255,6 +255,15 @@ impl HteamMcpServer {
         ok(serde_json::json!({"success": true, "card_id": card_id}))
     }
 
+    #[tool(description = "Obtener los comentarios de un card")]
+    async fn card_comments(
+        &self,
+        Parameters(CardParams { card_id }): Parameters<CardParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let comments = self.client.get_card_comments(card_id).await.map_err(err)?;
+        ok(comments)
+    }
+
     #[tool(description = "Agregar un comentario a un card")]
     async fn card_comment(
         &self,

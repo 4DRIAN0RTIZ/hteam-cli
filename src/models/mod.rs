@@ -308,6 +308,15 @@ fn display_option_f64(opt: &Option<f64>) -> String {
     }
 }
 
+fn truncate_comment(s: &String) -> String {
+    let s = s.replace('\n', " ");
+    if s.chars().count() > 80 {
+        format!("{}…", s.chars().take(79).collect::<String>())
+    } else {
+        s
+    }
+}
+
 fn display_option<T: ToString>(opt: &Option<T>) -> String {
     match opt {
         Some(v) => v.to_string(),
@@ -324,6 +333,35 @@ fn display_labels(labels: &Vec<Label>) -> String {
         .map(|l| l.name.clone())
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Tabled)]
+pub struct Comment {
+    pub id: u64,
+    #[tabled(rename = "Usuario")]
+    pub user_name: String,
+    #[serde(default)]
+    #[tabled(rename = "Fecha")]
+    pub submit_date: String,
+    #[tabled(display_with = "truncate_comment", rename = "Comentario")]
+    pub comment: String,
+    #[serde(default)]
+    #[tabled(skip)]
+    pub level: u64,
+    #[serde(default)]
+    #[tabled(skip)]
+    pub parent_id: Option<u64>,
+    #[serde(default)]
+    #[tabled(skip)]
+    pub is_removed: bool,
+    #[serde(default)]
+    #[tabled(skip)]
+    pub permalink: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CommentsResponse {
+    pub results: Vec<Comment>,
 }
 
 impl std::fmt::Display for Label {

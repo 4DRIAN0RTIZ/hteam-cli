@@ -23,6 +23,8 @@ pub enum CardsCommands {
     UpdateDesc(UpdateDescArgs),
     /// Comentar en un card
     Comment(CommentArgs),
+    /// Ver comentarios de un card
+    Comments(CommentsArgs),
     /// Ver labels disponibles de un card
     Labels(LabelsArgs),
     /// Actualizar campos de un card (nombre, descripción, prioridad)
@@ -93,6 +95,12 @@ pub struct CommentArgs {
 }
 
 #[derive(Args, Debug)]
+pub struct CommentsArgs {
+    /// ID del card
+    pub card_id: u64,
+}
+
+#[derive(Args, Debug)]
 pub struct LabelsArgs {
     /// ID del card
     pub card_id: u64,
@@ -135,6 +143,7 @@ pub async fn execute(cmd: CardsCommands, board: Option<u64>, json: bool) -> Resu
         CardsCommands::Move(args) => move_card(args, board, json).await,
         CardsCommands::UpdateDesc(args) => update_desc(args, json).await,
         CardsCommands::Comment(args) => post_comment(args, board, json).await,
+        CardsCommands::Comments(args) => list_comments(args, json).await,
         CardsCommands::Labels(args) => card_labels(args, board, json).await,
         CardsCommands::Update(args) => update_card(args, board, json).await,
         CardsCommands::Remind(args) => card_remind(args, json).await,
@@ -350,6 +359,31 @@ async fn post_comment(args: CommentArgs, board: Option<u64>, json: bool) -> Resu
     }
 
     println!("\n💬 Comentario agregado al card {}", args.card_id);
+    println!();
+
+    Ok(())
+}
+
+async fn list_comments(args: CommentsArgs, json: bool) -> Result<()> {
+    let config = Config::load()?;
+    let client = HteamClient::with_auth(config).await?;
+
+    let comments = client.get_card_comments(args.card_id).await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&comments)?);
+        return Ok(());
+    }
+
+    if comments.is_empty() {
+        println!("⚠️  No hay comentarios en el card {}.", args.card_id);
+        return Ok(());
+    }
+
+    println!("\n💬 Comentarios del card {}:\n", args.card_id);
+    let mut table = Table::new(&comments);
+    table.with(Style::rounded());
+    println!("{}", table);
     println!();
 
     Ok(())
