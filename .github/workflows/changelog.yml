@@ -32,6 +32,7 @@ jobs:
 
       - name: Generate docs/changelog.json
         run: |
+          mkdir -p docs
           "$RUNNER_TEMP/git-cliff/bin/git-cliff" --config cliff.toml --context --output docs/changelog.json --verbose
 
       - name: Commit and push if changed
