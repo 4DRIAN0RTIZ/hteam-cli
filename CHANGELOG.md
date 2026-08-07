@@ -5,23 +5,19 @@ All notable changes to hteam-cli will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0] - 2026-08-07
 
-### Added
+### Features
+- MCP server y CLI para hteam
+- Obtener comentarios de un card via django-comments-xtd
+- *(daily-work)* Add daily work history to CLI and MCP
 
-- `hteam daily-work` CLI command — historial de trabajo diario del equipo (`GET /history/daily-work`, filtros por usuario, tipo de actividad y rango de tiempo)
-- `daily_work` MCP tool, espejo del comando CLI
-- `DailyWorkEntry` model
-- Timeout global de 30s en el cliente HTTP (`reqwest`)
+---
 
-### Fixed
+## Version Numbering
 
-- `get_board_id()` ya no asume que la lista 1 ("Open") tiene cards: si está vacía, recorre el resto de listas hasta encontrar una con `card_count > 0`
-- `create_card()` ya no se auto-deadlockea — soltaba el lock de `tokio::sync::Mutex<Config>` antes de llamar a `get_board_id()`, que también lo necesita
+This project follows [Semantic Versioning](https://semver.org/):
 
-## [0.1.0] - 2026-06-16
-
-### Added
-
-- Servidor MCP y CLI base para hteam (autenticación, tarjetas, listas, comentarios, recordatorios, check-in, working on/off)
-- Soporte para obtener comentarios de un card vía `django-comments-xtd`
+- **MAJOR**: Incompatible API changes or significant breaking changes
+- **MINOR**: New functionality in a backwards compatible manner
+- **PATCH**: Backwards compatible bug fixes
