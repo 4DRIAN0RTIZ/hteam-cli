@@ -1,5 +1,6 @@
 use anyhow::Result;
 use serde_json;
+use std::io;
 
 pub mod board;
 pub mod cards;
@@ -8,7 +9,8 @@ pub mod login;
 pub mod project;
 pub mod working;
 
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
+use clap_complete::{generate, Shell};
 
 #[derive(Parser, Debug)]
 #[command(name = "hteam")]
@@ -74,6 +76,12 @@ pub enum Commands {
 
     /// Iniciar servidor MCP (Model Context Protocol) sobre stdio
     Mcp,
+
+    /// Generar script de autocompletado para la shell indicada
+    Completions {
+        /// Shell destino: bash, zsh, fish, elvish, powershell
+        shell: Shell,
+    },
 }
 
 #[derive(clap::Args, Debug)]
@@ -115,6 +123,12 @@ pub async fn run() -> Result<()> {
         Commands::Users(args) => search_users(args, cli.json).await,
         Commands::Interactive => interactive::run().await,
         Commands::Mcp => crate::mcp::run().await,
+        Commands::Completions { shell } => {
+            let mut cmd = Cli::command();
+            let name = cmd.get_name().to_string();
+            generate(shell, &mut cmd, name, &mut io::stdout());
+            Ok(())
+        }
     }
 }
 
