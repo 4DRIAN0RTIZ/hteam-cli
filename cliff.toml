@@ -1,0 +1,68 @@
+[changelog]
+header = """
+# Changelog
+
+All notable changes to hteam-cli will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+"""
+body = """
+{% if version %}\
+## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
+## [Unreleased]
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | upper_first }}
+{% for commit in commits %}\
+- {% if commit.scope %}*({{ commit.scope }})* {% endif %}\
+{% if commit.breaking %}**[BREAKING]** {% endif %}\
+{{ commit.message | upper_first }}
+{% endfor %}
+{% endfor %}
+"""
+footer = """
+---
+
+## Version Numbering
+
+This project follows [Semantic Versioning](https://semver.org/):
+
+- **MAJOR**: Incompatible API changes or significant breaking changes
+- **MINOR**: New functionality in a backwards compatible manner
+- **PATCH**: Backwards compatible bug fixes
+"""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+commit_preprocessors = []
+commit_parsers = [
+  # Breaking changes FIRST — highest priority, must not be swallowed by feat/fix rules below
+  # Matches: feat!:, fix!:, etc. (bang notation) and BREAKING CHANGE in footer
+  { message = "^\\w+!", group = "Breaking Changes" },
+  { footer = "^BREAKING CHANGE", group = "Breaking Changes" },
+  { message = "^feat", group = "Features" },
+  { message = "^fix", group = "Bug Fixes" },
+  { message = "^perf", group = "Performance" },
+  { message = "^refactor", group = "Refactoring" },
+  { message = "^docs", group = "Documentation" },
+  { message = "^chore|^style|^test|^ci|^build", skip = true },
+]
+protect_breaking_commits = true
+filter_commits = true
+tag_pattern = "v[0-9]*"
+skip_tags = ""
+ignore_tags = ""
+topo_order = false
+sort_commits = "oldest"
+
+[bump]
+# No hay tags todavia — sin esto, --bumped-version calcula "0.1.0" (sin
+# prefijo "v") y lo rechaza contra tag_pattern. Una vez exista el primer
+# tag real, git-cliff infiere el prefijo del ultimo tag y esto deja de usarse.
+initial_tag = "v0.1.0"
