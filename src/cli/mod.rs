@@ -63,6 +63,9 @@ pub enum Commands {
     /// Ver recordatorios pendientes
     Reminders,
 
+    /// Ver historial de trabajo diario del equipo
+    DailyWork(DailyWorkArgs),
+
     /// Buscar usuarios por nombre
     Users(UsersArgs),
 
@@ -79,6 +82,21 @@ pub struct UsersArgs {
     pub query: String,
 }
 
+#[derive(clap::Args, Debug)]
+pub struct DailyWorkArgs {
+    /// Filtrar por usuario (username)
+    #[arg(short, long)]
+    pub user: Option<String>,
+
+    /// Tipo de actividad: time, tracking, objectives
+    #[arg(short = 't', long = "type")]
+    pub activity_type: Option<String>,
+
+    /// Rango de tiempo: today, this_week, this_month
+    #[arg(short, long, default_value = "today")]
+    pub range: String,
+}
+
 pub async fn run() -> Result<()> {
     let cli = Cli::parse();
 
@@ -93,6 +111,7 @@ pub async fn run() -> Result<()> {
         Commands::Project(cmd) => project::execute(cmd, cli.json).await,
         Commands::Checkin => checkin(cli.json).await,
         Commands::Reminders => reminders(cli.json).await,
+        Commands::DailyWork(args) => daily_work(args, cli.json).await,
         Commands::Users(args) => search_users(args, cli.json).await,
         Commands::Interactive => interactive::run().await,
         Commands::Mcp => crate::mcp::run().await,
@@ -142,6 +161,35 @@ async fn reminders(json: bool) -> Result<()> {
     let mut table = Table::new(&items);
     table.with(Style::rounded());
     println!("\n🔔 Recordatorios:\n");
+    println!("{}", table);
+    println!();
+    Ok(())
+}
+
+async fn daily_work(args: DailyWorkArgs, json: bool) -> Result<()> {
+    use crate::client::HteamClient;
+    use crate::config::Config;
+    use tabled::{Table, settings::Style};
+
+    let config = Config::load()?;
+    let client = HteamClient::with_auth(config).await?;
+    let entries = client
+        .get_daily_work_history(args.user.as_deref(), args.activity_type.as_deref(), Some(&args.range))
+        .await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&entries)?);
+        return Ok(());
+    }
+
+    if entries.is_empty() {
+        println!("⚠️  No hay actividad para mostrar.");
+        return Ok(());
+    }
+
+    let mut table = Table::new(&entries);
+    table.with(Style::rounded());
+    println!("\n📅 Historial de trabajo diario:\n");
     println!("{}", table);
     println!();
     Ok(())

@@ -129,6 +129,16 @@ struct UsersSearchParams {
     query: String,
 }
 
+#[derive(Debug, Deserialize, JsonSchema)]
+struct DailyWorkParams {
+    #[schemars(description = "Filtrar por username (opcional)")]
+    user: Option<String>,
+    #[schemars(description = "Tipo de actividad: time, tracking, objectives (opcional)")]
+    activity_type: Option<String>,
+    #[schemars(description = "Rango de tiempo: today, this_week, this_month (default: today)")]
+    range: Option<String>,
+}
+
 // ── server ─────────────────────────────────────────────────────────────────
 
 #[derive(Clone)]
@@ -352,6 +362,18 @@ impl HteamMcpServer {
     async fn check_in(&self) -> Result<CallToolResult, McpError> {
         let result = self.client.check_in().await.map_err(err)?;
         ok(result)
+    }
+
+    #[tool(description = "Ver el historial de trabajo diario del equipo (daily work log)")]
+    async fn daily_work(
+        &self,
+        Parameters(DailyWorkParams { user, activity_type, range }): Parameters<DailyWorkParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let entries = self.client
+            .get_daily_work_history(user.as_deref(), activity_type.as_deref(), range.as_deref())
+            .await
+            .map_err(err)?;
+        ok(entries)
     }
 }
 

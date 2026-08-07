@@ -6,8 +6,8 @@ use tokio::sync::Mutex;
 
 use crate::config::Config;
 use crate::models::{
-    Card, CardDetail, CheckInResult, Comment, CommentsResponse, Label, List, ProjectMilestone,
-    ProjectTasksResponse, Reminder, UserSuggestion, WorkingOnStatus,
+    Card, CardDetail, CheckInResult, Comment, CommentsResponse, DailyWorkEntry, Label, List,
+    ProjectMilestone, ProjectTasksResponse, Reminder, UserSuggestion, WorkingOnStatus,
 };
 
 const BASE_URL: &str = "https://hteam.mx/api";
@@ -23,6 +23,7 @@ impl HteamClient {
         let client = Client::builder()
             // Don't use cookie store, we'll handle cookies manually
             .user_agent("curl/7.81.0")  // Match curl's user-agent
+            .timeout(std::time::Duration::from_secs(30))
             .build()
             .context("Error al crear el cliente HTTP")?;
 
@@ -210,7 +211,18 @@ impl HteamClient {
             }
         }
         // Fetch from any list (list 1 = Open) to extract board_id
-        let (_, board_id) = self.get_cards(1, None).await?;
+        let mut board_id = self.get_cards(1, None).await?.1;
+        if board_id.is_none() {
+            // "Open" can be empty; fall back to any list that actually has cards
+            for list in self.get_lists(None).await? {
+                if list.card_count.unwrap_or(0) > 0 {
+                    board_id = self.get_cards(list.id, None).await?.1;
+                    if board_id.is_some() {
+                        break;
+                    }
+                }
+            }
+        }
         let bid = board_id.ok_or_else(|| anyhow::anyhow!("No se pudo obtener board_id"))?;
         let mut config = self.config.lock().await;
         config.auth.board_id = Some(bid);
@@ -264,9 +276,11 @@ impl HteamClient {
         let board_number = self.get_board_number().await?;
         let user_id = self.get_user_id().await?;
 
-        let config = self.config.lock().await;
         let url = format!("{}/boards/care/boards/{}/create_card/", BASE_URL, board_id);
-        let headers = self.build_headers(&config)?;
+        let headers = {
+            let config = self.config.lock().await;
+            self.build_headers(&config)?
+        };
 
         let labels: Vec<u64> = list_id.into_iter().collect();
         let body = serde_json::json!({
@@ -721,6 +735,111 @@ impl HteamClient {
         }
 
         Ok(vec![])
+    }
+
+    pub async fn get_daily_work_history(
+        &self,
+        user: Option<&str>,
+        activity_type: Option<&str>,
+        time_range: Option<&str>,
+    ) -> Result<Vec<DailyWorkEntry>> {
+        let config = self.config.lock().await;
+
+        let mut params = Vec::new();
+        if let Some(u) = user {
+            params.push(format!("user={}", urlencoding::encode(u)));
+        }
+        if let Some(t) = activity_type {
+            params.push(format!("type={}", urlencoding::encode(t)));
+        }
+        if let Some(r) = time_range {
+            params.push(format!("time_range={}", urlencoding::encode(r)));
+        }
+        let url = if params.is_empty() {
+            format!("{}/history/daily-work", SITE_URL)
+        } else {
+            format!("{}/history/daily-work?{}", SITE_URL, params.join("&"))
+        };
+
+        let headers = self.build_headers(&config)?;
+
+        let response = self.client
+            .get(&url)
+            .headers(headers)
+            .send()
+            .await
+            .context("Error al obtener historial de trabajo diario")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+        }
+
+        let html = response.text().await?;
+        Self::parse_daily_work_history(&html)
+    }
+
+    fn parse_daily_work_history(html: &str) -> Result<Vec<DailyWorkEntry>> {
+        use scraper::{Html, Selector};
+
+        let timestamp_re = regex::Regex::new(
+            r"[A-Z][a-z]{2}\.\s\d{1,2},\s\d{4},\s\d{1,2}:\d{2}\s[ap]\.m\."
+        ).context("Regex de timestamp inválida")?;
+
+        let document = Html::parse_document(html);
+        let entry_sel = Selector::parse("#history p").map_err(|e| anyhow::anyhow!("{:?}", e))?;
+        let link_sel = Selector::parse("a").map_err(|e| anyhow::anyhow!("{:?}", e))?;
+
+        let mut entries = Vec::new();
+
+        for p in document.select(&entry_sel) {
+            let full_text = p.text().collect::<Vec<_>>().join(" ");
+            let full_text = full_text.split_whitespace().collect::<Vec<_>>().join(" ");
+            if full_text.is_empty() {
+                continue;
+            }
+
+            let links: Vec<(String, String)> = p.select(&link_sel)
+                .map(|a| {
+                    let href = a.value().attr("href").unwrap_or("").to_string();
+                    let text = a.text().collect::<String>().split_whitespace().collect::<Vec<_>>().join(" ");
+                    (href, text)
+                })
+                .collect();
+
+            let user_link = links.iter().find(|(href, _)| href.starts_with("/history/daily-work"));
+            let user = user_link
+                .map(|(_, text)| text.clone())
+                .unwrap_or_else(|| "External source".to_string());
+
+            let target_link = links.iter().find(|(href, _)| {
+                !href.starts_with("/history/daily-work") && !href.contains("/boards/general/labels/")
+            });
+            let target_url = target_link.map(|(href, _)| format!("{}{}", SITE_URL, href));
+
+            let rest = full_text.strip_prefix(user.as_str()).unwrap_or(&full_text).trim();
+
+            let Some(ts_match) = timestamp_re.find_iter(rest).last() else {
+                continue;
+            };
+
+            let timestamp = ts_match.as_str().to_string();
+            let activity = rest[..ts_match.start()].trim().to_string();
+            let relative = rest[ts_match.end()..]
+                .trim()
+                .trim_start_matches(',')
+                .trim()
+                .to_string();
+
+            entries.push(DailyWorkEntry {
+                user,
+                activity,
+                target_url,
+                timestamp,
+                relative,
+            });
+        }
+
+        Ok(entries)
     }
 
     pub async fn search_users(&self, query: &str) -> Result<Vec<UserSuggestion>> {

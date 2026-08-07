@@ -364,6 +364,21 @@ pub struct CommentsResponse {
     pub results: Vec<Comment>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Tabled)]
+pub struct DailyWorkEntry {
+    #[tabled(rename = "Usuario")]
+    pub user: String,
+    #[tabled(display_with = "truncate_comment", rename = "Actividad")]
+    pub activity: String,
+    #[serde(default)]
+    #[tabled(skip)]
+    pub target_url: Option<String>,
+    #[tabled(rename = "Fecha")]
+    pub timestamp: String,
+    #[tabled(rename = "Hace")]
+    pub relative: String,
+}
+
 impl std::fmt::Display for Label {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name)
