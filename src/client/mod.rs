@@ -858,8 +858,30 @@ impl HteamClient {
             anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
         }
 
-        let resp: crate::models::UserAutocompleteResponse = response.json().await?;
-        Ok(resp.results)
+        let text = response
+            .text()
+            .await
+            .context("Error leyendo respuesta de búsqueda de usuarios")?;
+
+        if text.trim().is_empty() || text.trim() == "null" {
+            return Ok(vec![]);
+        }
+
+        // The endpoint's shape isn't consistent between an empty and a
+        // non-empty query (mirrors the defensive parsing already used in
+        // get_working_on/get_reminders below): try the documented
+        // `{"results": [...]}` wrapper first, then a bare array.
+        if let Ok(resp) = serde_json::from_str::<crate::models::UserAutocompleteResponse>(&text) {
+            return Ok(resp.results);
+        }
+        if let Ok(list) = serde_json::from_str::<Vec<UserSuggestion>>(&text) {
+            return Ok(list);
+        }
+
+        anyhow::bail!(
+            "Respuesta inesperada al buscar usuarios: {:?}",
+            &text[..text.len().min(200)]
+        )
     }
 
     pub async fn check_in(&self) -> Result<CheckInResult> {

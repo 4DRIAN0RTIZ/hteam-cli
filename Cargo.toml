@@ -26,7 +26,9 @@ thiserror = "1"
 toml = "0.8"
 rmcp = { version = "1.7.0", features = ["server", "macros", "transport-io"] }
 schemars = "0.8"
+ratatui = "0.29"
+crossterm = "0.28"
+tempfile = "3"
 
 [dev-dependencies]
 mockito = "1"
-tempfile = "3"

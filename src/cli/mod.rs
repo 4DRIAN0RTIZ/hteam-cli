@@ -74,6 +74,9 @@ pub enum Commands {
     /// Modo interactivo REPL
     Interactive,
 
+    /// Board visual tipo kanban (TUI)
+    Tui,
+
     /// Iniciar servidor MCP (Model Context Protocol) sobre stdio
     Mcp,
 
@@ -122,6 +125,7 @@ pub async fn run() -> Result<()> {
         Commands::DailyWork(args) => daily_work(args, cli.json).await,
         Commands::Users(args) => search_users(args, cli.json).await,
         Commands::Interactive => interactive::run().await,
+        Commands::Tui => crate::tui::run(cli.board).await,
         Commands::Mcp => crate::mcp::run().await,
         Commands::Completions { shell } => {
             let mut cmd = Cli::command();

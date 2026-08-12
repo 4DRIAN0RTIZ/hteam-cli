@@ -23,12 +23,26 @@ pub struct BoardInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct TuiConfig {
+    /// List names (case-insensitive) hidden from the `hteam tui` board. Toggled
+    /// with 'v'/'V' inside the TUI; empty means every list is shown.
+    #[serde(default)]
+    pub hidden_lists: Vec<String>,
+    /// Project ids looked up from the 'P' popup, most-recently-used first, so
+    /// you can pick one again without retyping it.
+    #[serde(default)]
+    pub known_projects: Vec<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
     pub auth: AuthConfig,
     #[serde(default)]
     pub boards: HashMap<String, BoardInfo>,
     #[serde(default)]
     pub variables: HashMap<String, String>,
+    #[serde(default)]
+    pub tui: TuiConfig,
 }
 
 impl Config {

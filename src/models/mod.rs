@@ -275,11 +275,18 @@ fn display_content_title(opt: &Option<ContentObject>) -> String {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Tabled)]
 pub struct UserSuggestion {
-    pub id: u64,
-    pub username: String,
-    #[serde(rename = "full_name", default)]
-    #[tabled(display_with = "display_option", rename = "Name")]
-    pub full_name: Option<String>,
+    /// This select2-style endpoint returns `id` as a string (e.g. `"8"`),
+    /// not a number.
+    pub id: String,
+    /// The plain username to insert for a mention (e.g. `"oscarc"`).
+    #[serde(default)]
+    #[tabled(rename = "Usuario")]
+    pub selected_text: String,
+    /// Friendly display label the endpoint already formats for us (e.g.
+    /// `"oscarc (oscarc@ditra.mx)"`).
+    #[serde(default)]
+    #[tabled(rename = "Detalle")]
+    pub text: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
