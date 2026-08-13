@@ -1,32 +1,176 @@
-name: Publish release
+---
+name: Release
 
 on:
+  # Cada push a main calcula y publica la siguiente version.
   push:
+    branches:
+      - main
     tags:
       - "v*"
+  # Tambien permite lanzar una release manual con una version opcional.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: >-
+          Version opcional (ej. v0.4.0). Vacio = calcular automaticamente
+        required: false
+        type: string
 
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - name: Install git-cliff
+        uses: taiki-e/install-action@git-cliff
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create version, changelog and tag
+        if: >-
+          github.event_name == 'workflow_dispatch' ||
+          (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        env:
+          REQUESTED_VERSION: ${{ inputs.version || '' }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_REF_TYPE}" != "branch" ]]; then
+            echo "Automatic releases must run from a branch." >&2
+            exit 1
+          fi
+
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "The working tree is not clean after checkout." >&2
+            git status --short >&2
+            exit 1
+          fi
+
+          version="${REQUESTED_VERSION:-}"
+          if [[ -z "${version}" ]]; then
+            version="$(
+              git-cliff --config cliff.toml --bumped-version |
+                tail -n 1 |
+                tr -d '[:space:]'
+            )"
+          fi
+
+          version_pattern='^v[0-9]+\.[0-9]+\.[0-9]+'
+          version_pattern+='([-.][0-9A-Za-z.-]+)?$'
+          if [[ ! "${version}" =~ ${version_pattern} ]]; then
+            printf "Invalid version: '%s'. Expected vMAJOR.MINOR.PATCH.\n" \
+              "${version}" >&2
+            exit 1
+          fi
+
+          if git rev-parse -q --verify "refs/tags/${version}" >/dev/null; then
+            echo "The tag ${version} already exists." >&2
+            exit 1
+          fi
+
+          echo "New version: ${version}"
+          cargo_version="${version#v}"
+
+          # Keep the package version, lockfile and the VERSION mirror in sync.
+          awk -v new="${cargo_version}" '
+            /^\[package\]/ { in_pkg=1; print; next }
+            /^\[/ { in_pkg=0 }
+            in_pkg && /^version = / { print "version = \"" new "\""; next }
+            { print }
+          ' Cargo.toml > Cargo.toml.tmp
+          mv Cargo.toml.tmp Cargo.toml
+
+          awk -v new="${cargo_version}" '
+            /^\[\[package\]\]/ { in_hteam=0 }
+            /^name = "hteam"$/ { in_hteam=1; print; next }
+            in_hteam && /^version = / {
+              print "version = \"" new "\""
+              in_hteam=0
+              next
+            }
+            { print }
+          ' Cargo.lock > Cargo.lock.tmp
+          mv Cargo.lock.tmp Cargo.lock
+
+          printf '%s\n' "${cargo_version}" > VERSION
+
+          # Generate the human-readable changelog and the JSON used by docs.
+          git-cliff \
+            --config cliff.toml \
+            --tag "${version}" \
+            --output CHANGELOG.md
+          mkdir -p docs
+          git-cliff \
+            --config cliff.toml \
+            --context \
+            --output docs/changelog.json
+
+          git add CHANGELOG.md docs/changelog.json VERSION Cargo.toml Cargo.lock
+          if git diff --cached --quiet; then
+            echo "No release file changes to commit."
+          else
+            git commit -m "chore(release): ${version}"
+          fi
+
+          git tag -a "${version}" -m "Release ${version}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "${version}"
+
+          echo "RELEASE_VERSION=${version}" >> "${GITHUB_ENV}"
+
+      - name: Use pushed tag as version
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -euo pipefail
+
+          version="${GITHUB_REF_NAME}"
+          version_pattern='^v[0-9]+\.[0-9]+\.[0-9]+'
+          version_pattern+='([-.][0-9A-Za-z.-]+)?$'
+          if [[ ! "${version}" =~ ${version_pattern} ]]; then
+            printf "Invalid tag: '%s'. Expected vMAJOR.MINOR.PATCH.\n" \
+              "${version}" >&2
+            exit 1
+          fi
+
+          echo "RELEASE_VERSION=${version}" >> "${GITHUB_ENV}"
+
       - name: Generate release notes
-        uses: orhun/git-cliff-action@v4
-        id: git-cliff
-        with:
-          config: cliff.toml
-          args: --latest --strip all
+        run: |
+          set -euo pipefail
+          git-cliff \
+            --config cliff.toml \
+            --latest \
+            --strip all \
+            --output release-notes.md
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ github.ref_name }}" \
-            --title "${{ github.ref_name }}" \
-            --notes "${{ steps.git-cliff.outputs.content }}"
+          set -euo pipefail
+
+          if gh release view "${RELEASE_VERSION}" >/dev/null 2>&1; then
+            echo "GitHub release ${RELEASE_VERSION} already exists."
+            exit 0
+          fi
+
+          gh release create "${RELEASE_VERSION}" \
+            --verify-tag "${RELEASE_VERSION}" \
+            --title "${RELEASE_VERSION}" \
+            --notes-file release-notes.md
