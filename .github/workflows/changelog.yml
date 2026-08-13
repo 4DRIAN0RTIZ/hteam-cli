@@ -1,11 +1,9 @@
 name: Update changelog
 
+# CHANGELOG.md y docs/changelog.json ahora se generan dentro de release.yml.
+# Se conserva este workflow para actualizaciones manuales.
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - CHANGELOG.md
-      - docs/changelog.json
+  workflow_dispatch:
 
 permissions:
   contents: write
