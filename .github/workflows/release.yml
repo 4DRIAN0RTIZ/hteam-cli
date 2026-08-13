@@ -86,8 +86,13 @@ jobs:
           fi
 
           if git rev-parse -q --verify "refs/tags/${version}" >/dev/null; then
-            echo "The tag ${version} already exists." >&2
-            exit 1
+            if [[ -n "${REQUESTED_VERSION:-}" ]]; then
+              echo "The tag ${version} already exists." >&2
+              exit 1
+            fi
+            echo "Nothing to release: ${version} is already the latest tag and there are no version-worthy commits since then."
+            echo "RELEASE_VERSION=${version}" >> "${GITHUB_ENV}"
+            exit 0
           fi
 
           echo "New version: ${version}"
@@ -177,6 +182,5 @@ jobs:
           fi
 
           gh release create "${RELEASE_VERSION}" \
-            --verify-tag "${RELEASE_VERSION}" \
             --title "${RELEASE_VERSION}" \
             --notes-file release-notes.md
