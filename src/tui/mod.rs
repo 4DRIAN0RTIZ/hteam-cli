@@ -3,7 +3,7 @@ mod events;
 mod ui;
 
 use std::collections::HashSet;
-use std::io::{self, Stdout, Write};
+use std::io::{self, Stdout};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -109,6 +109,20 @@ async fn run_loop(
             continue;
         }
 
+        if app.show_description {
+            match key.code {
+                KeyCode::Esc => events::close_description(app),
+                KeyCode::Enter => app.description_input.push('\n'),
+                KeyCode::Backspace => events::description_input_backspace(app),
+                KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    events::submit_description(client, app).await;
+                }
+                KeyCode::Char(c) => events::description_input_push(app, c),
+                _ => {}
+            }
+            continue;
+        }
+
         if app.show_comments {
             if app.composing_comment {
                 match key.code {
@@ -195,39 +209,9 @@ async fn run_loop(
             KeyCode::Char('w') => events::toggle_working_on(client, app).await,
             KeyCode::Char('r') => events::refresh_all(client, app).await,
             KeyCode::Char('?') => events::open_help(app),
-            KeyCode::Enter => open_description_editor(terminal, client, app).await?,
+            KeyCode::Enter => events::open_description(app),
             _ => {}
         }
-    }
-
-    Ok(())
-}
-
-async fn open_description_editor(
-    terminal: &mut Terminal<CrosstermBackend<Stdout>>,
-    client: &HteamClient,
-    app: &mut App,
-) -> Result<()> {
-    let Some(card) = app.current_card().cloned() else {
-        return Ok(());
-    };
-
-    disable_raw_mode()?;
-    execute!(io::stdout(), LeaveAlternateScreen)?;
-    io::stdout().flush()?;
-
-    let edit_result = events::edit_in_external_editor(card.description.as_deref().unwrap_or(""));
-
-    enable_raw_mode()?;
-    execute!(io::stdout(), EnterAlternateScreen)?;
-    terminal.clear()?;
-
-    match edit_result {
-        Ok(Some(new_desc)) => {
-            events::save_description(client, app, card.id, &new_desc).await;
-        }
-        Ok(None) => {}
-        Err(e) => app.set_status(format!("Error abriendo editor: {}", e)),
     }
 
     Ok(())

@@ -28,6 +28,10 @@ pub struct App {
     /// Pending reminders, loaded when the 'R' popup is opened.
     pub reminders: Vec<Reminder>,
     pub show_reminders: bool,
+    /// True while the description popup ('Enter') is open, editing the
+    /// currently selected card's description inline.
+    pub show_description: bool,
+    pub description_input: String,
     /// Comments of the card that was selected when 'C' was pressed.
     pub comments: Vec<Comment>,
     pub show_comments: bool,
@@ -68,6 +72,8 @@ impl App {
             status_set_at: None,
             reminders: Vec::new(),
             show_reminders: false,
+            show_description: false,
+            description_input: String::new(),
             comments: Vec::new(),
             show_comments: false,
             composing_comment: false,
