@@ -1,6 +1,4 @@
-use std::io::Write;
-
-use anyhow::{Context, Result};
+use anyhow::Result;
 
 use crate::client::HteamClient;
 
@@ -357,36 +355,39 @@ pub async fn save_description(client: &HteamClient, app: &mut App, card_id: u64,
     }
 }
 
-/// Writes `initial` to a temp file, opens `$EDITOR` on it (blocking), and
-/// returns the new content if it changed. Caller is responsible for leaving
-/// the alternate screen / raw mode before calling this and restoring it after.
-pub fn edit_in_external_editor(initial: &str) -> Result<Option<String>> {
-    let editor = std::env::var("EDITOR").unwrap_or_else(|_| "vi".to_string());
+/// Opens the description popup for the currently selected card, seeding the
+/// input with its current description. No-op if no card is selected.
+pub fn open_description(app: &mut App) {
+    let Some(card) = app.current_card() else {
+        return;
+    };
+    app.description_input = card.description.clone().unwrap_or_default();
+    app.show_description = true;
+}
 
-    let mut file = tempfile::Builder::new()
-        .prefix("hteam-desc-")
-        .suffix(".md")
-        .tempfile()
-        .context("No se pudo crear el archivo temporal")?;
-    file.write_all(initial.as_bytes())?;
-    file.flush()?;
-    let path = file.path().to_path_buf();
+pub fn close_description(app: &mut App) {
+    app.show_description = false;
+    app.description_input.clear();
+}
 
-    let status = std::process::Command::new(&editor)
-        .arg(&path)
-        .status()
-        .with_context(|| format!("No se pudo ejecutar el editor '{}'", editor))?;
+pub fn description_input_push(app: &mut App, ch: char) {
+    app.description_input.push(ch);
+}
 
-    if !status.success() {
-        return Ok(None);
-    }
+pub fn description_input_backspace(app: &mut App) {
+    app.description_input.pop();
+}
 
-    let new_content = std::fs::read_to_string(&path)?;
-    if new_content.trim_end() == initial.trim_end() {
-        return Ok(None);
-    }
-
-    Ok(Some(new_content))
+/// Saves the edited description (if the card is still resolvable) and closes
+/// the popup regardless — mirrors `submit_comment`'s cancel-then-save order.
+pub async fn submit_description(client: &HteamClient, app: &mut App) {
+    let Some(card) = app.current_card().cloned() else {
+        close_description(app);
+        return;
+    };
+    let text = app.description_input.clone();
+    close_description(app);
+    save_description(client, app, card.id, &text).await;
 }
 
 /// Opens the projects popup. If nothing is active yet, auto-loads the most

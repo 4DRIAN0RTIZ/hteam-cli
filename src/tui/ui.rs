@@ -32,6 +32,8 @@ pub fn draw(frame: &mut Frame, app: &App) {
         draw_help_popup(frame);
     } else if app.show_reminders {
         draw_reminders_popup(frame, app);
+    } else if app.show_description {
+        draw_description_popup(frame, app);
     } else if app.show_comments {
         draw_comments_popup(frame, app);
     } else if app.show_projects {
@@ -57,7 +59,7 @@ fn draw_help_popup(frame: &mut Frame) {
         "  j/k, ↓/↑        mover selección",
         "  h/l, ←/→        cambiar de lista",
         "  H / L           mover card a la lista anterior/siguiente",
-        "  Enter           editar descripción de la card en $EDITOR",
+        "  Enter           editar descripción de la card",
         "  n               crear card nueva en la lista activa",
         "  w               marcar/desmarcar la card activa como 'working on'",
         "  v / V           ocultar lista activa / mostrar todas",
@@ -69,8 +71,13 @@ fn draw_help_popup(frame: &mut Frame) {
         "  C               comentarios — 'a' escribe uno nuevo (@ para mencionar)",
         "  P               proyectos/milestones — 'a' nuevo project id, j/k+Enter elige uno guardado",
         "",
-        "Dentro de un popup de texto (nueva card / comentario / project id)",
-        "  Enter           confirmar (en comentarios: salto de línea, o Ctrl+S para enviar)",
+        "Dentro de un popup de texto (nueva card / project id)",
+        "  Enter           confirmar",
+        "  Esc             cancelar",
+        "",
+        "Dentro de la descripción o un comentario",
+        "  Enter           salto de línea",
+        "  Ctrl+S          guardar / enviar",
         "  Esc             cancelar",
         "",
         "Dentro del popup de comentarios, mientras escribís @algo",
@@ -132,6 +139,30 @@ fn draw_reminders_popup(frame: &mut Frame, app: &App) {
 
     let p = Paragraph::new(lines.join("\n")).block(block).wrap(Wrap { trim: true });
     frame.render_widget(p, area);
+}
+
+fn draw_description_popup(frame: &mut Frame, app: &App) {
+    let area = centered_rect(70, 70, frame.area());
+    frame.render_widget(Clear, area);
+
+    let card_name = app.current_card().map(|c| c.name.as_str()).unwrap_or("?");
+    let block = Block::default()
+        .title(format!(
+            " Descripción de \"{}\" — Enter salto de línea · Ctrl+S guardar · Esc cancelar ",
+            card_name
+        ))
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Blue));
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+
+    let text_width = inner.width.saturating_sub(2).max(1);
+    let content_rows = wrapped_line_count(&app.description_input, text_width);
+    let scroll_y = content_rows.saturating_sub(inner.height);
+    let p = Paragraph::new(app.description_input.as_str())
+        .wrap(Wrap { trim: true })
+        .scroll((scroll_y, 0));
+    frame.render_widget(p, inner);
 }
 
 fn draw_comments_popup(frame: &mut Frame, app: &App) {
