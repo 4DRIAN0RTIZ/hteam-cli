@@ -6,6 +6,7 @@ use super::app::App;
 
 pub fn open_help(app: &mut App) {
     app.show_help = true;
+    app.help_scroll = 0;
 }
 
 pub fn close_help(app: &mut App) {
@@ -183,6 +184,7 @@ pub async fn move_active_card(client: &HteamClient, app: &mut App, delta: i32) {
 /// Opens the reminders popup and (re)loads pending reminders.
 pub async fn open_reminders(client: &HteamClient, app: &mut App) {
     app.show_reminders = true;
+    app.reminders_scroll = 0;
     match client.get_reminders().await {
         Ok(list) => app.reminders = list,
         Err(e) => app.set_status(format!("Error cargando reminders: {}", e)),
@@ -222,6 +224,7 @@ pub async fn open_comments(client: &HteamClient, app: &mut App) {
     app.composing_comment = false;
     app.comment_input.clear();
     app.mention_suggestions.clear();
+    app.comments_scroll = 0;
 
     match client.get_card_comments(card.id).await {
         Ok(list) => app.comments = list,
@@ -399,6 +402,8 @@ pub async fn open_projects(client: &HteamClient, app: &mut App) {
     app.show_projects = true;
     app.composing_project = false;
     app.project_input.clear();
+    app.projects_detail_focused = false;
+    app.projects_scroll = 0;
 
     if app.active_project.is_none() {
         if let Some(&id) = app.known_projects.first() {
@@ -411,6 +416,7 @@ pub fn close_projects(app: &mut App) {
     app.show_projects = false;
     app.composing_project = false;
     app.project_input.clear();
+    app.projects_detail_focused = false;
 }
 
 pub fn start_composing_project(app: &mut App) {
@@ -592,4 +598,31 @@ pub async fn toggle_working_on(client: &HteamClient, app: &mut App) {
             Err(e) => app.set_status(format!("Error iniciando working on: {}", e)),
         }
     }
+}
+
+/// Scroll hacia abajo (`delta` > 0) o arriba (`delta` < 0) en la lista de comentarios.
+/// Solo tiene efecto mientras se visualizan comentarios, no al componer.
+pub fn scroll_comments(app: &mut App, delta: i32) {
+    app.comments_scroll = (app.comments_scroll as i32 + delta).max(0) as u16;
+}
+
+/// Scroll hacia abajo (`delta` > 0) o arriba (`delta` < 0) en el popup de reminders.
+pub fn scroll_reminders(app: &mut App, delta: i32) {
+    app.reminders_scroll = (app.reminders_scroll as i32 + delta).max(0) as u16;
+}
+
+/// Scroll hacia abajo (`delta` > 0) o arriba (`delta` < 0) en el popup de ayuda.
+pub fn scroll_help(app: &mut App, delta: i32) {
+    app.help_scroll = (app.help_scroll as i32 + delta).max(0) as u16;
+}
+
+/// Alterna el foco entre la lista de proyectos guardados (izquierda) y el panel de detalle (derecha).
+pub fn toggle_projects_focus(app: &mut App) {
+    app.projects_detail_focused = !app.projects_detail_focused;
+    app.projects_scroll = 0;
+}
+
+/// Scroll hacia abajo (`delta` > 0) o arriba (`delta` < 0) en el panel de detalle de proyectos.
+pub fn scroll_projects(app: &mut App, delta: i32) {
+    app.projects_scroll = (app.projects_scroll as i32 + delta).max(0) as u16;
 }
