@@ -407,6 +407,27 @@ pub struct DailyWorkEntry {
     pub relative: String,
 }
 
+/// Un board listado por el endpoint datatables de operaciones.
+#[derive(Debug, Clone, Deserialize)]
+pub struct BoardEntry {
+    pub id: u64,
+    pub name: String,
+    #[serde(default)]
+    pub service: String,
+    #[serde(default)]
+    pub responsible: String,
+    #[serde(default)]
+    pub total_tasks: u64,
+    #[serde(default)]
+    pub total_tasks_closed: u64,
+}
+
+/// Respuesta de `GET /api/operation/care/operations/?format=datatables`.
+#[derive(Debug, Deserialize)]
+pub struct BoardsResponse {
+    pub data: Vec<BoardEntry>,
+}
+
 impl std::fmt::Display for Label {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name)
