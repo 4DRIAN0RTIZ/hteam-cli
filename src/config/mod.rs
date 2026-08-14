@@ -35,6 +35,38 @@ pub struct TuiConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct WorkingHoursConfig {
+    /// Hora de inicio de la jornada, formato "HH:MM" (24h).
+    #[serde(default)]
+    pub start: Option<String>,
+    /// Hora de fin de la jornada, formato "HH:MM" (24h).
+    #[serde(default)]
+    pub end: Option<String>,
+}
+
+impl WorkingHoursConfig {
+    /// Tiempo restante hasta `end`, formateado "Xh YYm restantes" — `None` si
+    /// no está configurada o `now` cae fuera del rango [start, end].
+    pub fn remaining_display(&self, now: chrono::NaiveTime) -> Option<String> {
+        let start = self.start.as_deref().and_then(parse_time)?;
+        let end = self.end.as_deref().and_then(parse_time)?;
+        if now < start || now > end {
+            return None;
+        }
+        let remaining = end - now;
+        Some(format!(
+            " {}h {:02}m restantes ",
+            remaining.num_hours(),
+            remaining.num_minutes() % 60
+        ))
+    }
+}
+
+fn parse_time(s: &str) -> Option<chrono::NaiveTime> {
+    chrono::NaiveTime::parse_from_str(s, "%H:%M").ok()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
     pub auth: AuthConfig,
     #[serde(default)]
@@ -43,6 +75,8 @@ pub struct Config {
     pub variables: HashMap<String, String>,
     #[serde(default)]
     pub tui: TuiConfig,
+    #[serde(default)]
+    pub working_hours: WorkingHoursConfig,
 }
 
 impl Config {
