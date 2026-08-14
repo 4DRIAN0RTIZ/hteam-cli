@@ -1,6 +1,7 @@
 use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
+    text::{Line, Text},
     widgets::{Block, Borders, Clear, Paragraph, Wrap},
     Frame,
 };
@@ -36,6 +37,8 @@ pub fn draw(frame: &mut Frame, app: &App) {
         draw_comments_popup(frame, app);
     } else if app.show_projects {
         draw_projects_popup(frame, app);
+    } else if app.show_board_switch {
+        draw_board_switch_popup(frame, app);
     } else if app.composing_card {
         draw_new_card_popup(frame, app);
     }
@@ -107,6 +110,7 @@ fn draw_help_popup(frame: &mut Frame) {
         "  q, Esc          salir",
         "",
         "Popups",
+        "  B               cambiar de board — lista en vivo · j/k + Enter seleccionar",
         "  R               reminders — 'a' agrega uno para la card seleccionada",
         "  C               comentarios — 'a' escribe uno nuevo (@ para mencionar)",
         "  P               proyectos/milestones — 'a' nuevo project id, j/k+Enter elige uno guardado",
@@ -425,6 +429,77 @@ fn progress_bar(v: f64) -> String {
     let pct = (v.clamp(0.0, 1.0) * 100.0).round() as usize;
     let filled = pct / 10;
     format!("{}{} {}%", "█".repeat(filled), "░".repeat(10 - filled), pct)
+}
+
+fn draw_board_switch_popup(frame: &mut Frame, app: &App) {
+    let area = centered_rect(78, 65, frame.area());
+    frame.render_widget(Clear, area);
+
+    let outer = Block::default()
+        .title(" Cambiar board — j/k · Enter seleccionar · r recargar · Esc cerrar ")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Yellow));
+    let inner = outer.inner(area);
+    frame.render_widget(outer, area);
+
+    if app.available_boards.is_empty() {
+        let msg = if app.status.as_deref().map(|s| s.contains("Cargando")).unwrap_or(false) {
+            "Cargando boards..."
+        } else {
+            "No se pudieron cargar los boards. Presiona 'r' para reintentar."
+        };
+        frame.render_widget(Paragraph::new(msg), inner);
+        return;
+    }
+
+    // Scroll automático para mantener el ítem seleccionado en pantalla
+    let scroll_y = if app.selected_board_idx + 1 > inner.height as usize {
+        (app.selected_board_idx + 1 - inner.height as usize) as u16
+    } else {
+        0
+    };
+
+    let lines: Vec<Line> = app
+        .available_boards
+        .iter()
+        .enumerate()
+        .map(|(i, b)| {
+            let marker = if i == app.selected_board_idx { "▶" } else { " " };
+            let active = if b.id == app.board_number { " •" } else { "  " };
+            let name = trunc_str(&b.name, 28);
+            let service = trunc_str(&b.service, 32);
+            let tasks = format!("{}/{}", b.total_tasks_closed, b.total_tasks);
+
+            let text = format!(
+                "{} {:>5}  {:<28}  {:<32}  {:>8}{}",
+                marker,
+                format!("#{}", b.id),
+                name,
+                service,
+                tasks,
+                active
+            );
+
+            let style = if i == app.selected_board_idx {
+                Style::default().fg(Color::Black).bg(Color::Cyan)
+            } else if b.id == app.board_number {
+                Style::default().fg(Color::Yellow)
+            } else {
+                Style::default()
+            };
+
+            Line::from(text).style(style)
+        })
+        .collect();
+
+    let p = Paragraph::new(Text::from(lines)).scroll((scroll_y, 0));
+    frame.render_widget(p, inner);
+}
+
+/// Trunca `s` a `max` caracteres y rellena con espacios si es más corto.
+fn trunc_str(s: &str, max: usize) -> String {
+    let chars: String = s.chars().take(max).collect();
+    format!("{:<width$}", chars, width = max)
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, area: Rect) -> Rect {

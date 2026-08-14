@@ -5,8 +5,8 @@ use std::time::{Duration, Instant};
 
 use crate::config::WorkingHoursConfig;
 use crate::models::{
-    Card, Comment, List, ProjectMilestone, ProjectTask, Reminder, UserSuggestion, WorkShiftRecord,
-    WorkingOnStatus,
+    BoardEntry, Card, Comment, List, ProjectMilestone, ProjectTask, Reminder, UserSuggestion,
+    WorkShiftRecord, WorkingOnStatus,
 };
 
 pub struct App {
@@ -61,6 +61,12 @@ pub struct App {
     pub new_card_input: String,
     pub new_card_list_id: Option<u64>,
     pub show_help: bool,
+    /// True mientras el popup de cambio de board ('B') está abierto.
+    pub show_board_switch: bool,
+    /// Boards obtenidos de la API al abrir el popup.
+    pub available_boards: Vec<BoardEntry>,
+    /// Índice del board resaltado en `available_boards`.
+    pub selected_board_idx: usize,
     /// Horario laboral configurado en `config.toml`'s `[working_hours]`.
     pub working_hours: WorkingHoursConfig,
 }
@@ -105,6 +111,9 @@ impl App {
             new_card_input: String::new(),
             new_card_list_id: None,
             show_help: false,
+            show_board_switch: false,
+            available_boards: Vec::new(),
+            selected_board_idx: 0,
             working_hours,
         }
     }
