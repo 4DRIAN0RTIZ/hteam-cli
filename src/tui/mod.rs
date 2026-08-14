@@ -205,6 +205,18 @@ async fn run_loop(
             continue;
         }
 
+        if app.show_board_switch {
+            match key.code {
+                KeyCode::Esc | KeyCode::Char('q') => events::close_board_switch(app),
+                KeyCode::Char('j') | KeyCode::Down => events::move_board_selection(app, 1),
+                KeyCode::Char('k') | KeyCode::Up => events::move_board_selection(app, -1),
+                KeyCode::Enter => events::select_current_board(client, app).await,
+                KeyCode::Char('r') => events::open_board_switch(client, app).await,
+                _ => {}
+            }
+            continue;
+        }
+
         if app.composing_card {
             match key.code {
                 KeyCode::Esc => events::cancel_composing_card(app),
@@ -232,6 +244,7 @@ async fn run_loop(
             KeyCode::Char('n') => events::start_composing_card(app),
             KeyCode::Char('w') => events::toggle_working_on(client, app).await,
             KeyCode::Char('r') => events::refresh_all(client, app).await,
+            KeyCode::Char('B') => events::open_board_switch(client, app).await,
             KeyCode::Char('?') => events::open_help(app),
             KeyCode::Enter => events::open_description(app),
             _ => {}

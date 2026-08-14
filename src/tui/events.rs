@@ -600,6 +600,85 @@ pub async fn toggle_working_on(client: &HteamClient, app: &mut App) {
     }
 }
 
+// ── Board-switch popup ──────────────────────────────────────────────────
+
+/// Abre el popup de cambio de board y obtiene la lista desde la API.
+pub async fn open_board_switch(client: &HteamClient, app: &mut App) {
+    app.show_board_switch = true;
+    app.available_boards.clear();
+    app.selected_board_idx = 0;
+    app.set_status("Cargando boards...");
+
+    match client.get_boards().await {
+        Ok(boards) => {
+            // Pre-seleccionar el board activo en la lista
+            if let Some(idx) = boards.iter().position(|b| b.id == app.board_number) {
+                app.selected_board_idx = idx;
+            }
+            app.available_boards = boards;
+            app.clear_status();
+        }
+        Err(e) => app.set_status(format!("Error cargando boards: {}", e)),
+    }
+}
+
+pub fn close_board_switch(app: &mut App) {
+    app.show_board_switch = false;
+    app.available_boards.clear();
+}
+
+pub fn move_board_selection(app: &mut App, delta: i32) {
+    if app.available_boards.is_empty() {
+        return;
+    }
+    let len = app.available_boards.len() as i32;
+    let next = (app.selected_board_idx as i32 + delta).clamp(0, len - 1);
+    app.selected_board_idx = next as usize;
+}
+
+/// Cambia al board actualmente resaltado en el popup.
+pub async fn select_current_board(client: &HteamClient, app: &mut App) {
+    let Some(board) = app.available_boards.get(app.selected_board_idx).cloned() else {
+        return;
+    };
+    switch_to_board(client, app, board.id).await;
+}
+
+/// Lógica central del cambio de board: actualiza `board_number`, limpia el
+/// estado del tablero, persiste en config.toml y recarga las listas/cards.
+async fn switch_to_board(client: &HteamClient, app: &mut App, id: u64) {
+    if id == app.board_number {
+        close_board_switch(app);
+        return;
+    }
+
+    app.board_number = id;
+    app.all_lists.clear();
+    app.cards_by_list.clear();
+    app.selected_card.clear();
+    app.selected_list = 0;
+    app.working_on.clear();
+
+    close_board_switch(app);
+
+    if let Err(e) = persist_board_switch(id) {
+        app.set_status(format!(
+            "Board #{} cargando (no se pudo guardar config: {})",
+            id, e
+        ));
+    }
+
+    refresh_all(client, app).await;
+}
+
+fn persist_board_switch(id: u64) -> anyhow::Result<()> {
+    let mut config = crate::config::Config::load()?;
+    config.auth.board_number = Some(id);
+    config.save()?;
+    crate::config::Config::save_last_ticket(id)?;
+    Ok(())
+}
+
 /// Scroll hacia abajo (`delta` > 0) o arriba (`delta` < 0) en la lista de comentarios.
 /// Solo tiene efecto mientras se visualizan comentarios, no al componer.
 pub fn scroll_comments(app: &mut App, delta: i32) {
