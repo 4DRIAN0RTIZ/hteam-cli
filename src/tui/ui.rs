@@ -16,9 +16,21 @@ pub fn draw(frame: &mut Frame, app: &App) {
     ])
     .split(area);
 
+    let user_line = user_status_line(app);
+    let user_width = user_line
+        .as_ref()
+        .map(|s| s.chars().count() as u16)
+        .unwrap_or(0);
+    let header_cols =
+        Layout::horizontal([Constraint::Min(0), Constraint::Length(user_width)]).split(rows[0]);
+
     let title = Paragraph::new(format!(" HTEAM #{} ", app.board_number))
         .style(Style::default().add_modifier(Modifier::BOLD));
-    frame.render_widget(title, rows[0]);
+    frame.render_widget(title, header_cols[0]);
+
+    if let Some(line) = user_line {
+        frame.render_widget(Paragraph::new(line), header_cols[1]);
+    }
 
     draw_board(frame, app, rows[1]);
 
@@ -481,4 +493,27 @@ fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
             frame.render_widget(p, rect);
         }
     }
+}
+
+/// Texto del estado de turno mostrado a la derecha del header, p.ej.
+/// "adrian.ortiz · trabajando desde 07:55 " o "adrian.ortiz · salió a las 17:01 ".
+fn user_status_line(app: &App) -> Option<String> {
+    let shift = app.user_shift.as_ref()?;
+    let username = &shift.user.username;
+    let line = match (&shift.check_in, &shift.check_out) {
+        (Some(check_in), None) => {
+            format!("{} · trabajando desde {} ", username, format_time(check_in))
+        }
+        (Some(_), Some(check_out)) => {
+            format!("{} · salió a las {} ", username, format_time(check_out))
+        }
+        _ => format!("{} ", username),
+    };
+    Some(line)
+}
+
+fn format_time(iso: &str) -> String {
+    chrono::DateTime::parse_from_rfc3339(iso)
+        .map(|dt| dt.format("%H:%M").to_string())
+        .unwrap_or_else(|_| iso.to_string())
 }
