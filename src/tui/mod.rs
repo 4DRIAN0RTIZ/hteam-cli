@@ -51,10 +51,11 @@ pub async fn run(board: Option<u64>) -> Result<()> {
         .map(|s| s.to_lowercase())
         .collect();
     let known_projects = config.tui.known_projects.clone();
+    let working_hours = config.working_hours.clone();
 
     let client = Arc::new(HteamClient::with_auth(config).await?);
 
-    let mut app = App::new(board_number, hidden_lists, known_projects);
+    let mut app = App::new(board_number, hidden_lists, known_projects, working_hours);
     events::refresh_all(&client, &mut app).await;
 
     let guard = TerminalGuard::enter()?;

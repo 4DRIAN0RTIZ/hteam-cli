@@ -1,5 +1,5 @@
 use ratatui::{
-    layout::{Constraint, Layout, Rect},
+    layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     widgets::{Block, Borders, Clear, Paragraph, Wrap},
     Frame,
@@ -16,21 +16,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
     ])
     .split(area);
 
-    let user_line = user_status_line(app);
-    let user_width = user_line
-        .as_ref()
-        .map(|s| s.chars().count() as u16)
-        .unwrap_or(0);
-    let header_cols =
-        Layout::horizontal([Constraint::Min(0), Constraint::Length(user_width)]).split(rows[0]);
-
-    let title = Paragraph::new(format!(" HTEAM #{} ", app.board_number))
-        .style(Style::default().add_modifier(Modifier::BOLD));
-    frame.render_widget(title, header_cols[0]);
-
-    if let Some(line) = user_line {
-        frame.render_widget(Paragraph::new(line), header_cols[1]);
-    }
+    draw_title_bar(frame, app, rows[0]);
 
     draw_board(frame, app, rows[1]);
 
@@ -52,6 +38,48 @@ pub fn draw(frame: &mut Frame, app: &App) {
         draw_projects_popup(frame, app);
     } else if app.composing_card {
         draw_new_card_popup(frame, app);
+    }
+}
+
+/// Título con "HTEAM #N" a la izquierda y, a la derecha, el estado de turno
+/// del usuario (username · trabajando desde/salió a las HH:MM) seguido — si
+/// hay `[working_hours]` configurado y estamos dentro del rango — del tiempo
+/// restante de jornada en verde.
+fn draw_title_bar(frame: &mut Frame, app: &App, area: Rect) {
+    let title = Paragraph::new(format!(" HTEAM #{} ", app.board_number))
+        .style(Style::default().add_modifier(Modifier::BOLD));
+
+    let user_line = user_status_line(app);
+    let remaining = app.working_hours_remaining();
+
+    if user_line.is_none() && remaining.is_none() {
+        frame.render_widget(title, area);
+        return;
+    }
+
+    let user_width = user_line.as_ref().map(|s| s.chars().count() as u16).unwrap_or(0);
+    let gap_width = if user_line.is_some() && remaining.is_some() { 2 } else { 0 };
+    let remaining_width = remaining.as_ref().map(|s| s.chars().count() as u16).unwrap_or(0);
+
+    let cols = Layout::horizontal([
+        Constraint::Min(0),
+        Constraint::Length(user_width),
+        Constraint::Length(gap_width),
+        Constraint::Length(remaining_width),
+    ])
+    .split(area);
+
+    frame.render_widget(title, cols[0]);
+
+    if let Some(line) = user_line {
+        frame.render_widget(Paragraph::new(line), cols[1]);
+    }
+
+    if let Some(remaining) = remaining {
+        let working_hours = Paragraph::new(remaining)
+            .style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
+            .alignment(Alignment::Right);
+        frame.render_widget(working_hours, cols[3]);
     }
 }
 
