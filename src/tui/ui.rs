@@ -21,11 +21,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
 
     draw_board(frame, app, rows[1]);
 
-    let status = app
-        .status
-        .clone()
-        .unwrap_or_else(|| " '?' ayuda · q salir".to_string());
-    frame.render_widget(Paragraph::new(status), rows[2]);
+    draw_status_bar(frame, app, rows[2]);
 
     if app.show_help {
         draw_help_popup(frame, app);
@@ -84,6 +80,29 @@ fn draw_title_bar(frame: &mut Frame, app: &App, area: Rect) {
             .alignment(Alignment::Right);
         frame.render_widget(working_hours, cols[3]);
     }
+}
+
+/// Barra de estado inferior: mensaje de estado a la izquierda, versión (ej.
+/// "v0.4.0") pegada a la orilla derecha.
+fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
+    let status = app
+        .status
+        .clone()
+        .unwrap_or_else(|| " '?' ayuda · q salir".to_string());
+
+    let version = format!("v{} ", env!("CARGO_PKG_VERSION"));
+    let version_width = version.chars().count() as u16;
+
+    let cols = Layout::horizontal([Constraint::Min(0), Constraint::Length(version_width)])
+        .split(area);
+
+    frame.render_widget(Paragraph::new(status), cols[0]);
+    frame.render_widget(
+        Paragraph::new(version)
+            .style(Style::default().fg(Color::DarkGray))
+            .alignment(Alignment::Right),
+        cols[1],
+    );
 }
 
 fn draw_help_popup(frame: &mut Frame, app: &App) {
