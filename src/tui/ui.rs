@@ -1,5 +1,5 @@
 use ratatui::{
-    layout::{Constraint, Layout, Rect},
+    layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     widgets::{Block, Borders, Clear, Paragraph, Wrap},
     Frame,
@@ -16,9 +16,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
     ])
     .split(area);
 
-    let title = Paragraph::new(format!(" HTEAM #{} ", app.board_number))
-        .style(Style::default().add_modifier(Modifier::BOLD));
-    frame.render_widget(title, rows[0]);
+    draw_title_bar(frame, app, rows[0]);
 
     draw_board(frame, app, rows[1]);
 
@@ -41,6 +39,30 @@ pub fn draw(frame: &mut Frame, app: &App) {
     } else if app.composing_card {
         draw_new_card_popup(frame, app);
     }
+}
+
+/// Título con "HTEAM #N" a la izquierda y, si hay `[working_hours]`
+/// configurado y estamos dentro del rango, el tiempo restante a la derecha.
+fn draw_title_bar(frame: &mut Frame, app: &App, area: Rect) {
+    let title = Paragraph::new(format!(" HTEAM #{} ", app.board_number))
+        .style(Style::default().add_modifier(Modifier::BOLD));
+
+    let Some(remaining) = app.working_hours_remaining() else {
+        frame.render_widget(title, area);
+        return;
+    };
+
+    let cols = Layout::horizontal([
+        Constraint::Min(0),
+        Constraint::Length(remaining.chars().count() as u16),
+    ])
+    .split(area);
+
+    frame.render_widget(title, cols[0]);
+    let working_hours = Paragraph::new(remaining)
+        .style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
+        .alignment(Alignment::Right);
+    frame.render_widget(working_hours, cols[1]);
 }
 
 fn draw_help_popup(frame: &mut Frame) {
