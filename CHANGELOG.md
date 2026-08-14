@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(tui)* Display remaining working hours in title bar
 - *(tui)* Add live board selector
 - *(tui)* Add scroll support to popups and project detail focus
+- *(tui)* Show version in status bar
 
 ## [0.4.0] - 2026-08-13
 
