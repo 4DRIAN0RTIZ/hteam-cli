@@ -15,6 +15,8 @@ pub fn close_help(app: &mut App) {
 pub async fn refresh_all(client: &HteamClient, app: &mut App) {
     app.set_status("Cargando...");
 
+    refresh_user_shift(client, app).await;
+
     match client.get_lists(Some(app.board_number)).await {
         Ok(lists) => {
             app.all_lists = lists;
@@ -554,6 +556,14 @@ async fn refresh_working_on(client: &HteamClient, app: &mut App) {
     // blanking out the border highlight everywhere.
     if let Ok(items) = client.get_working_on().await {
         app.working_on = items;
+    }
+}
+
+async fn refresh_user_shift(client: &HteamClient, app: &mut App) {
+    // Non-fatal: keep the previous value on a transient error instead of
+    // blanking out the header.
+    if let Ok(resume) = client.get_workshift_resume().await {
+        app.user_shift = resume.last;
     }
 }
 
