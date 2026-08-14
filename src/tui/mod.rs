@@ -96,6 +96,8 @@ async fn run_loop(
         if app.show_help {
             match key.code {
                 KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('?') => events::close_help(app),
+                KeyCode::Char('j') | KeyCode::Down => events::scroll_help(app, 1),
+                KeyCode::Char('k') | KeyCode::Up => events::scroll_help(app, -1),
                 _ => {}
             }
             continue;
@@ -105,6 +107,8 @@ async fn run_loop(
             match key.code {
                 KeyCode::Esc | KeyCode::Char('q') => events::close_reminders(app),
                 KeyCode::Char('a') => events::add_reminder_for_current_card(client, app).await,
+                KeyCode::Char('j') | KeyCode::Down => events::scroll_reminders(app, 1),
+                KeyCode::Char('k') | KeyCode::Up => events::scroll_reminders(app, -1),
                 _ => {}
             }
             continue;
@@ -154,6 +158,8 @@ async fn run_loop(
                 match key.code {
                     KeyCode::Esc | KeyCode::Char('q') => events::close_comments(app),
                     KeyCode::Char('a') => events::start_composing_comment(app),
+                    KeyCode::Char('j') | KeyCode::Down => events::scroll_comments(app, 1),
+                    KeyCode::Char('k') | KeyCode::Up => events::scroll_comments(app, -1),
                     _ => {}
                 }
             }
@@ -173,9 +179,26 @@ async fn run_loop(
                 match key.code {
                     KeyCode::Esc | KeyCode::Char('q') => events::close_projects(app),
                     KeyCode::Char('a') => events::start_composing_project(app),
-                    KeyCode::Char('j') | KeyCode::Down => events::move_project_selection(app, 1),
-                    KeyCode::Char('k') | KeyCode::Up => events::move_project_selection(app, -1),
-                    KeyCode::Enter => events::select_known_project(client, app).await,
+                    KeyCode::Tab => events::toggle_projects_focus(app),
+                    KeyCode::Char('j') | KeyCode::Down => {
+                        if app.projects_detail_focused {
+                            events::scroll_projects(app, 1);
+                        } else {
+                            events::move_project_selection(app, 1);
+                        }
+                    }
+                    KeyCode::Char('k') | KeyCode::Up => {
+                        if app.projects_detail_focused {
+                            events::scroll_projects(app, -1);
+                        } else {
+                            events::move_project_selection(app, -1);
+                        }
+                    }
+                    KeyCode::Enter => {
+                        if !app.projects_detail_focused {
+                            events::select_known_project(client, app).await;
+                        }
+                    }
                     _ => {}
                 }
             }

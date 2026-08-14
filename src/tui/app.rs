@@ -67,6 +67,17 @@ pub struct App {
     pub available_boards: Vec<BoardEntry>,
     /// Índice del board resaltado en `available_boards`.
     pub selected_board_idx: usize,
+    /// Scroll offset (rows) para el popup de ayuda.
+    pub help_scroll: u16,
+    /// Scroll offset (rows) para el popup de reminders.
+    pub reminders_scroll: u16,
+    /// Scroll offset (rows) para la lista de comentarios (solo en modo lectura, no al componer).
+    pub comments_scroll: u16,
+    /// True cuando el foco del popup de proyectos está en el panel de detalle (derecha).
+    /// Tab alterna entre la lista de proyectos guardados y el panel de detalle.
+    pub projects_detail_focused: bool,
+    /// Scroll offset (rows) para el panel de detalle del popup de proyectos.
+    pub projects_scroll: u16,
     /// Horario laboral configurado en `config.toml`'s `[working_hours]`.
     pub working_hours: WorkingHoursConfig,
 }
@@ -114,6 +125,11 @@ impl App {
             show_board_switch: false,
             available_boards: Vec::new(),
             selected_board_idx: 0,
+            help_scroll: 0,
+            reminders_scroll: 0,
+            comments_scroll: 0,
+            projects_detail_focused: false,
+            projects_scroll: 0,
             working_hours,
         }
     }
