@@ -28,7 +28,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
     frame.render_widget(Paragraph::new(status), rows[2]);
 
     if app.show_help {
-        draw_help_popup(frame);
+        draw_help_popup(frame, app);
     } else if app.show_reminders {
         draw_reminders_popup(frame, app);
     } else if app.show_description {
@@ -86,12 +86,12 @@ fn draw_title_bar(frame: &mut Frame, app: &App, area: Rect) {
     }
 }
 
-fn draw_help_popup(frame: &mut Frame) {
+fn draw_help_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(70, 85, frame.area());
     frame.render_widget(Clear, area);
 
     let block = Block::default()
-        .title(" Ayuda — Esc/q/? cerrar ")
+        .title(" Ayuda — j/k scroll · Esc/q/? cerrar ")
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::White));
     let inner = block.inner(area);
@@ -111,9 +111,10 @@ fn draw_help_popup(frame: &mut Frame) {
         "",
         "Popups",
         "  B               cambiar de board — lista en vivo · j/k + Enter seleccionar",
+        "  j/k, ↓/↑        scroll del contenido (reminders, comentarios, esta ayuda)",
         "  R               reminders — 'a' agrega uno para la card seleccionada",
         "  C               comentarios — 'a' escribe uno nuevo (@ para mencionar)",
-        "  P               proyectos/milestones — 'a' nuevo project id, j/k+Enter elige uno guardado",
+        "  P               proyectos — 'a' nuevo · Tab foco al detalle · j/k mover/scroll · Enter elegir",
         "",
         "Dentro de un popup de texto (nueva card / project id)",
         "  Enter           confirmar",
@@ -130,7 +131,7 @@ fn draw_help_popup(frame: &mut Frame) {
     ]
     .join("\n");
 
-    let p = Paragraph::new(text).wrap(Wrap { trim: true });
+    let p = Paragraph::new(text).wrap(Wrap { trim: true }).scroll((app.help_scroll, 0));
     frame.render_widget(p, inner);
 }
 
@@ -177,11 +178,14 @@ fn draw_reminders_popup(frame: &mut Frame, app: &App) {
     };
 
     let block = Block::default()
-        .title(" Reminders — 'a' agregar de la card seleccionada · Esc cerrar ")
+        .title(" Reminders — 'a' agregar · j/k scroll · Esc cerrar ")
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Magenta));
 
-    let p = Paragraph::new(lines.join("\n")).block(block).wrap(Wrap { trim: true });
+    let p = Paragraph::new(lines.join("\n"))
+        .block(block)
+        .wrap(Wrap { trim: true })
+        .scroll((app.reminders_scroll, 0));
     frame.render_widget(p, area);
 }
 
@@ -216,7 +220,7 @@ fn draw_comments_popup(frame: &mut Frame, app: &App) {
     let title = if app.composing_comment {
         " Nuevo comentario — Enter salto de línea · Ctrl+S enviar · Esc cancelar "
     } else {
-        " Comentarios — 'a' agregar · Esc cerrar "
+        " Comentarios — 'a' agregar · j/k scroll · Esc cerrar "
     };
     let outer = Block::default()
         .title(title)
@@ -257,7 +261,7 @@ fn draw_comment_list(frame: &mut Frame, app: &App, area: Rect) {
             .collect::<Vec<_>>()
             .join("\n")
     };
-    let p = Paragraph::new(text).wrap(Wrap { trim: true });
+    let p = Paragraph::new(text).wrap(Wrap { trim: true }).scroll((app.comments_scroll, 0));
     frame.render_widget(p, area);
 }
 
@@ -327,7 +331,7 @@ fn draw_projects_popup(frame: &mut Frame, app: &App) {
     let title = if app.composing_project {
         " Nuevo project id — dígitos + Enter · Esc cancelar "
     } else {
-        " Proyectos — 'a' agregar · j/k + Enter elegir · Esc cerrar "
+        " Proyectos — Tab foco · j/k mover/scroll · 'a' agregar · Esc cerrar "
     };
     let outer = Block::default()
         .title(title)
@@ -352,7 +356,14 @@ fn draw_projects_popup(frame: &mut Frame, app: &App) {
 }
 
 fn draw_known_projects_list(frame: &mut Frame, app: &App, area: Rect) {
-    let block = Block::default().title(" Guardados ").borders(Borders::ALL);
+    let block = Block::default()
+        .title(" Guardados ")
+        .borders(Borders::ALL)
+        .border_style(if !app.projects_detail_focused {
+            Style::default().fg(Color::Cyan)
+        } else {
+            Style::default()
+        });
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
@@ -375,7 +386,14 @@ fn draw_known_projects_list(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
-    let block = Block::default().title(" Milestones / Tasks ").borders(Borders::ALL);
+    let block = Block::default()
+        .title(" Milestones / Tasks ")
+        .borders(Borders::ALL)
+        .border_style(if app.projects_detail_focused {
+            Style::default().fg(Color::Cyan)
+        } else {
+            Style::default()
+        });
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
@@ -411,7 +429,9 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
         }
     }
 
-    let p = Paragraph::new(lines.join("\n")).wrap(Wrap { trim: true });
+    let p = Paragraph::new(lines.join("\n"))
+        .wrap(Wrap { trim: true })
+        .scroll((app.projects_scroll, 0));
     frame.render_widget(p, inner);
 }
 
