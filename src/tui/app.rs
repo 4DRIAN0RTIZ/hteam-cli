@@ -5,11 +5,15 @@ use std::time::{Duration, Instant};
 
 use crate::config::WorkingHoursConfig;
 use crate::models::{
-    Card, Comment, List, ProjectMilestone, ProjectTask, Reminder, UserSuggestion, WorkingOnStatus,
+    Card, Comment, List, ProjectMilestone, ProjectTask, Reminder, UserSuggestion, WorkShiftRecord,
+    WorkingOnStatus,
 };
 
 pub struct App {
     pub board_number: u64,
+    /// Último registro de turno del usuario actual (check_in/check_out),
+    /// mostrado en el header — `None` mientras no se ha podido cargar.
+    pub user_shift: Option<WorkShiftRecord>,
     /// Every list returned by the API, unfiltered — cards are fetched for all
     /// of them regardless of visibility so toggling a hidden list back on
     /// doesn't require another round trip.
@@ -70,6 +74,7 @@ impl App {
     ) -> Self {
         Self {
             board_number,
+            user_shift: None,
             all_lists: Vec::new(),
             hidden_lists,
             cards_by_list: HashMap::new(),

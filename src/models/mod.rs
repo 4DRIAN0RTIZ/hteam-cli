@@ -308,6 +308,27 @@ pub struct CheckInResult {
     pub shift_id: Option<u64>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkShiftUser {
+    pub id: u64,
+    pub username: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkShiftRecord {
+    pub id: u64,
+    pub user: WorkShiftUser,
+    pub check_in: Option<String>,
+    pub check_out: Option<String>,
+}
+
+/// Respuesta de `/tr/checkworkshifs/resume/` — sólo se usa `last` para
+/// mostrar el estado del turno actual en el header del TUI.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkShiftResume {
+    pub last: Option<WorkShiftRecord>,
+}
+
 fn display_option_f64(opt: &Option<f64>) -> String {
     match opt {
         Some(v) => format!("{:.0}%", v),
