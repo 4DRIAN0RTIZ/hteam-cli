@@ -3,12 +3,17 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::time::{Duration, Instant};
 
+use crate::config::WorkingHoursConfig;
 use crate::models::{
-    Card, Comment, List, ProjectMilestone, ProjectTask, Reminder, UserSuggestion, WorkingOnStatus,
+    Card, Comment, List, ProjectMilestone, ProjectTask, Reminder, UserSuggestion, WorkShiftRecord,
+    WorkingOnStatus,
 };
 
 pub struct App {
     pub board_number: u64,
+    /// Último registro de turno del usuario actual (check_in/check_out),
+    /// mostrado en el header — `None` mientras no se ha podido cargar.
+    pub user_shift: Option<WorkShiftRecord>,
     /// Every list returned by the API, unfiltered — cards are fetched for all
     /// of them regardless of visibility so toggling a hidden list back on
     /// doesn't require another round trip.
@@ -56,12 +61,20 @@ pub struct App {
     pub new_card_input: String,
     pub new_card_list_id: Option<u64>,
     pub show_help: bool,
+    /// Horario laboral configurado en `config.toml`'s `[working_hours]`.
+    pub working_hours: WorkingHoursConfig,
 }
 
 impl App {
-    pub fn new(board_number: u64, hidden_lists: HashSet<String>, known_projects: Vec<u64>) -> Self {
+    pub fn new(
+        board_number: u64,
+        hidden_lists: HashSet<String>,
+        known_projects: Vec<u64>,
+        working_hours: WorkingHoursConfig,
+    ) -> Self {
         Self {
             board_number,
+            user_shift: None,
             all_lists: Vec::new(),
             hidden_lists,
             cards_by_list: HashMap::new(),
@@ -92,7 +105,13 @@ impl App {
             new_card_input: String::new(),
             new_card_list_id: None,
             show_help: false,
+            working_hours,
         }
+    }
+
+    /// Tiempo restante de la jornada, evaluado contra la hora local actual.
+    pub fn working_hours_remaining(&self) -> Option<String> {
+        self.working_hours.remaining_display(chrono::Local::now().time())
     }
 
     /// Sets a footer status message, starts its expiry timer, and appends it

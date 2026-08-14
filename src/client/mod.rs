@@ -7,7 +7,8 @@ use tokio::sync::Mutex;
 use crate::config::Config;
 use crate::models::{
     Card, CardDetail, CheckInResult, Comment, CommentsResponse, DailyWorkEntry, Label, List,
-    ProjectMilestone, ProjectTasksResponse, Reminder, UserSuggestion, WorkingOnStatus,
+    ProjectMilestone, ProjectTasksResponse, Reminder, UserSuggestion, WorkShiftResume,
+    WorkingOnStatus,
 };
 
 const BASE_URL: &str = "https://hteam.mx/api";
@@ -903,6 +904,26 @@ impl HteamClient {
         }
 
         let result: CheckInResult = response.json().await?;
+        Ok(result)
+    }
+
+    pub async fn get_workshift_resume(&self) -> Result<WorkShiftResume> {
+        let config = self.config.lock().await;
+        let url = format!("{}/tr/checkworkshifs/resume/", BASE_URL);
+        let headers = self.build_headers(&config)?;
+
+        let response = self.client
+            .get(&url)
+            .headers(headers)
+            .send()
+            .await
+            .context("Error al obtener el resumen del turno")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+        }
+
+        let result: WorkShiftResume = response.json().await?;
         Ok(result)
     }
 
