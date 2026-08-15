@@ -3,9 +3,7 @@ use clap::{Args, Subcommand};
 use colored::Colorize;
 use tabled::{Table, settings::Style};
 
-use crate::client::HteamClient;
-use crate::config::Config;
-
+use crate::operations::{self, Session};
 
 #[derive(Subcommand, Debug)]
 pub enum CardsCommands {
@@ -60,11 +58,11 @@ pub struct CreateArgs {
 pub struct MoveArgs {
     /// ID del card
     pub card_id: u64,
-    
+
     /// Lista destino
     #[arg(short, long)]
     pub to: u64,
-    
+
     /// Lista origen (opcional)
     #[arg(short, long)]
     pub from: Option<u64>,
@@ -74,7 +72,7 @@ pub struct MoveArgs {
 pub struct UpdateDescArgs {
     /// ID del card
     pub card_id: u64,
-    
+
     /// Nueva descripción
     #[arg(short, long)]
     pub description: String,
@@ -84,11 +82,11 @@ pub struct UpdateDescArgs {
 pub struct CommentArgs {
     /// ID del card
     pub card_id: u64,
-    
+
     /// Comentario
     #[arg(short, long)]
     pub text: String,
-    
+
     /// Board number (si no está configurado)
     #[arg(short, long)]
     pub board: Option<u64>,
@@ -151,207 +149,198 @@ pub async fn execute(cmd: CardsCommands, board: Option<u64>, json: bool) -> Resu
 }
 
 pub async fn lists(board: Option<u64>, json: bool) -> Result<()> {
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
-    
-    let lists = client.get_lists(board).await?;
-    
+    let session = Session::open().await?;
+
+    let lists = operations::cards::list_lists(&session.client, board).await?;
+
     if json {
         println!("{}", serde_json::to_string_pretty(&lists)?);
         return Ok(());
     }
-    
+
     if lists.is_empty() {
         println!("⚠️  No se encontraron listas.");
         return Ok(());
     }
-    
+
     let mut table = Table::new(&lists);
     table.with(Style::rounded());
-    
+
     println!("\n📋 Listas del board:\n");
     println!("{}", table);
     println!();
-    
+
     Ok(())
 }
 
 async fn list_cards(args: ListCardsArgs, board: Option<u64>, json: bool) -> Result<()> {
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
-    
-    let (cards, _) = client.get_cards(args.list_id, board).await?;
-    
+    let session = Session::open().await?;
+
+    let (cards, _) = operations::cards::list_cards(&session.client, args.list_id, board).await?;
+
     if json {
         println!("{}", serde_json::to_string_pretty(&cards)?);
         return Ok(());
     }
-    
+
     if cards.is_empty() {
         println!("⚠️  No se encontraron cards en la lista {}.", args.list_id);
         return Ok(());
     }
-    
+
     let mut table = Table::new(&cards);
     table.with(Style::rounded());
-    
+
     println!("\n🎴 Cards en lista {}:\n", args.list_id);
     println!("{}", table);
     println!();
-    
+
     Ok(())
 }
 
 pub async fn open_cards(board: Option<u64>, json: bool) -> Result<()> {
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
-    
-    let cards = client.get_open_cards(board).await?;
-    
+    let session = Session::open().await?;
+
+    let cards = operations::cards::open_cards(&session.client, board).await?;
+
     if json {
         println!("{}", serde_json::to_string_pretty(&cards)?);
         return Ok(());
     }
-    
+
     if cards.is_empty() {
         println!("⚠️  No hay cards abiertos.");
         return Ok(());
     }
-    
+
     let mut table = Table::new(&cards);
     table.with(Style::rounded());
-    
+
     println!("\n🎴 Cards abiertos:\n");
     println!("{}", table);
     println!();
-    
+
     Ok(())
 }
 
 pub async fn closed_cards(board: Option<u64>, json: bool) -> Result<()> {
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
-    
-    let cards = client.get_closed_cards(board).await?;
-    
+    let session = Session::open().await?;
+
+    let cards = operations::cards::closed_cards(&session.client, board).await?;
+
     if json {
         println!("{}", serde_json::to_string_pretty(&cards)?);
         return Ok(());
     }
-    
+
     if cards.is_empty() {
         println!("⚠️  No hay cards cerrados.");
         return Ok(());
     }
-    
+
     let mut table = Table::new(&cards);
     table.with(Style::rounded());
-    
+
     println!("\n🎴 Cards cerrados:\n");
     println!("{}", table);
     println!();
-    
+
     Ok(())
 }
 
 async fn card_detail(args: DetailArgs, json: bool) -> Result<()> {
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
-    
-    let detail = client.get_card_detail(args.card_id).await?;
-    
+    let session = Session::open().await?;
+
+    let detail = operations::cards::card_detail(&session.client, args.card_id).await?;
+
     if json {
         println!("{}", serde_json::to_string_pretty(&detail)?);
         return Ok(());
     }
-    
+
     println!("\n🎴 Card #{}: {}", detail.id, detail.name.bold());
     if let Some(status) = &detail.status {
         println!("   Estado: {}", status);
     }
-    
+
     if let Some(list) = detail.list {
         println!("   Lista: {} ({})", list.name, list.id);
     }
-    
+
     if !detail.labels.is_empty() {
         let labels: Vec<String> = detail.labels.iter()
             .map(|l| l.name.clone())
             .collect();
         println!("   Labels: {}", labels.join(", "));
     }
-    
+
     if let Some(desc) = detail.description {
         println!("\n   Descripción:\n   {}", desc);
     }
-    
+
     println!();
-    
+
     Ok(())
 }
 
 async fn create_card(args: CreateArgs, json: bool) -> Result<()> {
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
-    
-    let card = client.create_card(&args.name, args.list_id, None).await?;
-    
+    let session = Session::open().await?;
+
+    let card = operations::cards::create_card(&session.client, &args.name, args.list_id).await?;
+
     if json {
         println!("{}", serde_json::to_string_pretty(&card)?);
         return Ok(());
     }
-    
+
     println!("\n✅ Card creado exitosamente:");
     println!("   ID: {}", card.id);
     println!("   Nombre: {}", card.name);
     println!();
-    
+
     Ok(())
 }
 
 async fn move_card(args: MoveArgs, board: Option<u64>, json: bool) -> Result<()> {
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
-    
-    // If from_list is not provided, use default 1 (Open)
+    let session = Session::open().await?;
+
+    // If from_list is not provided, operations::cards::move_card defaults to 1 (Open)
     let from_list = args.from.unwrap_or(1);
-    
-    client.move_card(args.card_id, from_list, args.to, board).await?;
-    
+
+    operations::cards::move_card(&session.client, args.card_id, args.from, args.to, board).await?;
+
     if json {
-        println!("{{\"success\": true, \"card_id\": {}, \"from_list\": {}, \"to_list\": {}}}", 
+        println!("{{\"success\": true, \"card_id\": {}, \"from_list\": {}, \"to_list\": {}}}",
                  args.card_id, from_list, args.to);
         return Ok(());
     }
-    
+
     println!("\n✅ Card {} movido de lista {} a lista {}", args.card_id, from_list, args.to);
     println!();
-    
+
     Ok(())
 }
 
 async fn update_desc(args: UpdateDescArgs, json: bool) -> Result<()> {
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
-    
-    client.update_card_description(args.card_id, &args.description).await?;
-    
+    let session = Session::open().await?;
+
+    operations::cards::update_description(&session.client, args.card_id, &args.description).await?;
+
     if json {
         println!("{{\"success\": true, \"card_id\": {}}}", args.card_id);
         return Ok(());
     }
-    
+
     println!("\n✅ Descripción actualizada para card {}", args.card_id);
     println!();
-    
+
     Ok(())
 }
 
 async fn post_comment(args: CommentArgs, board: Option<u64>, json: bool) -> Result<()> {
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
+    let session = Session::open().await?;
 
-    client.post_comment(args.card_id, &args.text, board).await?;
+    operations::comments::post_comment(&session.client, args.card_id, &args.text, board).await?;
 
     if json {
         println!("{{\"success\": true, \"card_id\": {}}}", args.card_id);
@@ -365,10 +354,9 @@ async fn post_comment(args: CommentArgs, board: Option<u64>, json: bool) -> Resu
 }
 
 async fn list_comments(args: CommentsArgs, json: bool) -> Result<()> {
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
+    let session = Session::open().await?;
 
-    let comments = client.get_card_comments(args.card_id).await?;
+    let comments = operations::comments::list_comments(&session.client, args.card_id).await?;
 
     if json {
         println!("{}", serde_json::to_string_pretty(&comments)?);
@@ -390,10 +378,9 @@ async fn list_comments(args: CommentsArgs, json: bool) -> Result<()> {
 }
 
 async fn card_labels(args: LabelsArgs, board: Option<u64>, json: bool) -> Result<()> {
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
+    let session = Session::open().await?;
 
-    let labels = client.get_card_labels(args.card_id, board).await?;
+    let labels = operations::cards::card_labels(&session.client, args.card_id, board).await?;
 
     if json {
         println!("{}", serde_json::to_string_pretty(&labels)?);
@@ -415,19 +402,14 @@ async fn card_labels(args: LabelsArgs, board: Option<u64>, json: bool) -> Result
 }
 
 async fn update_card(args: UpdateArgs, board: Option<u64>, json: bool) -> Result<()> {
-    let config = Config::load()?;
-    let board_number = board
-        .or_else(|| config.get_board_number())
+    let session = Session::open().await?;
+    let board_number = operations::resolve_board_number(&session.config, board)
         .ok_or_else(|| anyhow::anyhow!("No hay board configurado. Usa --board o 'hteam board switch'."))?;
 
-    let client = HteamClient::with_auth(config).await?;
-
-    let detail = client.get_card_detail(args.card_id).await?;
-
-    client.update_card_full(
+    operations::cards::update_card(
+        &session.client,
         args.card_id,
         board_number,
-        &detail,
         args.name.as_deref(),
         args.description.as_deref(),
         args.priority.as_deref(),
@@ -446,10 +428,9 @@ async fn update_card(args: UpdateArgs, board: Option<u64>, json: bool) -> Result
 }
 
 async fn card_remind(args: RemindArgs, json: bool) -> Result<()> {
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
+    let session = Session::open().await?;
 
-    client.set_reminder(args.card_id).await?;
+    operations::reminders::create(&session.client, args.card_id).await?;
 
     if json {
         println!("{{\"success\": true, \"card_id\": {}}}", args.card_id);
