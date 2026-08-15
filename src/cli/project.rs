@@ -2,8 +2,7 @@ use anyhow::Result;
 use clap::{Args, Subcommand};
 use tabled::{Table, settings::Style};
 
-use crate::client::HteamClient;
-use crate::config::Config;
+use crate::operations::{self, Session};
 
 #[derive(Subcommand, Debug)]
 pub enum ProjectCommands {
@@ -27,10 +26,9 @@ pub async fn execute(cmd: ProjectCommands, json: bool) -> Result<()> {
 }
 
 async fn project_milestones(args: ProjectArgs, json: bool) -> Result<()> {
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
+    let session = Session::open().await?;
 
-    let milestones = client.get_project_milestones(args.project_id).await?;
+    let milestones = operations::projects::milestones(&session.client, args.project_id).await?;
 
     if json {
         println!("{}", serde_json::to_string_pretty(&milestones)?);
@@ -53,10 +51,9 @@ async fn project_milestones(args: ProjectArgs, json: bool) -> Result<()> {
 }
 
 async fn project_tasks(args: ProjectArgs, json: bool) -> Result<()> {
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
+    let session = Session::open().await?;
 
-    let resp = client.get_project_tasks(args.project_id).await?;
+    let resp = operations::projects::tasks(&session.client, args.project_id).await?;
 
     if json {
         println!("{}", serde_json::to_string_pretty(&resp)?);

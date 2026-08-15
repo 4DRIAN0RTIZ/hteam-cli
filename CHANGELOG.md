@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 - *(workshift)* Show current shift status in the TUI header
 - *(tui)* Display remaining working hours in title bar
+- *(tui)* Add live board selector
+- *(tui)* Add scroll support to popups and project detail focus
+- *(tui)* Show version in status bar
+
+
+### Refactoring
+- *(core)* Extract shared operations and tui widgets modules
 
 ## [0.4.0] - 2026-08-13
 

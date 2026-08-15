@@ -3,6 +3,7 @@ mod client;
 mod config;
 mod mcp;
 mod models;
+mod operations;
 mod tui;
 
 use anyhow::Result;

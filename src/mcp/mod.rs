@@ -13,7 +13,7 @@ use rmcp::{
 use serde::Deserialize;
 
 use crate::client::HteamClient;
-use crate::config::Config;
+use crate::operations::{self, Session};
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -161,7 +161,7 @@ impl HteamMcpServer {
         &self,
         Parameters(BoardParam { board }): Parameters<BoardParam>,
     ) -> Result<CallToolResult, McpError> {
-        let lists = self.client.get_lists(board).await.map_err(err)?;
+        let lists = operations::cards::list_lists(&self.client, board).await.map_err(err)?;
         ok(lists)
     }
 
@@ -172,7 +172,7 @@ impl HteamMcpServer {
         &self,
         Parameters(ListCardsParams { list_id, board }): Parameters<ListCardsParams>,
     ) -> Result<CallToolResult, McpError> {
-        let (cards, _) = self.client.get_cards(list_id, board).await.map_err(err)?;
+        let (cards, _) = operations::cards::list_cards(&self.client, list_id, board).await.map_err(err)?;
         ok(cards)
     }
 
@@ -181,7 +181,7 @@ impl HteamMcpServer {
         &self,
         Parameters(BoardParam { board }): Parameters<BoardParam>,
     ) -> Result<CallToolResult, McpError> {
-        let cards = self.client.get_open_cards(board).await.map_err(err)?;
+        let cards = operations::cards::open_cards(&self.client, board).await.map_err(err)?;
         ok(cards)
     }
 
@@ -190,7 +190,7 @@ impl HteamMcpServer {
         &self,
         Parameters(BoardParam { board }): Parameters<BoardParam>,
     ) -> Result<CallToolResult, McpError> {
-        let cards = self.client.get_closed_cards(board).await.map_err(err)?;
+        let cards = operations::cards::closed_cards(&self.client, board).await.map_err(err)?;
         ok(cards)
     }
 
@@ -199,7 +199,7 @@ impl HteamMcpServer {
         &self,
         Parameters(CardParams { card_id }): Parameters<CardParams>,
     ) -> Result<CallToolResult, McpError> {
-        let detail = self.client.get_card_detail(card_id).await.map_err(err)?;
+        let detail = operations::cards::card_detail(&self.client, card_id).await.map_err(err)?;
         ok(detail)
     }
 
@@ -208,7 +208,7 @@ impl HteamMcpServer {
         &self,
         Parameters(CardLabelsParams { card_id, board }): Parameters<CardLabelsParams>,
     ) -> Result<CallToolResult, McpError> {
-        let labels = self.client.get_card_labels(card_id, board).await.map_err(err)?;
+        let labels = operations::cards::card_labels(&self.client, card_id, board).await.map_err(err)?;
         ok(labels)
     }
 
@@ -217,8 +217,7 @@ impl HteamMcpServer {
         &self,
         Parameters(CreateCardParams { name, list_id }): Parameters<CreateCardParams>,
     ) -> Result<CallToolResult, McpError> {
-        let card = self.client
-            .create_card(&name, list_id, None)
+        let card = operations::cards::create_card(&self.client, &name, list_id)
             .await
             .map_err(err)?;
         ok(card)
@@ -229,8 +228,7 @@ impl HteamMcpServer {
         &self,
         Parameters(MoveCardParams { card_id, to_list, from_list, board }): Parameters<MoveCardParams>,
     ) -> Result<CallToolResult, McpError> {
-        self.client
-            .move_card(card_id, from_list.unwrap_or(1), to_list, board)
+        operations::cards::move_card(&self.client, card_id, from_list, to_list, board)
             .await
             .map_err(err)?;
         ok(serde_json::json!({"success": true, "card_id": card_id, "to_list": to_list}))
@@ -241,8 +239,7 @@ impl HteamMcpServer {
         &self,
         Parameters(UpdateDescParams { card_id, description }): Parameters<UpdateDescParams>,
     ) -> Result<CallToolResult, McpError> {
-        self.client
-            .update_card_description(card_id, &description)
+        operations::cards::update_description(&self.client, card_id, &description)
             .await
             .map_err(err)?;
         ok(serde_json::json!({"success": true, "card_id": card_id}))
@@ -253,13 +250,11 @@ impl HteamMcpServer {
         &self,
         Parameters(UpdateCardParams { card_id, board, name, description, priority, responsible }): Parameters<UpdateCardParams>,
     ) -> Result<CallToolResult, McpError> {
-        let detail = self.client.get_card_detail(card_id).await.map_err(err)?;
-        self.client
-            .update_card_full(
-                card_id, board, &detail,
-                name.as_deref(), description.as_deref(),
-                priority.as_deref(), responsible.as_deref(),
-            )
+        operations::cards::update_card(
+            &self.client, card_id, board,
+            name.as_deref(), description.as_deref(),
+            priority.as_deref(), responsible.as_deref(),
+        )
             .await
             .map_err(err)?;
         ok(serde_json::json!({"success": true, "card_id": card_id}))
@@ -270,7 +265,7 @@ impl HteamMcpServer {
         &self,
         Parameters(CardParams { card_id }): Parameters<CardParams>,
     ) -> Result<CallToolResult, McpError> {
-        let comments = self.client.get_card_comments(card_id).await.map_err(err)?;
+        let comments = operations::comments::list_comments(&self.client, card_id).await.map_err(err)?;
         ok(comments)
     }
 
@@ -279,8 +274,7 @@ impl HteamMcpServer {
         &self,
         Parameters(CommentParams { card_id, comment, board }): Parameters<CommentParams>,
     ) -> Result<CallToolResult, McpError> {
-        self.client
-            .post_comment(card_id, &comment, board)
+        operations::comments::post_comment(&self.client, card_id, &comment, board)
             .await
             .map_err(err)?;
         ok(serde_json::json!({"success": true, "card_id": card_id}))
@@ -291,7 +285,7 @@ impl HteamMcpServer {
         &self,
         Parameters(CardParams { card_id }): Parameters<CardParams>,
     ) -> Result<CallToolResult, McpError> {
-        self.client.set_reminder(card_id).await.map_err(err)?;
+        operations::reminders::create(&self.client, card_id).await.map_err(err)?;
         ok(serde_json::json!({"success": true, "card_id": card_id}))
     }
 
@@ -299,7 +293,7 @@ impl HteamMcpServer {
 
     #[tool(description = "Listar los cards en los que estás trabajando actualmente")]
     async fn working_list(&self) -> Result<CallToolResult, McpError> {
-        let working = self.client.get_working_on().await.map_err(err)?;
+        let working = operations::working::list_working(&self.client).await.map_err(err)?;
         ok(working)
     }
 
@@ -308,7 +302,7 @@ impl HteamMcpServer {
         &self,
         Parameters(CardParams { card_id }): Parameters<CardParams>,
     ) -> Result<CallToolResult, McpError> {
-        self.client.start_working(card_id).await.map_err(err)?;
+        operations::working::start_working(&self.client, card_id).await.map_err(err)?;
         ok(serde_json::json!({"success": true, "card_id": card_id}))
     }
 
@@ -317,7 +311,7 @@ impl HteamMcpServer {
         &self,
         Parameters(WorkingStopParams { working_id }): Parameters<WorkingStopParams>,
     ) -> Result<CallToolResult, McpError> {
-        self.client.stop_working(working_id).await.map_err(err)?;
+        operations::working::stop_working(&self.client, working_id).await.map_err(err)?;
         ok(serde_json::json!({"success": true, "working_id": working_id}))
     }
 
@@ -328,7 +322,7 @@ impl HteamMcpServer {
         &self,
         Parameters(ProjectParams { project_id }): Parameters<ProjectParams>,
     ) -> Result<CallToolResult, McpError> {
-        let milestones = self.client.get_project_milestones(project_id).await.map_err(err)?;
+        let milestones = operations::projects::milestones(&self.client, project_id).await.map_err(err)?;
         ok(milestones)
     }
 
@@ -337,7 +331,7 @@ impl HteamMcpServer {
         &self,
         Parameters(ProjectParams { project_id }): Parameters<ProjectParams>,
     ) -> Result<CallToolResult, McpError> {
-        let resp = self.client.get_project_tasks(project_id).await.map_err(err)?;
+        let resp = operations::projects::tasks(&self.client, project_id).await.map_err(err)?;
         ok(resp)
     }
 
@@ -348,19 +342,19 @@ impl HteamMcpServer {
         &self,
         Parameters(UsersSearchParams { query }): Parameters<UsersSearchParams>,
     ) -> Result<CallToolResult, McpError> {
-        let users = self.client.search_users(&query).await.map_err(err)?;
+        let users = operations::users::search(&self.client, &query).await.map_err(err)?;
         ok(users)
     }
 
     #[tool(description = "Ver recordatorios pendientes")]
     async fn reminders(&self) -> Result<CallToolResult, McpError> {
-        let items = self.client.get_reminders().await.map_err(err)?;
+        let items = operations::reminders::list(&self.client).await.map_err(err)?;
         ok(items)
     }
 
     #[tool(description = "Registrar entrada del día (check in)")]
     async fn check_in(&self) -> Result<CallToolResult, McpError> {
-        let result = self.client.check_in().await.map_err(err)?;
+        let result = operations::checkin::check_in(&self.client).await.map_err(err)?;
         ok(result)
     }
 
@@ -369,8 +363,9 @@ impl HteamMcpServer {
         &self,
         Parameters(DailyWorkParams { user, activity_type, range }): Parameters<DailyWorkParams>,
     ) -> Result<CallToolResult, McpError> {
-        let entries = self.client
-            .get_daily_work_history(user.as_deref(), activity_type.as_deref(), range.as_deref())
+        let entries = operations::daily_work::history(
+            &self.client, user.as_deref(), activity_type.as_deref(), range.as_deref(),
+        )
             .await
             .map_err(err)?;
         ok(entries)
@@ -380,9 +375,8 @@ impl HteamMcpServer {
 // ── entrypoint ─────────────────────────────────────────────────────────────
 
 pub async fn run() -> Result<()> {
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
-    let server = HteamMcpServer::new(client);
+    let session = Session::open().await?;
+    let server = HteamMcpServer::new(session.client);
 
     let service = server.serve(stdio()).await
         .inspect_err(|e| eprintln!("MCP server error: {e:?}"))?;

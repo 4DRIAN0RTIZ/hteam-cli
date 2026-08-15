@@ -1,11 +1,13 @@
 use anyhow::Result;
 
 use crate::client::HteamClient;
+use crate::operations;
 
 use super::app::App;
 
 pub fn open_help(app: &mut App) {
     app.show_help = true;
+    app.help_scroll.reset();
 }
 
 pub fn close_help(app: &mut App) {
@@ -17,14 +19,14 @@ pub async fn refresh_all(client: &HteamClient, app: &mut App) {
 
     refresh_user_shift(client, app).await;
 
-    match client.get_lists(Some(app.board_number)).await {
+    match operations::cards::list_lists(client, Some(app.board_number)).await {
         Ok(lists) => {
             app.all_lists = lists;
             app.cards_by_list.clear();
 
             let mut error_msg = None;
             for list in app.all_lists.clone() {
-                match client.get_cards(list.id, Some(app.board_number)).await {
+                match operations::cards::list_cards(client, list.id, Some(app.board_number)).await {
                     Ok((cards, _)) => {
                         app.cards_by_list.insert(list.id, cards);
                     }
@@ -107,7 +109,7 @@ pub async fn refresh_current_list(client: &HteamClient, app: &mut App) {
     let Some(list) = app.current_list().cloned() else {
         return;
     };
-    match client.get_cards(list.id, Some(app.board_number)).await {
+    match operations::cards::list_cards(client, list.id, Some(app.board_number)).await {
         Ok((cards, _)) => {
             app.cards_by_list.insert(list.id, cards);
         }
@@ -149,9 +151,14 @@ pub async fn move_active_card(client: &HteamClient, app: &mut App, delta: i32) {
         .or_default()
         .push(card.clone());
 
-    match client
-        .move_card(card.id, from_list.id, to_list.id, Some(app.board_number))
-        .await
+    match operations::cards::move_card(
+        client,
+        card.id,
+        Some(from_list.id),
+        to_list.id,
+        Some(app.board_number),
+    )
+    .await
     {
         Ok(()) => {
             let new_len = app.cards_by_list.get(&to_list.id).map(|c| c.len()).unwrap_or(1);
@@ -183,7 +190,8 @@ pub async fn move_active_card(client: &HteamClient, app: &mut App, delta: i32) {
 /// Opens the reminders popup and (re)loads pending reminders.
 pub async fn open_reminders(client: &HteamClient, app: &mut App) {
     app.show_reminders = true;
-    match client.get_reminders().await {
+    app.reminders_scroll.reset();
+    match operations::reminders::list(client).await {
         Ok(list) => app.reminders = list,
         Err(e) => app.set_status(format!("Error cargando reminders: {}", e)),
     }
@@ -199,10 +207,10 @@ pub async fn add_reminder_for_current_card(client: &HteamClient, app: &mut App) 
     let Some(card) = app.current_card().cloned() else {
         return;
     };
-    match client.set_reminder(card.id).await {
+    match operations::reminders::create(client, card.id).await {
         Ok(()) => {
             app.set_status(format!("Reminder creado: {}", card.name));
-            if let Ok(list) = client.get_reminders().await {
+            if let Ok(list) = operations::reminders::list(client).await {
                 app.reminders = list;
             }
         }
@@ -222,8 +230,9 @@ pub async fn open_comments(client: &HteamClient, app: &mut App) {
     app.composing_comment = false;
     app.comment_input.clear();
     app.mention_suggestions.clear();
+    app.comments_scroll.reset();
 
-    match client.get_card_comments(card.id).await {
+    match operations::comments::list_comments(client, card.id).await {
         Ok(list) => app.comments = list,
         Err(e) => app.set_status(format!("Error cargando comentarios: {}", e)),
     }
@@ -252,7 +261,7 @@ pub async fn comment_input_push(client: &HteamClient, app: &mut App, ch: char) {
 }
 
 pub async fn comment_input_backspace(client: &HteamClient, app: &mut App) {
-    app.comment_input.pop();
+    app.comment_input.backspace();
     update_mention_suggestions(client, app).await;
 }
 
@@ -261,12 +270,12 @@ pub async fn comment_input_backspace(client: &HteamClient, app: &mut App) {
 /// background task/debounce), at the cost of one request per character while
 /// typing a mention.
 async fn update_mention_suggestions(client: &HteamClient, app: &mut App) {
-    match current_mention_query(&app.comment_input) {
+    match operations::comments::mention_query(app.comment_input.as_str()) {
         // Search on a bare '@' too (empty query) — matches the Neovim
         // plugin's behavior of firing on any `@([%w_]*)$` match, capture
         // included, so suggestions show up immediately instead of only
         // after the first letter.
-        Some(query) => match client.search_users(query).await {
+        Some(query) => match operations::comments::mention_suggestions(client, query).await {
             Ok(list) => {
                 app.mention_suggestions = list;
                 app.mention_selected = 0;
@@ -278,17 +287,6 @@ async fn update_mention_suggestions(client: &HteamClient, app: &mut App) {
         },
         None => app.mention_suggestions.clear(),
     }
-}
-
-/// Returns the partial username being typed if the text ends in an
-/// unfinished `@mention` token (mirrors the Neovim plugin's `@([%w_]*)$`
-/// end-of-line match).
-fn current_mention_query(text: &str) -> Option<&str> {
-    let word_start = text
-        .rfind(|c: char| c.is_whitespace())
-        .map(|i| i + 1)
-        .unwrap_or(0);
-    text[word_start..].strip_prefix('@')
 }
 
 pub fn mention_move_selection(app: &mut App, delta: i32) {
@@ -308,6 +306,7 @@ pub fn accept_mention_suggestion(app: &mut App) {
     };
     let word_start = app
         .comment_input
+        .as_str()
         .rfind(|c: char| c.is_whitespace())
         .map(|i| i + 1)
         .unwrap_or(0);
@@ -327,11 +326,11 @@ pub async fn submit_comment(client: &HteamClient, app: &mut App) {
         return;
     }
 
-    match client.post_comment(card.id, &text, Some(app.board_number)).await {
+    match operations::comments::post_comment(client, card.id, &text, Some(app.board_number)).await {
         Ok(()) => {
             app.set_status("Comentario publicado.");
             cancel_composing_comment(app);
-            if let Ok(list) = client.get_card_comments(card.id).await {
+            if let Ok(list) = operations::comments::list_comments(client, card.id).await {
                 app.comments = list;
             }
         }
@@ -346,7 +345,7 @@ pub async fn submit_comment(client: &HteamClient, app: &mut App) {
 /// when the TUI is running against the user's configured default board — same
 /// limitation the plain `hteam cards update-desc` command already has.
 pub async fn save_description(client: &HteamClient, app: &mut App, card_id: u64, description: &str) {
-    match client.update_card_description(card_id, description).await {
+    match operations::cards::update_description(client, card_id, description).await {
         Ok(()) => {
             app.set_status("Descripción actualizada.");
             refresh_current_list(client, app).await;
@@ -363,7 +362,7 @@ pub fn open_description(app: &mut App) {
     let Some(card) = app.current_card() else {
         return;
     };
-    app.description_input = card.description.clone().unwrap_or_default();
+    app.description_input.set(card.description.clone().unwrap_or_default());
     app.show_description = true;
 }
 
@@ -377,7 +376,7 @@ pub fn description_input_push(app: &mut App, ch: char) {
 }
 
 pub fn description_input_backspace(app: &mut App) {
-    app.description_input.pop();
+    app.description_input.backspace();
 }
 
 /// Saves the edited description (if the card is still resolvable) and closes
@@ -389,7 +388,7 @@ pub async fn submit_description(client: &HteamClient, app: &mut App) {
     };
     let text = app.description_input.clone();
     close_description(app);
-    save_description(client, app, card.id, &text).await;
+    save_description(client, app, card.id, text.as_str()).await;
 }
 
 /// Opens the projects popup. If nothing is active yet, auto-loads the most
@@ -399,6 +398,8 @@ pub async fn open_projects(client: &HteamClient, app: &mut App) {
     app.show_projects = true;
     app.composing_project = false;
     app.project_input.clear();
+    app.projects_detail_focused = false;
+    app.projects_scroll.reset();
 
     if app.active_project.is_none() {
         if let Some(&id) = app.known_projects.first() {
@@ -411,6 +412,7 @@ pub fn close_projects(app: &mut App) {
     app.show_projects = false;
     app.composing_project = false;
     app.project_input.clear();
+    app.projects_detail_focused = false;
 }
 
 pub fn start_composing_project(app: &mut App) {
@@ -430,7 +432,7 @@ pub fn project_input_push(app: &mut App, ch: char) {
 }
 
 pub fn project_input_backspace(app: &mut App) {
-    app.project_input.pop();
+    app.project_input.backspace();
 }
 
 pub fn move_project_selection(app: &mut App, delta: i32) {
@@ -465,11 +467,11 @@ async fn load_project(client: &HteamClient, app: &mut App, id: u64) {
     app.active_project = Some(id);
     remember_project(app, id);
 
-    match client.get_project_milestones(id).await {
+    match operations::projects::milestones(client, id).await {
         Ok(list) => app.project_milestones = list,
         Err(e) => app.set_status(format!("Error cargando milestones: {}", e)),
     }
-    match client.get_project_tasks(id).await {
+    match operations::projects::tasks(client, id).await {
         Ok(resp) => app.project_tasks = resp.results,
         Err(e) => app.set_status(format!("Error cargando tasks: {}", e)),
     }
@@ -482,7 +484,7 @@ fn remember_project(app: &mut App, id: u64) {
     app.known_projects.insert(0, id);
     app.selected_project_idx = 0;
 
-    if let Err(e) = persist_known_projects(app) {
+    if let Err(e) = persist_known_project(id) {
         app.set_status(format!(
             "Proyecto cargado (no se pudo guardar en config.toml: {})",
             e
@@ -490,10 +492,9 @@ fn remember_project(app: &mut App, id: u64) {
     }
 }
 
-fn persist_known_projects(app: &App) -> Result<()> {
+fn persist_known_project(id: u64) -> Result<()> {
     let mut config = crate::config::Config::load()?;
-    config.tui.known_projects = app.known_projects.clone();
-    config.save()
+    operations::projects::remember_project(&mut config, id)
 }
 
 /// Starts composing a new card for the currently selected list. No-op if
@@ -519,7 +520,7 @@ pub fn new_card_input_push(app: &mut App, ch: char) {
 }
 
 pub fn new_card_input_backspace(app: &mut App) {
-    app.new_card_input.pop();
+    app.new_card_input.backspace();
 }
 
 /// `create_card` resolves board_id/board_number internally from the saved
@@ -537,11 +538,11 @@ pub async fn submit_new_card(client: &HteamClient, app: &mut App) {
         return;
     }
 
-    match client.create_card(&name, Some(list_id), None).await {
+    match operations::cards::create_card(client, &name, Some(list_id)).await {
         Ok(card) => {
             app.set_status(format!("Card creada: {}", card.name));
             cancel_composing_card(app);
-            if let Ok((cards, _)) = client.get_cards(list_id, Some(app.board_number)).await {
+            if let Ok((cards, _)) = operations::cards::list_cards(client, list_id, Some(app.board_number)).await {
                 app.cards_by_list.insert(list_id, cards);
             }
         }
@@ -554,7 +555,7 @@ pub async fn submit_new_card(client: &HteamClient, app: &mut App) {
 async fn refresh_working_on(client: &HteamClient, app: &mut App) {
     // Non-fatal: keep the previous set on a transient error instead of
     // blanking out the border highlight everywhere.
-    if let Ok(items) = client.get_working_on().await {
+    if let Ok(items) = operations::working::list_working(client).await {
         app.working_on = items;
     }
 }
@@ -562,7 +563,7 @@ async fn refresh_working_on(client: &HteamClient, app: &mut App) {
 async fn refresh_user_shift(client: &HteamClient, app: &mut App) {
     // Non-fatal: keep the previous value on a transient error instead of
     // blanking out the header.
-    if let Ok(resume) = client.get_workshift_resume().await {
+    if let Ok(resume) = operations::checkin::workshift_resume(client).await {
         app.user_shift = resume.last;
     }
 }
@@ -576,7 +577,7 @@ pub async fn toggle_working_on(client: &HteamClient, app: &mut App) {
     };
 
     if let Some(working_id) = app.working_on_id_for(card.id) {
-        match client.stop_working(working_id).await {
+        match operations::working::stop_working(client, working_id).await {
             Ok(()) => {
                 app.set_status(format!("Dejaste de trabajar en: {}", card.name));
                 refresh_working_on(client, app).await;
@@ -584,7 +585,7 @@ pub async fn toggle_working_on(client: &HteamClient, app: &mut App) {
             Err(e) => app.set_status(format!("Error deteniendo working on: {}", e)),
         }
     } else {
-        match client.start_working(card.id).await {
+        match operations::working::start_working(client, card.id).await {
             Ok(()) => {
                 app.set_status(format!("Working on: {}", card.name));
                 refresh_working_on(client, app).await;
@@ -592,4 +593,87 @@ pub async fn toggle_working_on(client: &HteamClient, app: &mut App) {
             Err(e) => app.set_status(format!("Error iniciando working on: {}", e)),
         }
     }
+}
+
+// ── Board-switch popup ──────────────────────────────────────────────────
+
+/// Abre el popup de cambio de board y obtiene la lista desde la API.
+pub async fn open_board_switch(client: &HteamClient, app: &mut App) {
+    app.show_board_switch = true;
+    app.available_boards.clear();
+    app.selected_board_idx = 0;
+    app.set_status("Cargando boards...");
+
+    match operations::boards::list_live(client).await {
+        Ok(boards) => {
+            // Pre-seleccionar el board activo en la lista
+            if let Some(idx) = boards.iter().position(|b| b.id == app.board_number) {
+                app.selected_board_idx = idx;
+            }
+            app.available_boards = boards;
+            app.clear_status();
+        }
+        Err(e) => app.set_status(format!("Error cargando boards: {}", e)),
+    }
+}
+
+pub fn close_board_switch(app: &mut App) {
+    app.show_board_switch = false;
+    app.available_boards.clear();
+}
+
+pub fn move_board_selection(app: &mut App, delta: i32) {
+    if app.available_boards.is_empty() {
+        return;
+    }
+    let len = app.available_boards.len() as i32;
+    let next = (app.selected_board_idx as i32 + delta).clamp(0, len - 1);
+    app.selected_board_idx = next as usize;
+}
+
+/// Cambia al board actualmente resaltado en el popup.
+pub async fn select_current_board(client: &HteamClient, app: &mut App) {
+    let Some(board) = app.available_boards.get(app.selected_board_idx).cloned() else {
+        return;
+    };
+    switch_to_board(client, app, board.id).await;
+}
+
+/// Lógica central del cambio de board: actualiza `board_number`, limpia el
+/// estado del tablero, persiste en config.toml y recarga las listas/cards.
+async fn switch_to_board(client: &HteamClient, app: &mut App, id: u64) {
+    if id == app.board_number {
+        close_board_switch(app);
+        return;
+    }
+
+    app.board_number = id;
+    app.all_lists.clear();
+    app.cards_by_list.clear();
+    app.selected_card.clear();
+    app.selected_list = 0;
+    app.working_on.clear();
+
+    close_board_switch(app);
+
+    if let Err(e) = persist_board_switch(id) {
+        app.set_status(format!(
+            "Board #{} cargando (no se pudo guardar config: {})",
+            id, e
+        ));
+    }
+
+    refresh_all(client, app).await;
+}
+
+fn persist_board_switch(id: u64) -> Result<()> {
+    let mut config = crate::config::Config::load()?;
+    operations::boards::switch_board(&mut config, id, None)?;
+    Ok(())
+}
+
+/// Alterna el foco entre la lista de proyectos guardados (izquierda) y el panel de detalle (derecha).
+pub fn toggle_projects_focus(app: &mut App) {
+    app.projects_detail_focused = !app.projects_detail_focused;
+    app.projects_scroll.reset();
 }
