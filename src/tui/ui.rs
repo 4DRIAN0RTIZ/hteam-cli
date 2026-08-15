@@ -1,11 +1,13 @@
 use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
-    widgets::{Block, Borders, Clear, Paragraph, Wrap},
+    text::{Line, Text},
+    widgets::{Block, Borders, Paragraph, Wrap},
     Frame,
 };
 
 use super::app::App;
+use super::widgets::{centered_rect, draw_frame};
 
 pub fn draw(frame: &mut Frame, app: &App) {
     let area = frame.area();
@@ -20,14 +22,10 @@ pub fn draw(frame: &mut Frame, app: &App) {
 
     draw_board(frame, app, rows[1]);
 
-    let status = app
-        .status
-        .clone()
-        .unwrap_or_else(|| " '?' ayuda · q salir".to_string());
-    frame.render_widget(Paragraph::new(status), rows[2]);
+    draw_status_bar(frame, app, rows[2]);
 
     if app.show_help {
-        draw_help_popup(frame);
+        draw_help_popup(frame, app);
     } else if app.show_reminders {
         draw_reminders_popup(frame, app);
     } else if app.show_description {
@@ -36,6 +34,8 @@ pub fn draw(frame: &mut Frame, app: &App) {
         draw_comments_popup(frame, app);
     } else if app.show_projects {
         draw_projects_popup(frame, app);
+    } else if app.show_board_switch {
+        draw_board_switch_popup(frame, app);
     } else if app.composing_card {
         draw_new_card_popup(frame, app);
     }
@@ -83,16 +83,32 @@ fn draw_title_bar(frame: &mut Frame, app: &App, area: Rect) {
     }
 }
 
-fn draw_help_popup(frame: &mut Frame) {
-    let area = centered_rect(70, 85, frame.area());
-    frame.render_widget(Clear, area);
+/// Barra de estado inferior: mensaje de estado a la izquierda, versión (ej.
+/// "v0.4.0") pegada a la orilla derecha.
+fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
+    let status = app
+        .status
+        .clone()
+        .unwrap_or_else(|| " '?' ayuda · q salir".to_string());
 
-    let block = Block::default()
-        .title(" Ayuda — Esc/q/? cerrar ")
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::White));
-    let inner = block.inner(area);
-    frame.render_widget(block, area);
+    let version = format!("v{} ", env!("CARGO_PKG_VERSION"));
+    let version_width = version.chars().count() as u16;
+
+    let cols = Layout::horizontal([Constraint::Min(0), Constraint::Length(version_width)])
+        .split(area);
+
+    frame.render_widget(Paragraph::new(status), cols[0]);
+    frame.render_widget(
+        Paragraph::new(version)
+            .style(Style::default().fg(Color::DarkGray))
+            .alignment(Alignment::Right),
+        cols[1],
+    );
+}
+
+fn draw_help_popup(frame: &mut Frame, app: &App) {
+    let area = centered_rect(70, 85, frame.area());
+    let inner = draw_frame(frame, area, " Ayuda — j/k scroll · Esc/q/? cerrar ", Color::White);
 
     let text = [
         "Board",
@@ -107,9 +123,11 @@ fn draw_help_popup(frame: &mut Frame) {
         "  q, Esc          salir",
         "",
         "Popups",
+        "  B               cambiar de board — lista en vivo · j/k + Enter seleccionar",
+        "  j/k, ↓/↑        scroll del contenido (reminders, comentarios, esta ayuda)",
         "  R               reminders — 'a' agrega uno para la card seleccionada",
         "  C               comentarios — 'a' escribe uno nuevo (@ para mencionar)",
-        "  P               proyectos/milestones — 'a' nuevo project id, j/k+Enter elige uno guardado",
+        "  P               proyectos — 'a' nuevo · Tab foco al detalle · j/k mover/scroll · Enter elegir",
         "",
         "Dentro de un popup de texto (nueva card / project id)",
         "  Enter           confirmar",
@@ -126,13 +144,12 @@ fn draw_help_popup(frame: &mut Frame) {
     ]
     .join("\n");
 
-    let p = Paragraph::new(text).wrap(Wrap { trim: true });
+    let p = Paragraph::new(text).wrap(Wrap { trim: true }).scroll((app.help_scroll.offset(), 0));
     frame.render_widget(p, inner);
 }
 
 fn draw_new_card_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(50, 20, frame.area());
-    frame.render_widget(Clear, area);
 
     let list_name = app
         .new_card_list_id
@@ -140,12 +157,8 @@ fn draw_new_card_popup(frame: &mut Frame, app: &App) {
         .map(|l| l.name.as_str())
         .unwrap_or("?");
 
-    let block = Block::default()
-        .title(format!(" Nueva card en {} — Enter crear · Esc cancelar ", list_name))
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Cyan));
-    let inner = block.inner(area);
-    frame.render_widget(block, area);
+    let title = format!(" Nueva card en {} — Enter crear · Esc cancelar ", list_name);
+    let inner = draw_frame(frame, area, title, Color::Cyan);
 
     let p = Paragraph::new(app.new_card_input.as_str()).wrap(Wrap { trim: true });
     frame.render_widget(p, inner);
@@ -153,7 +166,12 @@ fn draw_new_card_popup(frame: &mut Frame, app: &App) {
 
 fn draw_reminders_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(60, 60, frame.area());
-    frame.render_widget(Clear, area);
+    let inner = draw_frame(
+        frame,
+        area,
+        " Reminders — 'a' agregar · j/k scroll · Esc cerrar ",
+        Color::Magenta,
+    );
 
     let lines: Vec<String> = if app.reminders.is_empty() {
         vec!["Sin reminders pendientes.".to_string()]
@@ -172,32 +190,24 @@ fn draw_reminders_popup(frame: &mut Frame, app: &App) {
             .collect()
     };
 
-    let block = Block::default()
-        .title(" Reminders — 'a' agregar de la card seleccionada · Esc cerrar ")
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Magenta));
-
-    let p = Paragraph::new(lines.join("\n")).block(block).wrap(Wrap { trim: true });
-    frame.render_widget(p, area);
+    let p = Paragraph::new(lines.join("\n"))
+        .wrap(Wrap { trim: true })
+        .scroll((app.reminders_scroll.offset(), 0));
+    frame.render_widget(p, inner);
 }
 
 fn draw_description_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(70, 70, frame.area());
-    frame.render_widget(Clear, area);
 
     let card_name = app.current_card().map(|c| c.name.as_str()).unwrap_or("?");
-    let block = Block::default()
-        .title(format!(
-            " Descripción de \"{}\" — Enter salto de línea · Ctrl+S guardar · Esc cancelar ",
-            card_name
-        ))
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Blue));
-    let inner = block.inner(area);
-    frame.render_widget(block, area);
+    let title = format!(
+        " Descripción de \"{}\" — Enter salto de línea · Ctrl+S guardar · Esc cancelar ",
+        card_name
+    );
+    let inner = draw_frame(frame, area, title, Color::Blue);
 
     let text_width = inner.width.saturating_sub(2).max(1);
-    let content_rows = wrapped_line_count(&app.description_input, text_width);
+    let content_rows = wrapped_line_count(app.description_input.as_str(), text_width);
     let scroll_y = content_rows.saturating_sub(inner.height);
     let p = Paragraph::new(app.description_input.as_str())
         .wrap(Wrap { trim: true })
@@ -207,24 +217,18 @@ fn draw_description_popup(frame: &mut Frame, app: &App) {
 
 fn draw_comments_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(70, 70, frame.area());
-    frame.render_widget(Clear, area);
 
     let title = if app.composing_comment {
         " Nuevo comentario — Enter salto de línea · Ctrl+S enviar · Esc cancelar "
     } else {
-        " Comentarios — 'a' agregar · Esc cerrar "
+        " Comentarios — 'a' agregar · j/k scroll · Esc cerrar "
     };
-    let outer = Block::default()
-        .title(title)
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Blue));
-    let inner = outer.inner(area);
-    frame.render_widget(outer, area);
+    let inner = draw_frame(frame, area, title, Color::Blue);
 
     if app.composing_comment {
         // Text width inside the input block, minus its own left/right borders.
         let text_width = inner.width.saturating_sub(2).max(1);
-        let content_rows = wrapped_line_count(&app.comment_input, text_width);
+        let content_rows = wrapped_line_count(app.comment_input.as_str(), text_width);
         let suggestion_rows = app.mention_suggestions.len().min(5) as u16;
 
         // Grow with content (+1 spare row for the cursor line, +2 for the
@@ -253,7 +257,7 @@ fn draw_comment_list(frame: &mut Frame, app: &App, area: Rect) {
             .collect::<Vec<_>>()
             .join("\n")
     };
-    let p = Paragraph::new(text).wrap(Wrap { trim: true });
+    let p = Paragraph::new(text).wrap(Wrap { trim: true }).scroll((app.comments_scroll.offset(), 0));
     frame.render_widget(p, area);
 }
 
@@ -264,8 +268,8 @@ fn draw_comment_input(frame: &mut Frame, app: &App, area: Rect, text_width: u16)
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
-    let content_rows = wrapped_line_count(&app.comment_input, text_width);
-    let mut text = app.comment_input.clone();
+    let content_rows = wrapped_line_count(app.comment_input.as_str(), text_width);
+    let mut text = app.comment_input.as_str().to_string();
     if !app.mention_suggestions.is_empty() {
         for (i, user) in app.mention_suggestions.iter().take(5).enumerate() {
             let marker = if i == app.mention_selected { "▶" } else { " " };
@@ -318,19 +322,13 @@ fn wrapped_line_count(text: &str, width: u16) -> u16 {
 
 fn draw_projects_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(80, 75, frame.area());
-    frame.render_widget(Clear, area);
 
     let title = if app.composing_project {
         " Nuevo project id — dígitos + Enter · Esc cancelar "
     } else {
-        " Proyectos — 'a' agregar · j/k + Enter elegir · Esc cerrar "
+        " Proyectos — Tab foco · j/k mover/scroll · 'a' agregar · Esc cerrar "
     };
-    let outer = Block::default()
-        .title(title)
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Green));
-    let inner = outer.inner(area);
-    frame.render_widget(outer, area);
+    let inner = draw_frame(frame, area, title, Color::Green);
 
     let rows = if app.composing_project {
         Layout::vertical([Constraint::Min(0), Constraint::Length(3)]).split(inner)
@@ -348,7 +346,14 @@ fn draw_projects_popup(frame: &mut Frame, app: &App) {
 }
 
 fn draw_known_projects_list(frame: &mut Frame, app: &App, area: Rect) {
-    let block = Block::default().title(" Guardados ").borders(Borders::ALL);
+    let block = Block::default()
+        .title(" Guardados ")
+        .borders(Borders::ALL)
+        .border_style(if !app.projects_detail_focused {
+            Style::default().fg(Color::Cyan)
+        } else {
+            Style::default()
+        });
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
@@ -371,7 +376,14 @@ fn draw_known_projects_list(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
-    let block = Block::default().title(" Milestones / Tasks ").borders(Borders::ALL);
+    let block = Block::default()
+        .title(" Milestones / Tasks ")
+        .borders(Borders::ALL)
+        .border_style(if app.projects_detail_focused {
+            Style::default().fg(Color::Cyan)
+        } else {
+            Style::default()
+        });
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
@@ -407,7 +419,9 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
         }
     }
 
-    let p = Paragraph::new(lines.join("\n")).wrap(Wrap { trim: true });
+    let p = Paragraph::new(lines.join("\n"))
+        .wrap(Wrap { trim: true })
+        .scroll((app.projects_scroll.offset(), 0));
     frame.render_widget(p, inner);
 }
 
@@ -427,20 +441,73 @@ fn progress_bar(v: f64) -> String {
     format!("{}{} {}%", "█".repeat(filled), "░".repeat(10 - filled), pct)
 }
 
-fn centered_rect(percent_x: u16, percent_y: u16, area: Rect) -> Rect {
-    let vertical = Layout::vertical([
-        Constraint::Percentage((100 - percent_y) / 2),
-        Constraint::Percentage(percent_y),
-        Constraint::Percentage((100 - percent_y) / 2),
-    ])
-    .split(area);
+fn draw_board_switch_popup(frame: &mut Frame, app: &App) {
+    let area = centered_rect(78, 65, frame.area());
+    let inner = draw_frame(
+        frame,
+        area,
+        " Cambiar board — j/k · Enter seleccionar · r recargar · Esc cerrar ",
+        Color::Yellow,
+    );
 
-    Layout::horizontal([
-        Constraint::Percentage((100 - percent_x) / 2),
-        Constraint::Percentage(percent_x),
-        Constraint::Percentage((100 - percent_x) / 2),
-    ])
-    .split(vertical[1])[1]
+    if app.available_boards.is_empty() {
+        let msg = if app.status.as_deref().map(|s| s.contains("Cargando")).unwrap_or(false) {
+            "Cargando boards..."
+        } else {
+            "No se pudieron cargar los boards. Presiona 'r' para reintentar."
+        };
+        frame.render_widget(Paragraph::new(msg), inner);
+        return;
+    }
+
+    // Scroll automático para mantener el ítem seleccionado en pantalla
+    let scroll_y = if app.selected_board_idx + 1 > inner.height as usize {
+        (app.selected_board_idx + 1 - inner.height as usize) as u16
+    } else {
+        0
+    };
+
+    let lines: Vec<Line> = app
+        .available_boards
+        .iter()
+        .enumerate()
+        .map(|(i, b)| {
+            let marker = if i == app.selected_board_idx { "▶" } else { " " };
+            let active = if b.id == app.board_number { " •" } else { "  " };
+            let name = trunc_str(&b.name, 28);
+            let service = trunc_str(&b.service, 32);
+            let tasks = format!("{}/{}", b.total_tasks_closed, b.total_tasks);
+
+            let text = format!(
+                "{} {:>5}  {:<28}  {:<32}  {:>8}{}",
+                marker,
+                format!("#{}", b.id),
+                name,
+                service,
+                tasks,
+                active
+            );
+
+            let style = if i == app.selected_board_idx {
+                Style::default().fg(Color::Black).bg(Color::Cyan)
+            } else if b.id == app.board_number {
+                Style::default().fg(Color::Yellow)
+            } else {
+                Style::default()
+            };
+
+            Line::from(text).style(style)
+        })
+        .collect();
+
+    let p = Paragraph::new(Text::from(lines)).scroll((scroll_y, 0));
+    frame.render_widget(p, inner);
+}
+
+/// Trunca `s` a `max` caracteres y rellena con espacios si es más corto.
+fn trunc_str(s: &str, max: usize) -> String {
+    let chars: String = s.chars().take(max).collect();
+    format!("{:<width$}", chars, width = max)
 }
 
 fn draw_board(frame: &mut Frame, app: &App, area: Rect) {

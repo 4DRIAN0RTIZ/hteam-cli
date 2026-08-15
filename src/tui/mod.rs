@@ -1,6 +1,7 @@
 mod app;
 mod events;
 mod ui;
+mod widgets;
 
 use std::collections::HashSet;
 use std::io::{self, Stdout};
@@ -16,7 +17,7 @@ use crossterm::{
 use ratatui::{backend::CrosstermBackend, Terminal};
 
 use crate::client::HteamClient;
-use crate::config::Config;
+use crate::operations::{self, Session};
 
 use app::App;
 
@@ -38,22 +39,21 @@ impl Drop for TerminalGuard {
 }
 
 pub async fn run(board: Option<u64>) -> Result<()> {
-    let config = Config::load()?;
-    let board_number = board
-        .or(config.auth.board_number)
-        .or_else(|| config.load_last_ticket().ok().flatten())
+    let session = Session::open().await?;
+    let board_number = operations::resolve_board_number(&session.config, board)
         .context("No se especificó el board number. Usa --board o configura uno con 'hteam board switch'.")?;
 
-    let hidden_lists: HashSet<String> = config
+    let hidden_lists: HashSet<String> = session
+        .config
         .tui
         .hidden_lists
         .iter()
         .map(|s| s.to_lowercase())
         .collect();
-    let known_projects = config.tui.known_projects.clone();
-    let working_hours = config.working_hours.clone();
+    let known_projects = session.config.tui.known_projects.clone();
+    let working_hours = session.config.working_hours.clone();
 
-    let client = Arc::new(HteamClient::with_auth(config).await?);
+    let client = Arc::new(session.client);
 
     let mut app = App::new(board_number, hidden_lists, known_projects, working_hours);
     events::refresh_all(&client, &mut app).await;
@@ -96,6 +96,8 @@ async fn run_loop(
         if app.show_help {
             match key.code {
                 KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('?') => events::close_help(app),
+                KeyCode::Char('j') | KeyCode::Down => app.help_scroll.by(1),
+                KeyCode::Char('k') | KeyCode::Up => app.help_scroll.by(-1),
                 _ => {}
             }
             continue;
@@ -105,6 +107,8 @@ async fn run_loop(
             match key.code {
                 KeyCode::Esc | KeyCode::Char('q') => events::close_reminders(app),
                 KeyCode::Char('a') => events::add_reminder_for_current_card(client, app).await,
+                KeyCode::Char('j') | KeyCode::Down => app.reminders_scroll.by(1),
+                KeyCode::Char('k') | KeyCode::Up => app.reminders_scroll.by(-1),
                 _ => {}
             }
             continue;
@@ -154,6 +158,8 @@ async fn run_loop(
                 match key.code {
                     KeyCode::Esc | KeyCode::Char('q') => events::close_comments(app),
                     KeyCode::Char('a') => events::start_composing_comment(app),
+                    KeyCode::Char('j') | KeyCode::Down => app.comments_scroll.by(1),
+                    KeyCode::Char('k') | KeyCode::Up => app.comments_scroll.by(-1),
                     _ => {}
                 }
             }
@@ -173,11 +179,40 @@ async fn run_loop(
                 match key.code {
                     KeyCode::Esc | KeyCode::Char('q') => events::close_projects(app),
                     KeyCode::Char('a') => events::start_composing_project(app),
-                    KeyCode::Char('j') | KeyCode::Down => events::move_project_selection(app, 1),
-                    KeyCode::Char('k') | KeyCode::Up => events::move_project_selection(app, -1),
-                    KeyCode::Enter => events::select_known_project(client, app).await,
+                    KeyCode::Tab => events::toggle_projects_focus(app),
+                    KeyCode::Char('j') | KeyCode::Down => {
+                        if app.projects_detail_focused {
+                            app.projects_scroll.by(1);
+                        } else {
+                            events::move_project_selection(app, 1);
+                        }
+                    }
+                    KeyCode::Char('k') | KeyCode::Up => {
+                        if app.projects_detail_focused {
+                            app.projects_scroll.by(-1);
+                        } else {
+                            events::move_project_selection(app, -1);
+                        }
+                    }
+                    KeyCode::Enter => {
+                        if !app.projects_detail_focused {
+                            events::select_known_project(client, app).await;
+                        }
+                    }
                     _ => {}
                 }
+            }
+            continue;
+        }
+
+        if app.show_board_switch {
+            match key.code {
+                KeyCode::Esc | KeyCode::Char('q') => events::close_board_switch(app),
+                KeyCode::Char('j') | KeyCode::Down => events::move_board_selection(app, 1),
+                KeyCode::Char('k') | KeyCode::Up => events::move_board_selection(app, -1),
+                KeyCode::Enter => events::select_current_board(client, app).await,
+                KeyCode::Char('r') => events::open_board_switch(client, app).await,
+                _ => {}
             }
             continue;
         }
@@ -209,6 +244,7 @@ async fn run_loop(
             KeyCode::Char('n') => events::start_composing_card(app),
             KeyCode::Char('w') => events::toggle_working_on(client, app).await,
             KeyCode::Char('r') => events::refresh_all(client, app).await,
+            KeyCode::Char('B') => events::open_board_switch(client, app).await,
             KeyCode::Char('?') => events::open_help(app),
             KeyCode::Enter => events::open_description(app),
             _ => {}

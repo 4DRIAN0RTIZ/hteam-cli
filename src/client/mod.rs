@@ -6,9 +6,9 @@ use tokio::sync::Mutex;
 
 use crate::config::Config;
 use crate::models::{
-    Card, CardDetail, CheckInResult, Comment, CommentsResponse, DailyWorkEntry, Label, List,
-    ProjectMilestone, ProjectTasksResponse, Reminder, UserSuggestion, WorkShiftResume,
-    WorkingOnStatus,
+    BoardEntry, BoardsResponse, Card, CardDetail, CheckInResult, Comment, CommentsResponse,
+    DailyWorkEntry, Label, List, ProjectMilestone, ProjectTasksResponse, Reminder, UserSuggestion,
+    WorkShiftResume, WorkingOnStatus,
 };
 
 const BASE_URL: &str = "https://hteam.mx/api";
@@ -925,6 +925,47 @@ impl HteamClient {
 
         let result: WorkShiftResume = response.json().await?;
         Ok(result)
+    }
+
+    /// Obtiene todos los boards en estado "Execution" desde el endpoint datatables.
+    pub async fn get_boards(&self) -> Result<Vec<BoardEntry>> {
+        let config = self.config.lock().await;
+        let headers = self.build_headers(&config)?;
+        drop(config);
+
+        let url = format!("{}/operation/care/operations/", BASE_URL);
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers)
+            .query(&[
+                ("format", "datatables"),
+                ("status", "Execution"),
+                ("draw", "1"),
+                ("start", "0"),
+                ("length", "500"),
+                ("columns[0][data]", "name"),
+                ("columns[0][orderable]", "true"),
+                ("columns[1][data]", "service"),
+                ("columns[2][data]", "responsible"),
+                ("columns[3][data]", "status"),
+                ("columns[4][data]", "total_tasks"),
+                ("columns[5][data]", "total_tasks_closed"),
+                ("columns[6][data]", "id"),
+                ("columns[6][orderable]", "true"),
+                ("order[0][column]", "0"),
+                ("order[0][dir]", "asc"),
+            ])
+            .send()
+            .await
+            .context("Error al obtener boards")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+        }
+
+        let data: BoardsResponse = response.json().await?;
+        Ok(data.data)
     }
 
     fn extract_comment_tokens(&self, html: &str) -> Option<(String, String, String)> {

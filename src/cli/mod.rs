@@ -137,12 +137,10 @@ pub async fn run() -> Result<()> {
 }
 
 async fn checkin(json: bool) -> Result<()> {
-    use crate::client::HteamClient;
-    use crate::config::Config;
+    use crate::operations::{self, Session};
 
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
-    let result = client.check_in().await?;
+    let session = Session::open().await?;
+    let result = operations::checkin::check_in(&session.client).await?;
 
     if json {
         println!("{}", serde_json::to_string_pretty(&result)?);
@@ -158,13 +156,11 @@ async fn checkin(json: bool) -> Result<()> {
 }
 
 async fn reminders(json: bool) -> Result<()> {
-    use crate::client::HteamClient;
-    use crate::config::Config;
+    use crate::operations::{self, Session};
     use tabled::{Table, settings::Style};
 
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
-    let items = client.get_reminders().await?;
+    let session = Session::open().await?;
+    let items = operations::reminders::list(&session.client).await?;
 
     if json {
         println!("{}", serde_json::to_string_pretty(&items)?);
@@ -185,15 +181,17 @@ async fn reminders(json: bool) -> Result<()> {
 }
 
 async fn daily_work(args: DailyWorkArgs, json: bool) -> Result<()> {
-    use crate::client::HteamClient;
-    use crate::config::Config;
+    use crate::operations::{self, Session};
     use tabled::{Table, settings::Style};
 
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
-    let entries = client
-        .get_daily_work_history(args.user.as_deref(), args.activity_type.as_deref(), Some(&args.range))
-        .await?;
+    let session = Session::open().await?;
+    let entries = operations::daily_work::history(
+        &session.client,
+        args.user.as_deref(),
+        args.activity_type.as_deref(),
+        Some(&args.range),
+    )
+    .await?;
 
     if json {
         println!("{}", serde_json::to_string_pretty(&entries)?);
@@ -214,13 +212,11 @@ async fn daily_work(args: DailyWorkArgs, json: bool) -> Result<()> {
 }
 
 async fn search_users(args: UsersArgs, json: bool) -> Result<()> {
-    use crate::client::HteamClient;
-    use crate::config::Config;
+    use crate::operations::{self, Session};
     use tabled::{Table, settings::Style};
 
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
-    let users = client.search_users(&args.query).await?;
+    let session = Session::open().await?;
+    let users = operations::users::search(&session.client, &args.query).await?;
 
     if json {
         println!("{}", serde_json::to_string_pretty(&users)?);

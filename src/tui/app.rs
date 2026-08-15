@@ -5,9 +5,11 @@ use std::time::{Duration, Instant};
 
 use crate::config::WorkingHoursConfig;
 use crate::models::{
-    Card, Comment, List, ProjectMilestone, ProjectTask, Reminder, UserSuggestion, WorkShiftRecord,
-    WorkingOnStatus,
+    BoardEntry, Card, Comment, List, ProjectMilestone, ProjectTask, Reminder, UserSuggestion,
+    WorkShiftRecord, WorkingOnStatus,
 };
+
+use super::widgets::{Scroll, TextInput};
 
 pub struct App {
     pub board_number: u64,
@@ -36,13 +38,13 @@ pub struct App {
     /// True while the description popup ('Enter') is open, editing the
     /// currently selected card's description inline.
     pub show_description: bool,
-    pub description_input: String,
+    pub description_input: TextInput,
     /// Comments of the card that was selected when 'C' was pressed.
     pub comments: Vec<Comment>,
     pub show_comments: bool,
     /// True while actively typing a new comment inside the comments popup.
     pub composing_comment: bool,
-    pub comment_input: String,
+    pub comment_input: TextInput,
     pub mention_suggestions: Vec<UserSuggestion>,
     pub mention_selected: usize,
     /// Project ids looked up before, most-recently-used first — mirrors
@@ -55,12 +57,29 @@ pub struct App {
     pub show_projects: bool,
     /// True while typing a new project id inside the projects popup.
     pub composing_project: bool,
-    pub project_input: String,
+    pub project_input: TextInput,
     /// True while typing a new card's name for `new_card_list_id`.
     pub composing_card: bool,
-    pub new_card_input: String,
+    pub new_card_input: TextInput,
     pub new_card_list_id: Option<u64>,
     pub show_help: bool,
+    /// True mientras el popup de cambio de board ('B') está abierto.
+    pub show_board_switch: bool,
+    /// Boards obtenidos de la API al abrir el popup.
+    pub available_boards: Vec<BoardEntry>,
+    /// Índice del board resaltado en `available_boards`.
+    pub selected_board_idx: usize,
+    /// Scroll offset para el popup de ayuda.
+    pub help_scroll: Scroll,
+    /// Scroll offset para el popup de reminders.
+    pub reminders_scroll: Scroll,
+    /// Scroll offset para la lista de comentarios (solo en modo lectura, no al componer).
+    pub comments_scroll: Scroll,
+    /// True cuando el foco del popup de proyectos está en el panel de detalle (derecha).
+    /// Tab alterna entre la lista de proyectos guardados y el panel de detalle.
+    pub projects_detail_focused: bool,
+    /// Scroll offset para el panel de detalle del popup de proyectos.
+    pub projects_scroll: Scroll,
     /// Horario laboral configurado en `config.toml`'s `[working_hours]`.
     pub working_hours: WorkingHoursConfig,
 }
@@ -86,11 +105,11 @@ impl App {
             reminders: Vec::new(),
             show_reminders: false,
             show_description: false,
-            description_input: String::new(),
+            description_input: TextInput::default(),
             comments: Vec::new(),
             show_comments: false,
             composing_comment: false,
-            comment_input: String::new(),
+            comment_input: TextInput::default(),
             mention_suggestions: Vec::new(),
             mention_selected: 0,
             known_projects,
@@ -100,11 +119,19 @@ impl App {
             project_tasks: Vec::new(),
             show_projects: false,
             composing_project: false,
-            project_input: String::new(),
+            project_input: TextInput::default(),
             composing_card: false,
-            new_card_input: String::new(),
+            new_card_input: TextInput::default(),
             new_card_list_id: None,
             show_help: false,
+            show_board_switch: false,
+            available_boards: Vec::new(),
+            selected_board_idx: 0,
+            help_scroll: Scroll::default(),
+            reminders_scroll: Scroll::default(),
+            comments_scroll: Scroll::default(),
+            projects_detail_focused: false,
+            projects_scroll: Scroll::default(),
             working_hours,
         }
     }
@@ -170,7 +197,7 @@ impl App {
     /// The "working on it" record id for `card_id`, if any — this is what
     /// `stop_working` needs, not the card id itself.
     pub fn working_on_id_for(&self, card_id: u64) -> Option<u64> {
-        self.working_on.iter().find(|w| w.card_id == card_id).map(|w| w.id)
+        crate::operations::working::working_id_for(&self.working_on, card_id)
     }
 
     pub fn move_selection(&mut self, delta: i32) {
