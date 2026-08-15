@@ -102,6 +102,22 @@ hteam project tasks 99                    # Tasks del proyecto
 hteam users "juan"                        # Buscar usuarios por nombre/username
 hteam reminders                           # Ver recordatorios pendientes
 hteam checkin                             # Registrar entrada del día
+hteam daily-work                          # Historial de trabajo diario del equipo (hoy)
+hteam daily-work --user juan --type time --range this_week
+```
+
+### Board visual (TUI)
+
+```bash
+hteam tui
+```
+
+Board estilo kanban en terminal (ratatui), con navegación por listas y cards del board activo.
+
+### Autocompletado de shell
+
+```bash
+hteam completions zsh > _hteam            # bash, zsh, fish, elvish, powershell
 ```
 
 ### MCP Server
@@ -110,7 +126,7 @@ hteam checkin                             # Registrar entrada del día
 hteam mcp
 ```
 
-Inicia el servidor MCP sobre **stdio**. Se integra con Claude Desktop, Claude Code u cualquier cliente MCP compatible. Las 20 herramientas expuestas son:
+Inicia el servidor MCP sobre **stdio**. Se integra con Claude Desktop, Claude Code u cualquier cliente MCP compatible. Las 22 herramientas expuestas son:
 
 | Herramienta | Descripción |
 |---|---|
@@ -124,6 +140,7 @@ Inicia el servidor MCP sobre **stdio**. Se integra con Claude Desktop, Claude Co
 | `card_move` | Mover card entre listas |
 | `card_update_desc` | Actualizar descripción |
 | `card_update` | Actualizar nombre/descripción/prioridad/responsable |
+| `card_comments` | Obtener comentarios de un card |
 | `card_comment` | Agregar comentario |
 | `card_remind` | Crear recordatorio |
 | `working_list` | Working On It activo |
@@ -134,6 +151,7 @@ Inicia el servidor MCP sobre **stdio**. Se integra con Claude Desktop, Claude Co
 | `users_search` | Buscar usuarios |
 | `reminders` | Recordatorios pendientes |
 | `check_in` | Registrar entrada del día |
+| `daily_work` | Historial de trabajo diario del equipo |
 
 #### Configuración en Claude Desktop
 
@@ -249,8 +267,30 @@ src/
 │   └── mod.rs       # Configuración y persistencia TOML
 ├── mcp/
 │   └── mod.rs       # Servidor MCP (rmcp, stdio)
-└── models/
-    └── mod.rs       # Structs de datos
+├── models/
+│   └── mod.rs       # Structs de datos
+├── operations/      # Lógica de negocio compartida entre CLI, REPL, TUI y MCP
+│   ├── mod.rs
+│   ├── boards.rs
+│   ├── cards.rs
+│   ├── checkin.rs
+│   ├── comments.rs
+│   ├── daily_work.rs
+│   ├── projects.rs
+│   ├── reminders.rs
+│   ├── session.rs
+│   ├── users.rs
+│   └── working.rs
+└── tui/             # Board visual tipo kanban (ratatui)
+    ├── mod.rs
+    ├── app.rs
+    ├── events.rs
+    ├── ui.rs
+    └── widgets/
+        ├── mod.rs
+        ├── popup.rs
+        ├── scroll.rs
+        └── text_input.rs
 ```
 
 ## Dependencias principales
@@ -271,6 +311,8 @@ src/
 | `colored` | Colores en terminal |
 | `chrono` | Fechas y horas |
 | `anyhow` / `thiserror` | Manejo de errores |
+| `ratatui` / `crossterm` | Board visual TUI (`hteam tui`) |
+| `clap_complete` | Autocompletado de shell (`hteam completions`) |
 
 ## Licencia
 
