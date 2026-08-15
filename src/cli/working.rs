@@ -2,8 +2,7 @@ use anyhow::Result;
 use clap::{Args, Subcommand};
 use tabled::{Table, settings::Style};
 
-use crate::client::HteamClient;
-use crate::config::Config;
+use crate::operations::{self, Session};
 
 #[derive(Subcommand, Debug)]
 pub enum WorkingCommands {
@@ -36,61 +35,58 @@ pub async fn execute(cmd: WorkingCommands, json: bool) -> Result<()> {
 }
 
 async fn list_working(json: bool) -> Result<()> {
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
-    
-    let working = client.get_working_on().await?;
-    
+    let session = Session::open().await?;
+
+    let working = operations::working::list_working(&session.client).await?;
+
     if json {
         println!("{}", serde_json::to_string_pretty(&working)?);
         return Ok(());
     }
-    
+
     if working.is_empty() {
         println!("⚠️  No estás trabajando en ningún card.");
         return Ok(());
     }
-    
+
     let mut table = Table::new(&working);
     table.with(Style::rounded());
-    
+
     println!("\n🔨 Working On It:\n");
     println!("{}", table);
     println!();
-    
+
     Ok(())
 }
 
 async fn start_working(args: WorkingStartArgs, json: bool) -> Result<()> {
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
-    
-    client.start_working(args.card_id).await?;
-    
+    let session = Session::open().await?;
+
+    operations::working::start_working(&session.client, args.card_id).await?;
+
     if json {
         println!("{{\"success\": true, \"card_id\": {}}}", args.card_id);
         return Ok(());
     }
-    
+
     println!("\n🔨 Ahora estás trabajando en el card {}", args.card_id);
     println!();
-    
+
     Ok(())
 }
 
 async fn stop_working(args: WorkingStopArgs, json: bool) -> Result<()> {
-    let config = Config::load()?;
-    let client = HteamClient::with_auth(config).await?;
-    
-    client.stop_working(args.working_id).await?;
-    
+    let session = Session::open().await?;
+
+    operations::working::stop_working(&session.client, args.working_id).await?;
+
     if json {
         println!("{{\"success\": true, \"working_id\": {}}}", args.working_id);
         return Ok(());
     }
-    
+
     println!("\n🛑 Dejaste de trabajar en el working {}", args.working_id);
     println!();
-    
+
     Ok(())
 }
