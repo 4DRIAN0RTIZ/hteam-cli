@@ -129,6 +129,7 @@ jobs:
           mkdir -p docs
           git-cliff \
             --config cliff.toml \
+            --tag "${version}" \
             --context \
             --output docs/changelog.json
 
