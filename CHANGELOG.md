@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.1] - 2026-08-15
 
+### Bug Fixes
+- *(client)* Sync board_number when switching boards in the TUI
+
+
 ### Documentation
 - *(readme)* Sync README with current MCP tools, CLI commands and license
 
