@@ -340,10 +340,10 @@ pub async fn submit_comment(client: &HteamClient, app: &mut App) {
     }
 }
 
-/// `update_card_description` resolves board_number internally from the saved
-/// config (not from `app.board_number`), so this only round-trips correctly
-/// when the TUI is running against the user's configured default board — same
-/// limitation the plain `hteam cards update-desc` command already has.
+/// `update_card_description` resolves board_number internally from the
+/// client's cached config, which `switch_to_board` keeps in sync via
+/// `client.set_board_number`, so this correctly targets whichever board is
+/// currently active in the TUI.
 pub async fn save_description(client: &HteamClient, app: &mut App, card_id: u64, description: &str) {
     match operations::cards::update_description(client, card_id, description).await {
         Ok(()) => {
@@ -523,10 +523,10 @@ pub fn new_card_input_backspace(app: &mut App) {
     app.new_card_input.backspace();
 }
 
-/// `create_card` resolves board_id/board_number internally from the saved
-/// config (not from `app.board_number`), same caveat as
-/// `update_card_description` — only fully correct against the user's
-/// configured default board.
+/// `create_card` resolves board_id/board_number from the client's cached
+/// config, kept in sync with `app.board_number` by `switch_to_board` via
+/// `client.set_board_number`, so the card always lands on the board
+/// currently active in the TUI.
 pub async fn submit_new_card(client: &HteamClient, app: &mut App) {
     let Some(list_id) = app.new_card_list_id else {
         cancel_composing_card(app);
@@ -639,8 +639,9 @@ pub async fn select_current_board(client: &HteamClient, app: &mut App) {
     switch_to_board(client, app, board.id).await;
 }
 
-/// Lógica central del cambio de board: actualiza `board_number`, limpia el
-/// estado del tablero, persiste en config.toml y recarga las listas/cards.
+/// Lógica central del cambio de board: actualiza `board_number` (tanto en
+/// `App` como en el `HteamClient`), limpia el estado del tablero, persiste
+/// en config.toml y recarga las listas/cards.
 async fn switch_to_board(client: &HteamClient, app: &mut App, id: u64) {
     if id == app.board_number {
         close_board_switch(app);
@@ -653,6 +654,11 @@ async fn switch_to_board(client: &HteamClient, app: &mut App, id: u64) {
     app.selected_card.clear();
     app.selected_list = 0;
     app.working_on.clear();
+
+    // Sin esto, create_card/update_card_description seguirían resolviendo
+    // el board desde la copia de Config cacheada al arrancar el cliente,
+    // operando sobre el board viejo aunque la UI ya muestre el nuevo.
+    client.set_board_number(id).await;
 
     close_board_switch(app);
 

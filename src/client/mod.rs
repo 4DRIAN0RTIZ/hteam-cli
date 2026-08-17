@@ -14,6 +14,13 @@ use crate::models::{
 const BASE_URL: &str = "https://hteam.mx/api";
 const SITE_URL: &str = "https://hteam.mx";
 
+/// Trunca `s` a `max_chars` caracteres para incluirlo en un mensaje de error.
+/// Corta por char, no por byte, para no panickear si el límite cae en medio
+/// de un carácter multibyte (tildes, ñ) en la respuesta del API.
+fn truncate_for_error(s: &str, max_chars: usize) -> String {
+    s.chars().take(max_chars).collect()
+}
+
 pub struct HteamClient {
     client: Client,
     config: Arc<Mutex<Config>>,
@@ -204,6 +211,17 @@ impl HteamClient {
         Ok(resp.results)
     }
 
+    /// Actualiza el board activo del cliente en memoria (no toca disco —
+    /// eso lo hace el caller vía `Config::save`). Invalida el `board_id`
+    /// cacheado porque es específico del board anterior; reusarlo tras un
+    /// cambio de board haría que `create_card`/`move_card` operen sobre el
+    /// board equivocado.
+    pub async fn set_board_number(&self, board_number: u64) {
+        let mut config = self.config.lock().await;
+        config.auth.board_number = Some(board_number);
+        config.auth.board_id = None;
+    }
+
     pub async fn get_board_id(&self) -> Result<u64> {
         {
             let config = self.config.lock().await;
@@ -248,20 +266,35 @@ impl HteamClient {
 
         if let Ok(array) = serde_json::from_str::<Vec<crate::models::WorkingOnResponse>>(&text) {
             if let Some(first) = array.first() {
-                let uid = first.user;
-                let mut config = self.config.lock().await;
-                config.auth.user_id = Some(uid);
-                return Ok(uid);
+                return Ok(self.cache_user_id(first.user).await);
             }
         }
         if let Ok(single) = serde_json::from_str::<crate::models::WorkingOnResponse>(&text) {
-            let uid = single.user;
-            let mut config = self.config.lock().await;
-            config.auth.user_id = Some(uid);
-            return Ok(uid);
+            return Ok(self.cache_user_id(single.user).await);
+        }
+
+        // `/tr/workingonit/user/` sólo devuelve algo mientras el usuario
+        // tiene una card marcada "en curso" (start_working). Si no, caemos
+        // al último registro de turno, que trae el user_id sin depender de
+        // ese estado.
+        if let Ok(resume) = self.get_workshift_resume().await {
+            if let Some(last) = resume.last {
+                return Ok(self.cache_user_id(last.user.id).await);
+            }
         }
 
         anyhow::bail!("No se pudo obtener el user_id del usuario autenticado")
+    }
+
+    /// Guarda `user_id` en memoria y en disco (`config.toml`) para que no
+    /// haya que volver a resolverlo en cada arranque del TUI/CLI — es un
+    /// dato del usuario, no de la sesión, así que sigue siendo válido
+    /// aunque las cookies expiren y se vuelva a hacer login.
+    async fn cache_user_id(&self, uid: u64) -> u64 {
+        let mut config = self.config.lock().await;
+        config.auth.user_id = Some(uid);
+        let _ = config.save();
+        uid
     }
 
     pub async fn create_card(
@@ -339,7 +372,7 @@ impl HteamClient {
         }
 
         serde_json::from_str::<Card>(&response_text)
-            .with_context(|| format!("Respuesta inesperada del API al crear card: {:?}", &response_text[..response_text.len().min(300)]))
+            .with_context(|| format!("Respuesta inesperada del API al crear card: {:?}", truncate_for_error(&response_text, 300)))
     }
 
     pub async fn move_card(
@@ -349,8 +382,10 @@ impl HteamClient {
         to_list: u64,
         board_number: Option<u64>,
     ) -> Result<()> {
-        // Use hardcoded board_id 483 for POST operations (like create_card)
-        let board = board_number.unwrap_or(483);
+        let board = match board_number {
+            Some(b) => b,
+            None => self.get_board_number().await?,
+        };
 
         let config = self.config.lock().await;
         let url = format!("{}/boards/care/labels/update_card_position/", BASE_URL);
@@ -420,7 +455,7 @@ impl HteamClient {
             return Ok(vec![single.into()]);
         }
         
-        anyhow::bail!("No se pudo parsear la respuesta de working on: {}", &response_text[..response_text.len().min(200)])
+        anyhow::bail!("No se pudo parsear la respuesta de working on: {}", truncate_for_error(&response_text, 200))
     }
 
     pub async fn start_working(&self, card_id: u64) -> Result<()> {
@@ -472,7 +507,10 @@ impl HteamClient {
     }
 
     pub async fn post_comment(&self, card_id: u64, comment: &str, board_number: Option<u64>) -> Result<()> {
-        let board = board_number.unwrap_or(483);
+        let board = match board_number {
+            Some(b) => b,
+            None => self.get_board_number().await?,
+        };
 
         let config = self.config.lock().await;
         let task_url = format!("{}/operations/{}/tasks/{}/", SITE_URL, board, card_id);
@@ -881,7 +919,7 @@ impl HteamClient {
 
         anyhow::bail!(
             "Respuesta inesperada al buscar usuarios: {:?}",
-            &text[..text.len().min(200)]
+            truncate_for_error(&text, 200)
         )
     }
 
