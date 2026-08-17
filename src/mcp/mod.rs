@@ -109,6 +109,10 @@ struct CommentParams {
     comment: String,
     #[schemars(description = "ID del board (opcional)")]
     board: Option<u64>,
+    #[schemars(description = "Marcar el comentario para seguimiento (recibir notificaciones de respuestas); false por defecto")]
+    follow: Option<bool>,
+    #[schemars(description = "Fecha del comentario, formato \"YYYY-MM-DD HH:MM\" en hora local (opcional; por defecto ahora)")]
+    date: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -272,9 +276,9 @@ impl HteamMcpServer {
     #[tool(description = "Agregar un comentario a un card")]
     async fn card_comment(
         &self,
-        Parameters(CommentParams { card_id, comment, board }): Parameters<CommentParams>,
+        Parameters(CommentParams { card_id, comment, board, follow, date }): Parameters<CommentParams>,
     ) -> Result<CallToolResult, McpError> {
-        operations::comments::post_comment(&self.client, card_id, &comment, board)
+        operations::comments::post_comment(&self.client, card_id, &comment, board, follow.unwrap_or(false), date.as_deref())
             .await
             .map_err(err)?;
         ok(serde_json::json!({"success": true, "card_id": card_id}))
