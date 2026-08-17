@@ -71,7 +71,7 @@ jobs:
           version="${REQUESTED_VERSION:-}"
           if [[ -z "${version}" ]]; then
             version="$(
-              git-cliff --config cliff.toml --bumped-version |
+              git-cliff --config cliff.toml --unreleased --bumped-version |
                 tail -n 1 |
                 tr -d '[:space:]'
             )"
