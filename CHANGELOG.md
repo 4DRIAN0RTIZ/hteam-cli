@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug Fixes
 - *(release)* Pass --tag when generating docs/changelog.json
+- *(client)* Resolve board id via get_board_id in get_card_labels
+
+
+### Features
+- *(comments)* Add follow-up flag and custom date to comment posting
 
 ## [0.5.1] - 2026-08-15
 
