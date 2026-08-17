@@ -580,11 +580,10 @@ impl HteamClient {
     }
 
     pub async fn get_card_labels(&self, card_id: u64, board_id: Option<u64>) -> Result<Vec<Label>> {
-        let board = board_id.unwrap_or_else(|| {
-            self.config.try_lock().ok()
-                .and_then(|c| c.get_board_number())
-                .unwrap_or(483)
-        });
+        let board = match board_id {
+            Some(id) => id,
+            None => self.get_board_id().await?,
+        };
 
         let config = self.config.lock().await;
         let url = format!("{}/boards/care/boards/{}/card/{}/labels/?format=json", BASE_URL, board, card_id);
