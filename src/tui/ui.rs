@@ -126,7 +126,7 @@ fn draw_help_popup(frame: &mut Frame, app: &App) {
         "  B               cambiar de board — lista en vivo · j/k + Enter seleccionar",
         "  j/k, ↓/↑        scroll del contenido (reminders, comentarios, esta ayuda)",
         "  R               reminders — 'a' agrega uno para la card seleccionada",
-        "  C               comentarios — 'a' escribe uno nuevo (@ para mencionar)",
+        "  C               comentarios — 'a' escribe uno nuevo (@ para mencionar, Tab fecha, Ctrl+F seguimiento)",
         "  P               proyectos — 'a' nuevo · Tab foco al detalle · j/k mover/scroll · Enter elegir",
         "",
         "Dentro de un popup de texto (nueva card / project id)",
@@ -219,7 +219,7 @@ fn draw_comments_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(70, 70, frame.area());
 
     let title = if app.composing_comment {
-        " Nuevo comentario — Enter salto de línea · Ctrl+S enviar · Esc cancelar "
+        " Nuevo comentario — Enter salto de línea · Tab fecha/texto · Ctrl+F seguimiento · Ctrl+S enviar · Esc cancelar "
     } else {
         " Comentarios — 'a' agregar · j/k scroll · Esc cerrar "
     };
@@ -232,12 +232,13 @@ fn draw_comments_popup(frame: &mut Frame, app: &App) {
         let suggestion_rows = app.mention_suggestions.len().min(5) as u16;
 
         // Grow with content (+1 spare row for the cursor line, +2 for the
-        // input block's own top/bottom borders), but never shrink the
-        // comment list above below 3 rows — that's what keeps this from
-        // breaking the popup layout on a long comment.
-        let wanted = content_rows + suggestion_rows + 1 + 2;
-        let max_input_h = inner.height.saturating_sub(3).max(4);
-        let input_h = wanted.clamp(4, max_input_h);
+        // input block's own top/bottom borders, +3 for the fixed-height date
+        // field above it), but never shrink the comment list above below 3
+        // rows — that's what keeps this from breaking the popup layout on a
+        // long comment.
+        let wanted = content_rows + suggestion_rows + 1 + 2 + DATE_FIELD_HEIGHT;
+        let max_input_h = inner.height.saturating_sub(3).max(4 + DATE_FIELD_HEIGHT);
+        let input_h = wanted.clamp(4 + DATE_FIELD_HEIGHT, max_input_h);
 
         let chunks = Layout::vertical([Constraint::Min(0), Constraint::Length(input_h)]).split(inner);
         draw_comment_list(frame, app, chunks[0]);
@@ -246,6 +247,8 @@ fn draw_comments_popup(frame: &mut Frame, app: &App) {
         draw_comment_list(frame, app, inner);
     }
 }
+
+const DATE_FIELD_HEIGHT: u16 = 3;
 
 fn draw_comment_list(frame: &mut Frame, app: &App, area: Rect) {
     let text = if app.comments.is_empty() {
@@ -262,9 +265,44 @@ fn draw_comment_list(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_comment_input(frame: &mut Frame, app: &App, area: Rect, text_width: u16) {
+    let chunks = Layout::vertical([Constraint::Length(DATE_FIELD_HEIGHT), Constraint::Min(1)]).split(area);
+    draw_comment_date_field(frame, app, chunks[0]);
+    draw_comment_text_field(frame, app, chunks[1], text_width);
+}
+
+fn draw_comment_date_field(frame: &mut Frame, app: &App, area: Rect) {
+    let border_color = if app.comment_date_focused { Color::Yellow } else { Color::DarkGray };
     let block = Block::default()
-        .title(" Comentario (@ para mencionar) ")
-        .borders(Borders::ALL);
+        .title(" Fecha (YYYY-MM-DD HH:MM) — Tab enfoca ")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(border_color));
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+
+    let text = if app.comment_date_input.as_str().is_empty() {
+        "ahora (hora local)".to_string()
+    } else {
+        app.comment_date_input.as_str().to_string()
+    };
+    let style = if app.comment_date_input.as_str().is_empty() {
+        Style::default().fg(Color::DarkGray)
+    } else {
+        Style::default()
+    };
+    frame.render_widget(Paragraph::new(text).style(style), inner);
+}
+
+fn draw_comment_text_field(frame: &mut Frame, app: &App, area: Rect, text_width: u16) {
+    let border_color = if app.comment_date_focused { Color::DarkGray } else { Color::Yellow };
+    let title = if app.comment_follow {
+        " Comentario (@ para mencionar) · 🔔 seguimiento ON "
+    } else {
+        " Comentario (@ para mencionar) "
+    };
+    let block = Block::default()
+        .title(title)
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(border_color));
     let inner = block.inner(area);
     frame.render_widget(block, area);
 

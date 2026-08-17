@@ -141,17 +141,33 @@ async fn run_loop(
                     KeyCode::Enter => {
                         if !app.mention_suggestions.is_empty() {
                             events::accept_mention_suggestion(app);
-                        } else {
+                        } else if !app.comment_date_focused {
                             app.comment_input.push('\n');
                         }
                     }
                     KeyCode::Down => events::mention_move_selection(app, 1),
                     KeyCode::Up => events::mention_move_selection(app, -1),
-                    KeyCode::Backspace => events::comment_input_backspace(client, app).await,
+                    KeyCode::Tab => events::toggle_comment_date_focus(app),
+                    KeyCode::Backspace => {
+                        if app.comment_date_focused {
+                            events::comment_date_input_backspace(app);
+                        } else {
+                            events::comment_input_backspace(client, app).await;
+                        }
+                    }
                     KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         events::submit_comment(client, app).await;
                     }
-                    KeyCode::Char(c) => events::comment_input_push(client, app, c).await,
+                    KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        events::toggle_comment_follow(app);
+                    }
+                    KeyCode::Char(c) => {
+                        if app.comment_date_focused {
+                            events::comment_date_input_push(app, c);
+                        } else {
+                            events::comment_input_push(client, app, c).await;
+                        }
+                    }
                     _ => {}
                 }
             } else {

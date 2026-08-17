@@ -45,6 +45,12 @@ pub struct App {
     /// True while actively typing a new comment inside the comments popup.
     pub composing_comment: bool,
     pub comment_input: TextInput,
+    /// True cuando el comentario en curso se marcará para seguimiento (Ctrl+F togglea).
+    pub comment_follow: bool,
+    /// Fecha del comentario en curso; vacío = "ahora" en hora local. Tab alterna
+    /// el foco entre este campo y `comment_input`.
+    pub comment_date_input: TextInput,
+    pub comment_date_focused: bool,
     pub mention_suggestions: Vec<UserSuggestion>,
     pub mention_selected: usize,
     /// Project ids looked up before, most-recently-used first — mirrors
@@ -110,6 +116,9 @@ impl App {
             show_comments: false,
             composing_comment: false,
             comment_input: TextInput::default(),
+            comment_follow: false,
+            comment_date_input: TextInput::default(),
+            comment_date_focused: false,
             mention_suggestions: Vec::new(),
             mention_selected: 0,
             known_projects,
