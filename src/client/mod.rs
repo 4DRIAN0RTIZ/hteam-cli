@@ -14,6 +14,11 @@ use crate::models::{
 const BASE_URL: &str = "https://hteam.mx/api";
 const SITE_URL: &str = "https://hteam.mx";
 
+/// Format the site's own hidden `date` comment field uses — server-local
+/// time, not UTC. `operations::comments` re-exposes this as the format
+/// every caller (CLI, MCP, REPL, TUI) validates user input against.
+pub const COMMENT_DATE_FORMAT: &str = "%Y-%m-%d %H:%M";
+
 /// Trunca `s` a `max_chars` caracteres para incluirlo en un mensaje de error.
 /// Corta por char, no por byte, para no panickear si el límite cae en medio
 /// de un carácter multibyte (tildes, ñ) en la respuesta del API.
@@ -506,7 +511,14 @@ impl HteamClient {
         Ok(())
     }
 
-    pub async fn post_comment(&self, card_id: u64, comment: &str, board_number: Option<u64>) -> Result<()> {
+    pub async fn post_comment(
+        &self,
+        card_id: u64,
+        comment: &str,
+        board_number: Option<u64>,
+        follow: bool,
+        date: chrono::NaiveDateTime,
+    ) -> Result<()> {
         let board = match board_number {
             Some(b) => b,
             None => self.get_board_number().await?,
@@ -544,8 +556,8 @@ impl HteamClient {
             out
         };
 
-        let now = chrono::Utc::now().format("%Y-%m-%d %H:%M").to_string();
-        let body = [
+        let date_str = date.format(COMMENT_DATE_FORMAT).to_string();
+        let mut fields = vec![
             format!("csrfmiddlewaretoken={}", encode(&csrf)),
             format!("next=%2Fcomments%2Fsent%2F"),
             format!("content_type=processes.task"),
@@ -555,8 +567,13 @@ impl HteamClient {
             format!("reply_to=0"),
             format!("honeypot="),
             format!("comment={}", encode(comment)),
-            format!("date={}", encode(&now)),
-        ].join("&");
+        ];
+        // Mirrors the HTML checkbox: only sent when checked, omitted otherwise.
+        if follow {
+            fields.push("follow=on".to_string());
+        }
+        fields.push(format!("date={}", encode(&date_str)));
+        let body = fields.join("&");
 
         let comment_url = format!("{}/comments/post/", SITE_URL);
 

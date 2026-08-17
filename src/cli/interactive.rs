@@ -349,16 +349,44 @@ async fn handle_working_command(args: &[&str]) -> Result<()> {
 async fn handle_comment_command(args: &[&str]) -> Result<()> {
     use crate::cli::cards::{CardsCommands, CommentArgs};
 
+    const USAGE: &str = "⚠️  Uso: comment <card_id> [--follow] [--date YYYY-MM-DD HH:MM] <texto>";
+
     if args.len() < 2 {
-        println!("⚠️  Uso: comment <card_id> <texto>");
+        println!("{}", USAGE);
         return Ok(());
     }
 
     let card_id = args[0].parse::<u64>()?;
-    let text = args[1..].join(" ");
-    
+    let mut rest = &args[1..];
+    let mut follow = false;
+    let mut date: Option<String> = None;
+
+    loop {
+        match rest.first() {
+            Some(&"--follow") => {
+                follow = true;
+                rest = &rest[1..];
+            }
+            Some(&"--date") => {
+                if rest.len() < 3 {
+                    println!("⚠️  --date requiere fecha y hora: --date YYYY-MM-DD HH:MM");
+                    return Ok(());
+                }
+                date = Some(format!("{} {}", rest[1], rest[2]));
+                rest = &rest[3..];
+            }
+            _ => break,
+        }
+    }
+
+    if rest.is_empty() {
+        println!("{}", USAGE);
+        return Ok(());
+    }
+    let text = rest.join(" ");
+
     cli::cards::execute(
-        CardsCommands::Comment(CommentArgs { card_id, text, board: None }),
+        CardsCommands::Comment(CommentArgs { card_id, text, board: None, follow, date }),
         None,
         false,
     ).await?;

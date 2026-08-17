@@ -90,6 +90,14 @@ pub struct CommentArgs {
     /// Board number (si no está configurado)
     #[arg(short, long)]
     pub board: Option<u64>,
+
+    /// Marcar el comentario para seguimiento (recibir notificaciones de respuestas)
+    #[arg(short, long)]
+    pub follow: bool,
+
+    /// Fecha del comentario, formato "YYYY-MM-DD HH:MM" en hora local (opcional; por defecto ahora)
+    #[arg(short, long)]
+    pub date: Option<String>,
 }
 
 #[derive(Args, Debug)]
@@ -340,7 +348,7 @@ async fn update_desc(args: UpdateDescArgs, json: bool) -> Result<()> {
 async fn post_comment(args: CommentArgs, board: Option<u64>, json: bool) -> Result<()> {
     let session = Session::open().await?;
 
-    operations::comments::post_comment(&session.client, args.card_id, &args.text, board).await?;
+    operations::comments::post_comment(&session.client, args.card_id, &args.text, board, args.follow, args.date.as_deref()).await?;
 
     if json {
         println!("{{\"success\": true, \"card_id\": {}}}", args.card_id);

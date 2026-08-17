@@ -246,13 +246,40 @@ pub fn close_comments(app: &mut App) {
 pub fn start_composing_comment(app: &mut App) {
     app.composing_comment = true;
     app.comment_input.clear();
+    app.comment_follow = false;
+    app.comment_date_input.clear();
+    app.comment_date_focused = false;
     app.mention_suggestions.clear();
 }
 
 pub fn cancel_composing_comment(app: &mut App) {
     app.composing_comment = false;
     app.comment_input.clear();
+    app.comment_follow = false;
+    app.comment_date_input.clear();
+    app.comment_date_focused = false;
     app.mention_suggestions.clear();
+}
+
+pub fn toggle_comment_follow(app: &mut App) {
+    app.comment_follow = !app.comment_follow;
+}
+
+pub fn toggle_comment_date_focus(app: &mut App) {
+    app.comment_date_focused = !app.comment_date_focused;
+}
+
+/// Restricted to the characters `COMMENT_DATE_FORMAT` ("%Y-%m-%d %H:%M")
+/// can ever contain, so the field can't hold something `resolve_comment_date`
+/// would always reject.
+pub fn comment_date_input_push(app: &mut App, ch: char) {
+    if ch.is_ascii_digit() || ch == '-' || ch == ':' || ch == ' ' {
+        app.comment_date_input.push(ch);
+    }
+}
+
+pub fn comment_date_input_backspace(app: &mut App) {
+    app.comment_date_input.backspace();
 }
 
 pub async fn comment_input_push(client: &HteamClient, app: &mut App, ch: char) {
@@ -326,7 +353,10 @@ pub async fn submit_comment(client: &HteamClient, app: &mut App) {
         return;
     }
 
-    match operations::comments::post_comment(client, card.id, &text, Some(app.board_number)).await {
+    let date_input = app.comment_date_input.trim().to_string();
+    let date = if date_input.is_empty() { None } else { Some(date_input.as_str()) };
+
+    match operations::comments::post_comment(client, card.id, &text, Some(app.board_number), app.comment_follow, date).await {
         Ok(()) => {
             app.set_status("Comentario publicado.");
             cancel_composing_comment(app);
