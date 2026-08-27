@@ -8,12 +8,24 @@ pub struct List {
     #[serde(rename = "total_board_cards")]
     #[tabled(display_with = "display_option", rename = "Cards")]
     pub card_count: Option<usize>,
+    #[expect(
+        dead_code,
+        reason = "kept for API compatibility with Hteam list payloads"
+    )]
     #[serde(skip)]
     #[tabled(skip)]
     pub color: Option<String>,
+    #[expect(
+        dead_code,
+        reason = "kept for API compatibility with Hteam list payloads"
+    )]
     #[serde(skip)]
     #[tabled(skip)]
     pub position: Option<u64>,
+    #[expect(
+        dead_code,
+        reason = "kept for API compatibility with Hteam list payloads"
+    )]
     #[serde(skip)]
     #[tabled(skip)]
     pub show_url: Option<String>,
@@ -46,24 +58,48 @@ pub struct Card {
     #[serde(rename = "subtitle")]
     #[tabled(skip)]
     pub description: Option<String>,
+    #[expect(
+        dead_code,
+        reason = "kept for API compatibility with Hteam card payloads"
+    )]
     #[serde(skip)]
     #[tabled(skip)]
     pub status: Option<String>,
     #[serde(rename = "labels_list")]
     #[tabled(display_with = "display_labels")]
     pub labels: Vec<Label>,
+    #[expect(
+        dead_code,
+        reason = "kept for API compatibility with Hteam card payloads"
+    )]
     #[serde(skip)]
     #[tabled(skip)]
     pub number: Option<u64>,
+    #[expect(
+        dead_code,
+        reason = "kept for API compatibility with Hteam card payloads"
+    )]
     #[serde(skip)]
     #[tabled(skip)]
     pub title_url: Option<String>,
+    #[expect(
+        dead_code,
+        reason = "kept for API compatibility with Hteam card payloads"
+    )]
     #[serde(skip)]
     #[tabled(skip)]
     pub subtitle_url: Option<String>,
+    #[expect(
+        dead_code,
+        reason = "kept for API compatibility with Hteam card payloads"
+    )]
     #[serde(skip)]
     #[tabled(skip)]
     pub responsible: Option<serde_json::Value>,
+    #[expect(
+        dead_code,
+        reason = "kept for API compatibility with Hteam card payloads"
+    )]
     #[serde(skip)]
     #[tabled(skip)]
     pub worker: Option<serde_json::Value>,
@@ -131,6 +167,7 @@ where
     }
 }
 
+#[expect(dead_code, reason = "kept for API compatibility with board payloads")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Board {
     pub id: u64,
@@ -191,13 +228,21 @@ impl<'de> serde::Deserialize<'de> for ProjectMilestone {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let (name, progress, url): (String, f64, String) =
             serde::Deserialize::deserialize(deserializer)?;
-        Ok(Self { name, progress, url })
+        Ok(Self {
+            name,
+            progress,
+            url,
+        })
     }
 }
 
 fn display_progress(v: &f64) -> String {
     // milestones usan escala 0.0-1.0, tasks usan 0.0-100.0
-    let pct = if *v <= 1.0 { (v * 100.0).round() as usize } else { v.round() as usize };
+    let pct = if *v <= 1.0 {
+        (v * 100.0).round() as usize
+    } else {
+        v.round() as usize
+    };
     let pct = pct.min(100);
     let filled = pct / 10;
     let bar = format!("{}{}", "█".repeat(filled), "░".repeat(10 - filled));
@@ -239,15 +284,23 @@ pub struct ProjectResponsible {
 }
 
 fn display_milestone(opt: &Option<ProjectMilestoneRef>) -> String {
-    opt.as_ref().map(|m| m.name.clone()).unwrap_or_else(|| "-".to_string())
+    opt.as_ref()
+        .map(|m| m.name.clone())
+        .unwrap_or_else(|| "-".to_string())
 }
 
 fn display_responsible(opt: &Option<ProjectResponsible>) -> String {
-    opt.as_ref().map(|r| r.username.clone()).unwrap_or_else(|| "-".to_string())
+    opt.as_ref()
+        .map(|r| r.username.clone())
+        .unwrap_or_else(|| "-".to_string())
 }
 
 fn display_closed(v: &bool) -> String {
-    if *v { "✅".to_string() } else { "🔲".to_string() }
+    if *v {
+        "✅".to_string()
+    } else {
+        "🔲".to_string()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Tabled)]
@@ -329,14 +382,7 @@ pub struct WorkShiftResume {
     pub last: Option<WorkShiftRecord>,
 }
 
-fn display_option_f64(opt: &Option<f64>) -> String {
-    match opt {
-        Some(v) => format!("{:.0}%", v),
-        None => "-".to_string(),
-    }
-}
-
-fn truncate_comment(s: &String) -> String {
+fn truncate_comment(s: &str) -> String {
     let s = s.replace('\n', " ");
     if s.chars().count() > 80 {
         format!("{}…", s.chars().take(79).collect::<String>())
@@ -352,7 +398,7 @@ fn display_option<T: ToString>(opt: &Option<T>) -> String {
     }
 }
 
-fn display_labels(labels: &Vec<Label>) -> String {
+fn display_labels(labels: &[Label]) -> String {
     if labels.is_empty() {
         return "-".to_string();
     }
@@ -414,6 +460,10 @@ pub struct BoardEntry {
     pub name: String,
     #[serde(default)]
     pub service: String,
+    #[expect(
+        dead_code,
+        reason = "kept for API compatibility with board datatables payloads"
+    )]
     #[serde(default)]
     pub responsible: String,
     #[serde(default)]

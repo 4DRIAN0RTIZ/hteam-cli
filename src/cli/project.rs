@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
-use tabled::{Table, settings::Style};
+use tabled::{settings::Style, Table};
 
 use crate::operations::{self, Session};
 
@@ -36,7 +36,10 @@ async fn project_milestones(args: ProjectArgs, json: bool) -> Result<()> {
     }
 
     if milestones.is_empty() {
-        println!("⚠️  No se encontraron milestones para el proyecto {}.", args.project_id);
+        println!(
+            "⚠️  No se encontraron milestones para el proyecto {}.",
+            args.project_id
+        );
         return Ok(());
     }
 
@@ -61,14 +64,20 @@ async fn project_tasks(args: ProjectArgs, json: bool) -> Result<()> {
     }
 
     if resp.results.is_empty() {
-        println!("⚠️  No se encontraron tasks para el proyecto {}.", args.project_id);
+        println!(
+            "⚠️  No se encontraron tasks para el proyecto {}.",
+            args.project_id
+        );
         return Ok(());
     }
 
     let mut table = Table::new(&resp.results);
     table.with(Style::rounded());
 
-    println!("\n📌 Tasks del proyecto {} ({} total):\n", args.project_id, resp.count);
+    println!(
+        "\n📌 Tasks del proyecto {} ({} total):\n",
+        args.project_id, resp.count
+    );
     println!("{}", table);
     println!();
 

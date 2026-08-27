@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
-use reqwest::Client;
 use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE, COOKIE, REFERER};
+use reqwest::Client;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -31,11 +31,19 @@ pub struct HteamClient {
     config: Arc<Mutex<Config>>,
 }
 
+pub struct UpdateCardPatch<'a> {
+    pub detail: &'a CardDetail,
+    pub name: Option<&'a str>,
+    pub description: Option<&'a str>,
+    pub priority: Option<&'a str>,
+    pub responsible: Option<&'a str>,
+}
+
 impl HteamClient {
     pub fn new(config: Config) -> Result<Self> {
         let client = Client::builder()
             // Don't use cookie store, we'll handle cookies manually
-            .user_agent("curl/7.81.0")  // Match curl's user-agent
+            .user_agent("curl/7.81.0") // Match curl's user-agent
             .timeout(std::time::Duration::from_secs(30))
             .build()
             .context("Error al crear el cliente HTTP")?;
@@ -58,10 +66,12 @@ impl HteamClient {
 
         headers.insert(REFERER, HeaderValue::from_static("https://hteam.mx/"));
 
-        if let (Some(session_id), Some(csrf_token)) = (&config.auth.session_id, &config.auth.csrf_token) {
+        if let (Some(session_id), Some(csrf_token)) =
+            (&config.auth.session_id, &config.auth.csrf_token)
+        {
             let cookie_value = format!("sessionid={}; csrftoken={}", session_id, csrf_token);
             headers.insert(COOKIE, HeaderValue::from_str(&cookie_value)?);
-            
+
             headers.insert("X-CSRFToken", HeaderValue::from_str(csrf_token)?);
         }
 
@@ -73,8 +83,11 @@ impl HteamClient {
         }
 
         // Add X-Requested-With for AJAX requests (like plugin Lua does)
-        headers.insert("X-Requested-With", HeaderValue::from_static("XMLHttpRequest"));
-        
+        headers.insert(
+            "X-Requested-With",
+            HeaderValue::from_static("XMLHttpRequest"),
+        );
+
         // Add Accept header like curl does
         headers.insert(reqwest::header::ACCEPT, HeaderValue::from_static("*/*"));
 
@@ -83,7 +96,8 @@ impl HteamClient {
 
     async fn get_board_number(&self) -> Result<u64> {
         let config = self.config.lock().await;
-        config.get_board_number()
+        config
+            .get_board_number()
             .or_else(|| config.load_last_ticket().ok().flatten())
             .context("No se especificó el board number. Usa --board o configura uno por defecto.")
     }
@@ -93,14 +107,13 @@ impl HteamClient {
         // This endpoint should work with cookie authentication
         let config = self.config.lock().await;
         let board = config.get_board_number().unwrap_or(483);
-        let url = format!("{}/operation/care/operations/{}/lists/?format=json", BASE_URL, board);
+        let url = format!(
+            "{}/operation/care/operations/{}/lists/?format=json",
+            BASE_URL, board
+        );
         let headers = self.build_headers(&config)?;
-        
-        let response = self.client
-            .get(&url)
-            .headers(headers)
-            .send()
-            .await?;
+
+        let response = self.client.get(&url).headers(headers).send().await?;
 
         Ok(response.status().is_success())
     }
@@ -112,10 +125,14 @@ impl HteamClient {
         };
 
         let config = self.config.lock().await;
-        let url = format!("{}/operation/care/operations/{}/lists/?format=json", BASE_URL, board);
+        let url = format!(
+            "{}/operation/care/operations/{}/lists/?format=json",
+            BASE_URL, board
+        );
         let headers = self.build_headers(&config)?;
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .headers(headers)
             .send()
@@ -123,24 +140,36 @@ impl HteamClient {
             .context("Error al obtener listas")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
         }
 
         let lists: Vec<List> = response.json().await?;
         Ok(lists)
     }
 
-    pub async fn get_cards(&self, list_id: u64, board_number: Option<u64>) -> Result<(Vec<Card>, Option<u64>)> {
+    pub async fn get_cards(
+        &self,
+        list_id: u64,
+        board_number: Option<u64>,
+    ) -> Result<(Vec<Card>, Option<u64>)> {
         let board = match board_number {
             Some(b) => b,
             None => self.get_board_number().await?,
         };
 
         let config = self.config.lock().await;
-        let url = format!("{}/operation/care/operations/{}/lists/{}/cards/?format=json", BASE_URL, board, list_id);
+        let url = format!(
+            "{}/operation/care/operations/{}/lists/{}/cards/?format=json",
+            BASE_URL, board, list_id
+        );
         let headers = self.build_headers(&config)?;
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .headers(headers)
             .send()
@@ -148,21 +177,27 @@ impl HteamClient {
             .context("Error al obtener cards")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
         }
 
         let card_response: crate::models::CardListResponse = response.json().await?;
-        
+
         // Extract board_id from first entry if available
-        let board_id = card_response.cardlist_list
+        let board_id = card_response
+            .cardlist_list
             .first()
             .map(|entry| entry.board_id);
-        
-        let cards: Vec<Card> = card_response.cardlist_list
+
+        let cards: Vec<Card> = card_response
+            .cardlist_list
             .into_iter()
             .map(|entry| entry.card)
             .collect();
-            
+
         Ok((cards, board_id))
     }
 
@@ -181,7 +216,8 @@ impl HteamClient {
         let url = format!("{}/operation/care/tasks/{}/?format=json", BASE_URL, card_id);
         let headers = self.build_headers(&config)?;
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .headers(headers)
             .send()
@@ -189,7 +225,11 @@ impl HteamClient {
             .context("Error al obtener detalle de card")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
         }
 
         let detail: CardDetail = response.json().await?;
@@ -201,7 +241,8 @@ impl HteamClient {
         let url = format!("{}/comments/api/processes-task/{}/", SITE_URL, card_id);
         let headers = self.build_headers(&config)?;
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .headers(headers)
             .send()
@@ -209,7 +250,11 @@ impl HteamClient {
             .context("Error al obtener comentarios")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
         }
 
         let resp: CommentsResponse = response.json().await?;
@@ -328,10 +373,9 @@ impl HteamClient {
             "process": board_number,
             "labels": labels,
         });
-        
 
-
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .headers(headers)
             .header(CONTENT_TYPE, "application/json")
@@ -342,7 +386,7 @@ impl HteamClient {
 
         let status = response.status();
         let response_text = response.text().await?;
-        
+
         if !status.is_success() {
             anyhow::bail!("Error HTTP {}: {}", status, response_text);
         }
@@ -376,8 +420,12 @@ impl HteamClient {
             });
         }
 
-        serde_json::from_str::<Card>(&response_text)
-            .with_context(|| format!("Respuesta inesperada del API al crear card: {:?}", truncate_for_error(&response_text, 300)))
+        serde_json::from_str::<Card>(&response_text).with_context(|| {
+            format!(
+                "Respuesta inesperada del API al crear card: {:?}",
+                truncate_for_error(&response_text, 300)
+            )
+        })
     }
 
     pub async fn move_card(
@@ -404,7 +452,8 @@ impl HteamClient {
             "card_type": 0,
         });
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .headers(headers)
             .header(CONTENT_TYPE, "application/json")
@@ -414,7 +463,11 @@ impl HteamClient {
             .context("Error al mover card")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
         }
 
         Ok(())
@@ -423,7 +476,18 @@ impl HteamClient {
     pub async fn update_card_description(&self, card_id: u64, description: &str) -> Result<()> {
         let board_number = self.get_board_number().await?;
         let detail = self.get_card_detail(card_id).await?;
-        self.update_card_full(card_id, board_number, &detail, None, Some(description), None, None).await
+        self.update_card_full(
+            card_id,
+            board_number,
+            UpdateCardPatch {
+                detail: &detail,
+                name: None,
+                description: Some(description),
+                priority: None,
+                responsible: None,
+            },
+        )
+        .await
     }
 
     pub async fn get_working_on(&self) -> Result<Vec<WorkingOnStatus>> {
@@ -431,7 +495,8 @@ impl HteamClient {
         let url = format!("{}/tr/workingonit/user/", BASE_URL);
         let headers = self.build_headers(&config)?;
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .headers(headers)
             .send()
@@ -439,28 +504,38 @@ impl HteamClient {
             .context("Error al obtener working on")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
         }
 
         // Try to parse as array first, then as single object
         let response_text = response.text().await?;
-        
+
         // Check if response is empty or null
         if response_text.trim().is_empty() || response_text.trim() == "null" {
             return Ok(vec![]);
         }
-        
+
         // Try to parse as array
-        if let Ok(array) = serde_json::from_str::<Vec<crate::models::WorkingOnResponse>>(&response_text) {
+        if let Ok(array) =
+            serde_json::from_str::<Vec<crate::models::WorkingOnResponse>>(&response_text)
+        {
             return Ok(array.into_iter().map(|resp| resp.into()).collect());
         }
-        
+
         // Try to parse as single object
-        if let Ok(single) = serde_json::from_str::<crate::models::WorkingOnResponse>(&response_text) {
+        if let Ok(single) = serde_json::from_str::<crate::models::WorkingOnResponse>(&response_text)
+        {
             return Ok(vec![single.into()]);
         }
-        
-        anyhow::bail!("No se pudo parsear la respuesta de working on: {}", truncate_for_error(&response_text, 200))
+
+        anyhow::bail!(
+            "No se pudo parsear la respuesta de working on: {}",
+            truncate_for_error(&response_text, 200)
+        )
     }
 
     pub async fn start_working(&self, card_id: u64) -> Result<()> {
@@ -470,10 +545,14 @@ impl HteamClient {
 
         let body = format!("object_id={}&content_type=99", card_id);
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .headers(headers)
-            .header(CONTENT_TYPE, "application/x-www-form-urlencoded; charset=UTF-8")
+            .header(
+                CONTENT_TYPE,
+                "application/x-www-form-urlencoded; charset=UTF-8",
+            )
             .header("X-Requested-With", "XMLHttpRequest")
             .body(body)
             .send()
@@ -481,7 +560,11 @@ impl HteamClient {
             .context("Error al iniciar working on")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
         }
 
         Ok(())
@@ -489,15 +572,22 @@ impl HteamClient {
 
     pub async fn stop_working(&self, working_id: u64) -> Result<()> {
         let config = self.config.lock().await;
-        let url = format!("{}/tr/workingonit/{}/content_type/99/", BASE_URL, working_id);
+        let url = format!(
+            "{}/tr/workingonit/{}/content_type/99/",
+            BASE_URL, working_id
+        );
         let headers = self.build_headers(&config)?;
 
         let body = format!("object_id={}&content_type=99&state=4", working_id);
 
-        let response = self.client
+        let response = self
+            .client
             .put(&url)
             .headers(headers)
-            .header(CONTENT_TYPE, "application/x-www-form-urlencoded; charset=UTF-8")
+            .header(
+                CONTENT_TYPE,
+                "application/x-www-form-urlencoded; charset=UTF-8",
+            )
             .header("X-Requested-With", "XMLHttpRequest")
             .body(body)
             .send()
@@ -505,7 +595,11 @@ impl HteamClient {
             .context("Error al detener working on")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
         }
 
         Ok(())
@@ -528,7 +622,8 @@ impl HteamClient {
         let task_url = format!("{}/operations/{}/tasks/{}/", SITE_URL, board, card_id);
         let headers = self.build_headers(&config)?;
 
-        let html_response = self.client
+        let html_response = self
+            .client
             .get(&task_url)
             .headers(headers.clone())
             .send()
@@ -536,19 +631,25 @@ impl HteamClient {
             .context("Error al obtener página de card")?;
 
         if !html_response.status().is_success() {
-            anyhow::bail!("Error HTTP {} al obtener página de card", html_response.status());
+            anyhow::bail!(
+                "Error HTTP {} al obtener página de card",
+                html_response.status()
+            );
         }
 
         let html = html_response.text().await?;
 
-        let (timestamp, security_hash, csrf) = self.extract_comment_tokens(&html)
+        let (timestamp, security_hash, csrf) = self
+            .extract_comment_tokens(&html)
             .context("No se pudo extraer el formulario de comentarios de la página")?;
 
         let encode = |s: &str| {
             let mut out = String::new();
             for b in s.bytes() {
                 match b {
-                    b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => out.push(b as char),
+                    b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                        out.push(b as char)
+                    }
                     b' ' => out.push('+'),
                     _ => out.push_str(&format!("%{:02X}", b)),
                 }
@@ -577,7 +678,8 @@ impl HteamClient {
 
         let comment_url = format!("{}/comments/post/", SITE_URL);
 
-        let response = self.client
+        let response = self
+            .client
             .post(&comment_url)
             .headers(headers)
             .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
@@ -603,10 +705,14 @@ impl HteamClient {
         };
 
         let config = self.config.lock().await;
-        let url = format!("{}/boards/care/boards/{}/card/{}/labels/?format=json", BASE_URL, board, card_id);
+        let url = format!(
+            "{}/boards/care/boards/{}/card/{}/labels/?format=json",
+            BASE_URL, board, card_id
+        );
         let headers = self.build_headers(&config)?;
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .headers(headers)
             .send()
@@ -614,7 +720,11 @@ impl HteamClient {
             .context("Error al obtener labels")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
         }
 
         let labels: Vec<Label> = response.json().await?;
@@ -623,10 +733,14 @@ impl HteamClient {
 
     pub async fn get_project_milestones(&self, project_id: u64) -> Result<Vec<ProjectMilestone>> {
         let config = self.config.lock().await;
-        let url = format!("{}/project-new/care/projects/{}/milestones_progress/", BASE_URL, project_id);
+        let url = format!(
+            "{}/project-new/care/projects/{}/milestones_progress/",
+            BASE_URL, project_id
+        );
         let headers = self.build_headers(&config)?;
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .headers(headers)
             .send()
@@ -634,7 +748,11 @@ impl HteamClient {
             .context("Error al obtener milestones")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
         }
 
         let milestones: Vec<ProjectMilestone> = response.json().await?;
@@ -643,10 +761,14 @@ impl HteamClient {
 
     pub async fn get_project_tasks(&self, project_id: u64) -> Result<ProjectTasksResponse> {
         let config = self.config.lock().await;
-        let url = format!("{}/project-new/care/{}/tasks-projects/", BASE_URL, project_id);
+        let url = format!(
+            "{}/project-new/care/{}/tasks-projects/",
+            BASE_URL, project_id
+        );
         let headers = self.build_headers(&config)?;
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .headers(headers)
             .send()
@@ -654,7 +776,11 @@ impl HteamClient {
             .context("Error al obtener tasks de proyecto")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
         }
 
         let resp: ProjectTasksResponse = response.json().await?;
@@ -665,14 +791,13 @@ impl HteamClient {
         &self,
         card_id: u64,
         board_number: u64,
-        detail: &CardDetail,
-        name: Option<&str>,
-        description: Option<&str>,
-        priority: Option<&str>,
-        responsible: Option<&str>,
+        patch: UpdateCardPatch<'_>,
     ) -> Result<()> {
         let config = self.config.lock().await;
-        let url = format!("{}/operations/{}/tasks/{}/edit/", SITE_URL, board_number, card_id);
+        let url = format!(
+            "{}/operations/{}/tasks/{}/edit/",
+            SITE_URL, board_number, card_id
+        );
         let headers = self.build_headers(&config)?;
         let csrf = config.auth.csrf_token.as_deref().unwrap_or("");
 
@@ -699,21 +824,67 @@ impl HteamClient {
             }
         };
 
+        let detail = patch.detail;
         let fields = vec![
             format!("csrfmiddlewaretoken={}", encode(csrf)),
             format!("process_id={}", board_number),
-            format!("name={}", encode(name.unwrap_or(&detail.name))),
-            format!("description={}", encode(description.unwrap_or(detail.description.as_deref().unwrap_or("")))),
-            format!("time_estimated={}", encode(detail.time_estimated.as_deref().unwrap_or(""))),
-            format!("start_date={}", encode(detail.start_date.as_deref().unwrap_or(""))),
-            format!("dependence={}", encode(&detail.dependence.as_ref().map(val_to_str).unwrap_or_default())),
-            format!("responsible={}", encode(responsible.unwrap_or(&detail.responsible.as_ref().map(val_to_str).unwrap_or_default()))),
-            format!("priority={}", encode(priority.unwrap_or(&detail.priority.as_ref().map(val_to_str).unwrap_or_else(|| "3".to_string())))),
+            format!("name={}", encode(patch.name.unwrap_or(&detail.name))),
+            format!(
+                "description={}",
+                encode(
+                    patch
+                        .description
+                        .unwrap_or(detail.description.as_deref().unwrap_or(""))
+                )
+            ),
+            format!(
+                "time_estimated={}",
+                encode(detail.time_estimated.as_deref().unwrap_or(""))
+            ),
+            format!(
+                "start_date={}",
+                encode(detail.start_date.as_deref().unwrap_or(""))
+            ),
+            format!(
+                "dependence={}",
+                encode(
+                    &detail
+                        .dependence
+                        .as_ref()
+                        .map(val_to_str)
+                        .unwrap_or_default()
+                )
+            ),
+            format!(
+                "responsible={}",
+                encode(
+                    patch.responsible.unwrap_or(
+                        &detail
+                            .responsible
+                            .as_ref()
+                            .map(val_to_str)
+                            .unwrap_or_default()
+                    )
+                )
+            ),
+            format!(
+                "priority={}",
+                encode(
+                    patch.priority.unwrap_or(
+                        &detail
+                            .priority
+                            .as_ref()
+                            .map(val_to_str)
+                            .unwrap_or_else(|| "3".to_string())
+                    )
+                )
+            ),
             format!("id={}", card_id),
         ];
         let body = fields.join("&");
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .headers(headers)
             .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
@@ -743,7 +914,8 @@ impl HteamClient {
             "card_type": 0,
         });
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .headers(headers)
             .header(CONTENT_TYPE, "application/json")
@@ -765,7 +937,8 @@ impl HteamClient {
         let url = format!("{}/tr/reminders/user/", BASE_URL);
         let headers = self.build_headers(&config)?;
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .headers(headers)
             .send()
@@ -773,7 +946,11 @@ impl HteamClient {
             .context("Error al obtener reminders")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
         }
 
         let text = response.text().await?;
@@ -818,7 +995,8 @@ impl HteamClient {
 
         let headers = self.build_headers(&config)?;
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .headers(headers)
             .send()
@@ -826,7 +1004,11 @@ impl HteamClient {
             .context("Error al obtener historial de trabajo diario")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
         }
 
         let html = response.text().await?;
@@ -836,9 +1018,9 @@ impl HteamClient {
     fn parse_daily_work_history(html: &str) -> Result<Vec<DailyWorkEntry>> {
         use scraper::{Html, Selector};
 
-        let timestamp_re = regex::Regex::new(
-            r"[A-Z][a-z]{2}\.\s\d{1,2},\s\d{4},\s\d{1,2}:\d{2}\s[ap]\.m\."
-        ).context("Regex de timestamp inválida")?;
+        let timestamp_re =
+            regex::Regex::new(r"[A-Z][a-z]{2}\.\s\d{1,2},\s\d{4},\s\d{1,2}:\d{2}\s[ap]\.m\.")
+                .context("Regex de timestamp inválida")?;
 
         let document = Html::parse_document(html);
         let entry_sel = Selector::parse("#history p").map_err(|e| anyhow::anyhow!("{:?}", e))?;
@@ -853,25 +1035,37 @@ impl HteamClient {
                 continue;
             }
 
-            let links: Vec<(String, String)> = p.select(&link_sel)
+            let links: Vec<(String, String)> = p
+                .select(&link_sel)
                 .map(|a| {
                     let href = a.value().attr("href").unwrap_or("").to_string();
-                    let text = a.text().collect::<String>().split_whitespace().collect::<Vec<_>>().join(" ");
+                    let text = a
+                        .text()
+                        .collect::<String>()
+                        .split_whitespace()
+                        .collect::<Vec<_>>()
+                        .join(" ");
                     (href, text)
                 })
                 .collect();
 
-            let user_link = links.iter().find(|(href, _)| href.starts_with("/history/daily-work"));
+            let user_link = links
+                .iter()
+                .find(|(href, _)| href.starts_with("/history/daily-work"));
             let user = user_link
                 .map(|(_, text)| text.clone())
                 .unwrap_or_else(|| "External source".to_string());
 
             let target_link = links.iter().find(|(href, _)| {
-                !href.starts_with("/history/daily-work") && !href.contains("/boards/general/labels/")
+                !href.starts_with("/history/daily-work")
+                    && !href.contains("/boards/general/labels/")
             });
             let target_url = target_link.map(|(href, _)| format!("{}{}", SITE_URL, href));
 
-            let rest = full_text.strip_prefix(user.as_str()).unwrap_or(&full_text).trim();
+            let rest = full_text
+                .strip_prefix(user.as_str())
+                .unwrap_or(&full_text)
+                .trim();
 
             let Some(ts_match) = timestamp_re.find_iter(rest).last() else {
                 continue;
@@ -902,7 +1096,8 @@ impl HteamClient {
         let url = format!("{}/users/username-autocomplete/?q={}", BASE_URL, query);
         let headers = self.build_headers(&config)?;
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .headers(headers)
             .send()
@@ -910,7 +1105,11 @@ impl HteamClient {
             .context("Error al buscar usuarios")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
         }
 
         let text = response
@@ -944,7 +1143,8 @@ impl HteamClient {
         let url = format!("{}/tr/checkworkshifs/check_in/", BASE_URL);
         let headers = self.build_headers(&config)?;
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .headers(headers)
             .header(CONTENT_TYPE, "application/json")
@@ -954,7 +1154,11 @@ impl HteamClient {
             .context("Error al hacer check in")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
         }
 
         let result: CheckInResult = response.json().await?;
@@ -966,7 +1170,8 @@ impl HteamClient {
         let url = format!("{}/tr/checkworkshifs/resume/", BASE_URL);
         let headers = self.build_headers(&config)?;
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .headers(headers)
             .send()
@@ -974,7 +1179,11 @@ impl HteamClient {
             .context("Error al obtener el resumen del turno")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
         }
 
         let result: WorkShiftResume = response.json().await?;
@@ -1015,7 +1224,11 @@ impl HteamClient {
             .context("Error al obtener boards")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Error HTTP {}: {}", response.status(), response.text().await?);
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
         }
 
         let data: BoardsResponse = response.json().await?;

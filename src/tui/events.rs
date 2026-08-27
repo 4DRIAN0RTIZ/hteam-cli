@@ -74,7 +74,10 @@ pub fn toggle_hide_current_list(app: &mut App) {
 
     match persist_hidden_lists(app) {
         Ok(()) => {
-            app.set_status(format!("Lista oculta: {} ('V' para mostrar todas)", list.name));
+            app.set_status(format!(
+                "Lista oculta: {} ('V' para mostrar todas)",
+                list.name
+            ));
         }
         Err(e) => {
             app.set_status(format!(
@@ -90,12 +93,10 @@ pub fn show_all_lists(app: &mut App) {
     app.hidden_lists.clear();
     match persist_hidden_lists(app) {
         Ok(()) => app.set_status("Todas las listas visibles."),
-        Err(e) => {
-            app.set_status(format!(
-                "Mostrando todas (no se pudo guardar en config.toml: {})",
-                e
-            ))
-        }
+        Err(e) => app.set_status(format!(
+            "Mostrando todas (no se pudo guardar en config.toml: {})",
+            e
+        )),
     }
 }
 
@@ -161,7 +162,11 @@ pub async fn move_active_card(client: &HteamClient, app: &mut App, delta: i32) {
     .await
     {
         Ok(()) => {
-            let new_len = app.cards_by_list.get(&to_list.id).map(|c| c.len()).unwrap_or(1);
+            let new_len = app
+                .cards_by_list
+                .get(&to_list.id)
+                .map(|c| c.len())
+                .unwrap_or(1);
             app.selected_card.insert(to_list.id, new_len - 1);
             app.selected_list = target_pos as usize;
             app.set_status(format!("Movida: {} → {}", card.name, to_list.name));
@@ -354,9 +359,22 @@ pub async fn submit_comment(client: &HteamClient, app: &mut App) {
     }
 
     let date_input = app.comment_date_input.trim().to_string();
-    let date = if date_input.is_empty() { None } else { Some(date_input.as_str()) };
+    let date = if date_input.is_empty() {
+        None
+    } else {
+        Some(date_input.as_str())
+    };
 
-    match operations::comments::post_comment(client, card.id, &text, Some(app.board_number), app.comment_follow, date).await {
+    match operations::comments::post_comment(
+        client,
+        card.id,
+        &text,
+        Some(app.board_number),
+        app.comment_follow,
+        date,
+    )
+    .await
+    {
         Ok(()) => {
             app.set_status("Comentario publicado.");
             cancel_composing_comment(app);
@@ -374,7 +392,12 @@ pub async fn submit_comment(client: &HteamClient, app: &mut App) {
 /// client's cached config, which `switch_to_board` keeps in sync via
 /// `client.set_board_number`, so this correctly targets whichever board is
 /// currently active in the TUI.
-pub async fn save_description(client: &HteamClient, app: &mut App, card_id: u64, description: &str) {
+pub async fn save_description(
+    client: &HteamClient,
+    app: &mut App,
+    card_id: u64,
+    description: &str,
+) {
     match operations::cards::update_description(client, card_id, description).await {
         Ok(()) => {
             app.set_status("Descripción actualizada.");
@@ -392,7 +415,8 @@ pub fn open_description(app: &mut App) {
     let Some(card) = app.current_card() else {
         return;
     };
-    app.description_input.set(card.description.clone().unwrap_or_default());
+    app.description_input
+        .set(card.description.clone().unwrap_or_default());
     app.show_description = true;
 }
 
@@ -572,7 +596,9 @@ pub async fn submit_new_card(client: &HteamClient, app: &mut App) {
         Ok(card) => {
             app.set_status(format!("Card creada: {}", card.name));
             cancel_composing_card(app);
-            if let Ok((cards, _)) = operations::cards::list_cards(client, list_id, Some(app.board_number)).await {
+            if let Ok((cards, _)) =
+                operations::cards::list_cards(client, list_id, Some(app.board_number)).await
+            {
                 app.cards_by_list.insert(list_id, cards);
             }
         }
