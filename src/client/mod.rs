@@ -29,6 +29,8 @@ fn truncate_for_error(s: &str, max_chars: usize) -> String {
 pub struct HteamClient {
     client: Client,
     config: Arc<Mutex<Config>>,
+    api_base_url: String,
+    site_base_url: String,
 }
 
 pub struct UpdateCardPatch<'a> {
@@ -51,6 +53,8 @@ impl HteamClient {
         Ok(Self {
             client,
             config: Arc::new(Mutex::new(config)),
+            api_base_url: BASE_URL.to_string(),
+            site_base_url: SITE_URL.to_string(),
         })
     }
 
@@ -59,6 +63,18 @@ impl HteamClient {
             anyhow::bail!("No autenticado. Ejecuta 'hteam login' primero.");
         }
         Self::new(config)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn new_for_test(
+        config: Config,
+        api_base_url: String,
+        site_base_url: String,
+    ) -> Result<Self> {
+        let mut client = Self::new(config)?;
+        client.api_base_url = api_base_url;
+        client.site_base_url = site_base_url;
+        Ok(client)
     }
 
     fn build_headers(&self, config: &Config) -> Result<HeaderMap> {
@@ -109,7 +125,7 @@ impl HteamClient {
         let board = config.get_board_number().unwrap_or(483);
         let url = format!(
             "{}/operation/care/operations/{}/lists/?format=json",
-            BASE_URL, board
+            self.api_base_url, board
         );
         let headers = self.build_headers(&config)?;
 
@@ -127,7 +143,7 @@ impl HteamClient {
         let config = self.config.lock().await;
         let url = format!(
             "{}/operation/care/operations/{}/lists/?format=json",
-            BASE_URL, board
+            self.api_base_url, board
         );
         let headers = self.build_headers(&config)?;
 
@@ -164,7 +180,7 @@ impl HteamClient {
         let config = self.config.lock().await;
         let url = format!(
             "{}/operation/care/operations/{}/lists/{}/cards/?format=json",
-            BASE_URL, board, list_id
+            self.api_base_url, board, list_id
         );
         let headers = self.build_headers(&config)?;
 
@@ -213,7 +229,10 @@ impl HteamClient {
 
     pub async fn get_card_detail(&self, card_id: u64) -> Result<CardDetail> {
         let config = self.config.lock().await;
-        let url = format!("{}/operation/care/tasks/{}/?format=json", BASE_URL, card_id);
+        let url = format!(
+            "{}/operation/care/tasks/{}/?format=json",
+            self.api_base_url, card_id
+        );
         let headers = self.build_headers(&config)?;
 
         let response = self
@@ -238,7 +257,10 @@ impl HteamClient {
 
     pub async fn get_card_comments(&self, card_id: u64) -> Result<Vec<Comment>> {
         let config = self.config.lock().await;
-        let url = format!("{}/comments/api/processes-task/{}/", SITE_URL, card_id);
+        let url = format!(
+            "{}/comments/api/processes-task/{}/",
+            self.site_base_url, card_id
+        );
         let headers = self.build_headers(&config)?;
 
         let response = self
@@ -307,7 +329,7 @@ impl HteamClient {
         }
 
         let config = self.config.lock().await;
-        let url = format!("{}/tr/workingonit/user/", BASE_URL);
+        let url = format!("{}/tr/workingonit/user/", self.api_base_url);
         let headers = self.build_headers(&config)?;
         drop(config);
 
@@ -360,7 +382,10 @@ impl HteamClient {
         let board_number = self.get_board_number().await?;
         let user_id = self.get_user_id().await?;
 
-        let url = format!("{}/boards/care/boards/{}/create_card/", BASE_URL, board_id);
+        let url = format!(
+            "{}/boards/care/boards/{}/create_card/",
+            self.api_base_url, board_id
+        );
         let headers = {
             let config = self.config.lock().await;
             self.build_headers(&config)?
@@ -441,7 +466,10 @@ impl HteamClient {
         };
 
         let config = self.config.lock().await;
-        let url = format!("{}/boards/care/labels/update_card_position/", BASE_URL);
+        let url = format!(
+            "{}/boards/care/labels/update_card_position/",
+            self.api_base_url
+        );
         let headers = self.build_headers(&config)?;
 
         let body = serde_json::json!({
@@ -492,7 +520,7 @@ impl HteamClient {
 
     pub async fn get_working_on(&self) -> Result<Vec<WorkingOnStatus>> {
         let config = self.config.lock().await;
-        let url = format!("{}/tr/workingonit/user/", BASE_URL);
+        let url = format!("{}/tr/workingonit/user/", self.api_base_url);
         let headers = self.build_headers(&config)?;
 
         let response = self
@@ -540,7 +568,7 @@ impl HteamClient {
 
     pub async fn start_working(&self, card_id: u64) -> Result<()> {
         let config = self.config.lock().await;
-        let url = format!("{}/tr/workingonit/", BASE_URL);
+        let url = format!("{}/tr/workingonit/", self.api_base_url);
         let headers = self.build_headers(&config)?;
 
         let body = format!("object_id={}&content_type=99", card_id);
@@ -574,7 +602,7 @@ impl HteamClient {
         let config = self.config.lock().await;
         let url = format!(
             "{}/tr/workingonit/{}/content_type/99/",
-            BASE_URL, working_id
+            self.api_base_url, working_id
         );
         let headers = self.build_headers(&config)?;
 
@@ -619,7 +647,10 @@ impl HteamClient {
         };
 
         let config = self.config.lock().await;
-        let task_url = format!("{}/operations/{}/tasks/{}/", SITE_URL, board, card_id);
+        let task_url = format!(
+            "{}/operations/{}/tasks/{}/",
+            self.site_base_url, board, card_id
+        );
         let headers = self.build_headers(&config)?;
 
         let html_response = self
@@ -676,14 +707,14 @@ impl HteamClient {
         fields.push(format!("date={}", encode(&date_str)));
         let body = fields.join("&");
 
-        let comment_url = format!("{}/comments/post/", SITE_URL);
+        let comment_url = format!("{}/comments/post/", self.site_base_url);
 
         let response = self
             .client
             .post(&comment_url)
             .headers(headers)
             .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
-            .header("Origin", SITE_URL)
+            .header("Origin", self.site_base_url.as_str())
             .header(REFERER, task_url.as_str())
             .body(body)
             .send()
@@ -707,7 +738,7 @@ impl HteamClient {
         let config = self.config.lock().await;
         let url = format!(
             "{}/boards/care/boards/{}/card/{}/labels/?format=json",
-            BASE_URL, board, card_id
+            self.api_base_url, board, card_id
         );
         let headers = self.build_headers(&config)?;
 
@@ -735,7 +766,7 @@ impl HteamClient {
         let config = self.config.lock().await;
         let url = format!(
             "{}/project-new/care/projects/{}/milestones_progress/",
-            BASE_URL, project_id
+            self.api_base_url, project_id
         );
         let headers = self.build_headers(&config)?;
 
@@ -763,7 +794,7 @@ impl HteamClient {
         let config = self.config.lock().await;
         let url = format!(
             "{}/project-new/care/{}/tasks-projects/",
-            BASE_URL, project_id
+            self.api_base_url, project_id
         );
         let headers = self.build_headers(&config)?;
 
@@ -796,7 +827,7 @@ impl HteamClient {
         let config = self.config.lock().await;
         let url = format!(
             "{}/operations/{}/tasks/{}/edit/",
-            SITE_URL, board_number, card_id
+            self.site_base_url, board_number, card_id
         );
         let headers = self.build_headers(&config)?;
         let csrf = config.auth.csrf_token.as_deref().unwrap_or("");
@@ -888,7 +919,7 @@ impl HteamClient {
             .post(&url)
             .headers(headers)
             .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
-            .header("Origin", SITE_URL)
+            .header("Origin", self.site_base_url.as_str())
             .header(REFERER, url.as_str())
             .body(body)
             .send()
@@ -905,7 +936,7 @@ impl HteamClient {
 
     pub async fn set_reminder(&self, card_id: u64) -> Result<()> {
         let config = self.config.lock().await;
-        let url = format!("{}/tr/reminders/", BASE_URL);
+        let url = format!("{}/tr/reminders/", self.api_base_url);
         let headers = self.build_headers(&config)?;
 
         let body = serde_json::json!({
@@ -934,7 +965,7 @@ impl HteamClient {
 
     pub async fn get_reminders(&self) -> Result<Vec<Reminder>> {
         let config = self.config.lock().await;
-        let url = format!("{}/tr/reminders/user/", BASE_URL);
+        let url = format!("{}/tr/reminders/user/", self.api_base_url);
         let headers = self.build_headers(&config)?;
 
         let response = self
@@ -988,9 +1019,13 @@ impl HteamClient {
             params.push(format!("time_range={}", urlencoding::encode(r)));
         }
         let url = if params.is_empty() {
-            format!("{}/history/daily-work", SITE_URL)
+            format!("{}/history/daily-work", self.site_base_url)
         } else {
-            format!("{}/history/daily-work?{}", SITE_URL, params.join("&"))
+            format!(
+                "{}/history/daily-work?{}",
+                self.site_base_url,
+                params.join("&")
+            )
         };
 
         let headers = self.build_headers(&config)?;
@@ -1093,7 +1128,10 @@ impl HteamClient {
 
     pub async fn search_users(&self, query: &str) -> Result<Vec<UserSuggestion>> {
         let config = self.config.lock().await;
-        let url = format!("{}/users/username-autocomplete/?q={}", BASE_URL, query);
+        let url = format!(
+            "{}/users/username-autocomplete/?q={}",
+            self.api_base_url, query
+        );
         let headers = self.build_headers(&config)?;
 
         let response = self
@@ -1140,7 +1178,7 @@ impl HteamClient {
 
     pub async fn check_in(&self) -> Result<CheckInResult> {
         let config = self.config.lock().await;
-        let url = format!("{}/tr/checkworkshifs/check_in/", BASE_URL);
+        let url = format!("{}/tr/checkworkshifs/check_in/", self.api_base_url);
         let headers = self.build_headers(&config)?;
 
         let response = self
@@ -1167,7 +1205,7 @@ impl HteamClient {
 
     pub async fn get_workshift_resume(&self) -> Result<WorkShiftResume> {
         let config = self.config.lock().await;
-        let url = format!("{}/tr/checkworkshifs/resume/", BASE_URL);
+        let url = format!("{}/tr/checkworkshifs/resume/", self.api_base_url);
         let headers = self.build_headers(&config)?;
 
         let response = self
@@ -1196,7 +1234,7 @@ impl HteamClient {
         let headers = self.build_headers(&config)?;
         drop(config);
 
-        let url = format!("{}/operation/care/operations/", BASE_URL);
+        let url = format!("{}/operation/care/operations/", self.api_base_url);
         let response = self
             .client
             .get(&url)
@@ -1250,5 +1288,55 @@ impl HteamClient {
         let csrf = extract("csrfmiddlewaretoken")?;
 
         Some((timestamp, security_hash, csrf))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mockito::Matcher;
+
+    #[tokio::test]
+    async fn test_new_for_test_uses_mock_base_url() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/operation/care/operations/483/lists/")
+            .match_query(Matcher::UrlEncoded(
+                "format".to_string(),
+                "json".to_string(),
+            ))
+            .with_status(200)
+            .with_body(r#"[{"id":1,"name":"Open","total_board_cards":0}]"#)
+            .create_async()
+            .await;
+        let client = HteamClient::new_for_test(
+            Config::default(),
+            server.url(),
+            "http://example.test".to_string(),
+        )
+        .expect("test client");
+
+        let lists = client.get_lists(Some(483)).await.expect("lists");
+
+        assert_eq!(lists[0].name, "Open");
+    }
+
+    #[test]
+    fn test_extract_comment_tokens_requires_all_fields() {
+        let client = HteamClient::new(Config::default()).expect("client");
+        let html = r#"
+            <input name="timestamp" value="123">
+            <input name="security_hash" value="abc">
+            <input name="csrfmiddlewaretoken" value="csrf">
+        "#;
+
+        assert_eq!(
+            client.extract_comment_tokens(html),
+            Some(("123".to_string(), "abc".to_string(), "csrf".to_string()))
+        );
+        assert_eq!(
+            client.extract_comment_tokens("<input name=\"timestamp\" value=\"123\">"),
+            None
+        );
     }
 }
