@@ -54,3 +54,86 @@ pub fn mention_query(text: &str) -> Option<&str> {
 pub async fn mention_suggestions(client: &HteamClient, query: &str) -> Result<Vec<UserSuggestion>> {
     client.search_users(query).await
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+    use mockito::Matcher;
+
+    fn client(server_url: &str) -> HteamClient {
+        HteamClient::new_for_test(
+            Config::default(),
+            server_url.to_string(),
+            server_url.to_string(),
+        )
+        .expect("test client")
+    }
+
+    #[tokio::test]
+    async fn test_list_comments_returns_results() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/comments/api/processes-task/42/")
+            .with_status(200)
+            .with_body(
+                r#"{"results":[{"id":1,"user_name":"ana","submit_date":"2026-08-27","comment":"hola"}]}"#,
+            )
+            .create_async()
+            .await;
+
+        let comments = list_comments(&client(&server.url()), 42)
+            .await
+            .expect("comments");
+
+        assert_eq!(comments.len(), 1);
+        assert_eq!(comments[0].user_name, "ana");
+        assert_eq!(comments[0].comment, "hola");
+    }
+
+    #[tokio::test]
+    async fn test_mention_suggestions_uses_query() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/users/username-autocomplete/")
+            .match_query(Matcher::UrlEncoded("q".to_string(), "ana".to_string()))
+            .with_status(200)
+            .with_body(
+                r#"{"results":[{"id":"8","selected_text":"ana","text":"ana (ana@example.com)"}]}"#,
+            )
+            .create_async()
+            .await;
+
+        let suggestions = mention_suggestions(&client(&server.url()), "ana")
+            .await
+            .expect("suggestions");
+
+        assert_eq!(suggestions[0].id, "8");
+        assert_eq!(suggestions[0].selected_text, "ana");
+    }
+
+    #[test]
+    fn test_resolve_comment_date_parses_expected_format() {
+        let date = resolve_comment_date(Some("2026-08-27 09:30")).expect("date");
+
+        assert_eq!(
+            date.format(COMMENT_DATE_FORMAT).to_string(),
+            "2026-08-27 09:30"
+        );
+    }
+
+    #[test]
+    fn test_resolve_comment_date_rejects_invalid_format() {
+        let err = resolve_comment_date(Some("27/08/2026")).expect_err("invalid date");
+
+        assert!(err.to_string().contains("Fecha inválida"));
+    }
+
+    #[test]
+    fn test_mention_query_only_matches_last_unfinished_token() {
+        assert_eq!(mention_query("hola @ana"), Some("ana"));
+        assert_eq!(mention_query("hola @"), Some(""));
+        assert_eq!(mention_query("hola @ana listo"), None);
+        assert_eq!(mention_query("correo a@b"), None);
+    }
+}
