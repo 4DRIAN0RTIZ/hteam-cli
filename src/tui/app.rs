@@ -147,7 +147,8 @@ impl App {
 
     /// Tiempo restante de la jornada, evaluado contra la hora local actual.
     pub fn working_hours_remaining(&self) -> Option<String> {
-        self.working_hours.remaining_display(chrono::Local::now().time())
+        self.working_hours
+            .remaining_display(chrono::Local::now().time())
     }
 
     /// Sets a footer status message, starts its expiry timer, and appends it
@@ -196,7 +197,9 @@ impl App {
 
     pub fn current_card(&self) -> Option<&Card> {
         let list = self.current_list()?;
-        self.cards_by_list.get(&list.id)?.get(self.current_card_index())
+        self.cards_by_list
+            .get(&list.id)?
+            .get(self.current_card_index())
     }
 
     pub fn is_working_on(&self, card_id: u64) -> bool {
@@ -210,9 +213,15 @@ impl App {
     }
 
     pub fn move_selection(&mut self, delta: i32) {
-        let Some(list) = self.current_list() else { return };
+        let Some(list) = self.current_list() else {
+            return;
+        };
         let list_id = list.id;
-        let len = self.cards_by_list.get(&list_id).map(|c| c.len()).unwrap_or(0);
+        let len = self
+            .cards_by_list
+            .get(&list_id)
+            .map(|c| c.len())
+            .unwrap_or(0);
         if len == 0 {
             return;
         }
@@ -240,7 +249,11 @@ fn log_line(msg: &str) {
     if std::fs::create_dir_all(&dir).is_err() {
         return;
     }
-    let Ok(mut file) = OpenOptions::new().create(true).append(true).open(dir.join("tui.log")) else {
+    let Ok(mut file) = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(dir.join("tui.log"))
+    else {
         return;
     };
     let _ = writeln!(

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use colored::Colorize;
-use rustyline::DefaultEditor;
 use rustyline::error::ReadlineError;
+use rustyline::DefaultEditor;
 use std::process::Command as ProcessCommand;
 
 use crate::cli;
@@ -9,16 +9,19 @@ use crate::config::Config;
 
 pub async fn run() -> Result<()> {
     println!("{}", "🚀 Hteam CLI - Modo Interactivo".bold());
-    println!("{}", "Escribe 'help' para ver los comandos disponibles.".dimmed());
+    println!(
+        "{}",
+        "Escribe 'help' para ver los comandos disponibles.".dimmed()
+    );
     println!("{}", "Escribe 'exit' o 'quit' para salir.\n".dimmed());
 
     let mut rl = DefaultEditor::new()?;
-    
+
     // Load history if available
     let history_path = dirs::home_dir()
         .map(|h| h.join(".hteam_history"))
         .unwrap_or_else(|| std::path::PathBuf::from(".hteam_history"));
-    
+
     if history_path.exists() {
         let _ = rl.load_history(&history_path);
     }
@@ -30,15 +33,15 @@ pub async fn run() -> Result<()> {
 
     loop {
         let readline = rl.readline("hteam> ");
-        
+
         match readline {
             Ok(line) => {
                 let trimmed = line.trim();
-                
+
                 if trimmed.is_empty() {
                     continue;
                 }
-                
+
                 rl.add_history_entry(trimmed)?;
 
                 // Check for internal commands first
@@ -69,7 +72,7 @@ pub async fn run() -> Result<()> {
 
 async fn process_command(line: &str) -> Result<()> {
     let parts: Vec<&str> = line.split_whitespace().collect();
-    
+
     if parts.is_empty() {
         return Ok(());
     }
@@ -147,14 +150,14 @@ async fn process_command(line: &str) -> Result<()> {
 
 fn print_help() {
     println!("{}", "\n📚 Comandos disponibles:\n".bold());
-    
+
     println!("{}", "Gestión de Boards:".bold());
     println!("  board list              Listar boards configurados");
     println!("  board switch <id>       Cambiar board activo");
     println!("  board current           Mostrar board actual");
     println!("  lists, ls               Listar listas del board");
     println!();
-    
+
     println!("{}", "Cards:".bold());
     println!("  open, o                 Ver cards abiertos");
     println!("  closed, c               Ver cards cerrados");
@@ -164,17 +167,17 @@ fn print_help() {
     println!("  detail, show <id>       Ver detalle de un card");
     println!("  comment, co <id> <txt>  Agregar comentario");
     println!();
-    
+
     println!("{}", "Working On It:".bold());
     println!("  working, w list         Ver en qué estás trabajando");
     println!("  working start <id>      Empezar a trabajar en un card");
     println!("  working stop <id>       Dejar de trabajar");
     println!();
-    
+
     println!("{}", "Configuración:".bold());
     println!("  config show             Mostrar configuración");
     println!();
-    
+
     println!("{}", "Utilidades:".bold());
     println!("  ! <comando>             Ejecutar comando shell");
     println!("  clear, cls              Limpiar pantalla");
@@ -203,7 +206,11 @@ async fn handle_board_command(args: &[&str]) -> Result<()> {
             }
             let board_id = args[1].parse::<u64>()?;
             let name = args.get(2).map(|s| s.to_string());
-            cli::board::execute(BoardCommands::Switch(BoardSwitchArgs { board_id, name }), false).await?;
+            cli::board::execute(
+                BoardCommands::Switch(BoardSwitchArgs { board_id, name }),
+                false,
+            )
+            .await?;
         }
         "current" => {
             cli::board::execute(BoardCommands::Current, false).await?;
@@ -245,7 +252,8 @@ async fn handle_create_command(args: &[&str]) -> Result<()> {
         }),
         None,
         false,
-    ).await?;
+    )
+    .await?;
     Ok(())
 }
 
@@ -260,7 +268,7 @@ async fn handle_move_command(args: &[&str]) -> Result<()> {
     let card_id = args[0].parse::<u64>()?;
     let mut to_list = None;
     let mut from_list = None;
-    
+
     let mut i = 1;
     while i < args.len() {
         match args[i] {
@@ -287,12 +295,17 @@ async fn handle_move_command(args: &[&str]) -> Result<()> {
     }
 
     let to = to_list.ok_or_else(|| anyhow::anyhow!("Se requiere --to <list_id>"))?;
-    
+
     cli::cards::execute(
-        CardsCommands::Move(MoveArgs { card_id, to, from: from_list }),
+        CardsCommands::Move(MoveArgs {
+            card_id,
+            to,
+            from: from_list,
+        }),
         None,
         false,
-    ).await?;
+    )
+    .await?;
     Ok(())
 }
 
@@ -328,7 +341,8 @@ async fn handle_working_command(args: &[&str]) -> Result<()> {
                 return Ok(());
             }
             let card_id = args[1].parse::<u64>()?;
-            cli::working::execute(WorkingCommands::Start(WorkingStartArgs { card_id }), false).await?;
+            cli::working::execute(WorkingCommands::Start(WorkingStartArgs { card_id }), false)
+                .await?;
         }
         "stop" => {
             if args.len() < 2 {
@@ -336,7 +350,8 @@ async fn handle_working_command(args: &[&str]) -> Result<()> {
                 return Ok(());
             }
             let working_id = args[1].parse::<u64>()?;
-            cli::working::execute(WorkingCommands::Stop(WorkingStopArgs { working_id }), false).await?;
+            cli::working::execute(WorkingCommands::Stop(WorkingStopArgs { working_id }), false)
+                .await?;
         }
         _ => {
             println!("⚠️  Subcomando desconocido: {}", args[0]);
@@ -386,10 +401,17 @@ async fn handle_comment_command(args: &[&str]) -> Result<()> {
     let text = rest.join(" ");
 
     cli::cards::execute(
-        CardsCommands::Comment(CommentArgs { card_id, text, board: None, follow, date }),
+        CardsCommands::Comment(CommentArgs {
+            card_id,
+            text,
+            board: None,
+            follow,
+            date,
+        }),
         None,
         false,
-    ).await?;
+    )
+    .await?;
     Ok(())
 }
 
@@ -403,7 +425,7 @@ async fn handle_config_command(args: &[&str]) -> Result<()> {
         "show" => {
             let config = Config::load()?;
             println!("\n{}", "Configuración:".bold());
-            
+
             if config.is_authenticated() {
                 println!("  Estado: ✅ Autenticado");
                 if let Some(board) = config.get_board_number() {
@@ -412,7 +434,7 @@ async fn handle_config_command(args: &[&str]) -> Result<()> {
             } else {
                 println!("  Estado: ❌ No autenticado");
             }
-            
+
             if !config.boards.is_empty() {
                 println!("\n  Boards:");
                 for (id, info) in &config.boards {

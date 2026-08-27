@@ -2,8 +2,8 @@ use anyhow::Result;
 use clap::Args;
 use inquire::{Password, Text};
 
-use crate::config::Config;
 use crate::client::HteamClient;
+use crate::config::Config;
 
 #[derive(Args, Debug)]
 pub struct LoginArgs {
@@ -45,22 +45,25 @@ pub async fn execute(args: LoginArgs) -> Result<()> {
     if let Some(board) = args.board {
         config.set_board_number(board);
         Config::save_last_ticket(board)?;
-        
-        config.boards.entry(board.to_string()).or_insert_with(|| crate::config::BoardInfo {
-            name: format!("Board {}", board),
-            last_used: Some(chrono::Utc::now().to_rfc3339()),
-        });
+
+        config
+            .boards
+            .entry(board.to_string())
+            .or_insert_with(|| crate::config::BoardInfo {
+                name: format!("Board {}", board),
+                last_used: Some(chrono::Utc::now().to_rfc3339()),
+            });
     }
 
     // Test authentication
     println!("\n🔄 Verificando credenciales...");
     let client = HteamClient::new(config.clone())?;
-    
+
     match client.test_auth().await {
         Ok(true) => {
             config.save()?;
             println!("✅ Autenticación exitosa!");
-            
+
             if let Some(board) = config.get_board_number() {
                 println!("📋 Board activo: {}", board);
             }
