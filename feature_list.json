@@ -1,0 +1,23 @@
+{
+  "project": "hteam-cli",
+  "description": "CLI en Rust para gestionar boards de Hteam, con soporte de MCP para IA. Backlog de trabajo FUTURO — lo ya hecho está en CHANGELOG.md, no se documenta acá.",
+  "rules": {
+    "one_feature_at_a_time": true,
+    "require_tests_to_close": true,
+    "valid_status": ["pending", "in_progress", "done", "blocked"]
+  },
+  "features": [
+    {
+      "id": 1,
+      "name": "cargo_fmt_codebase",
+      "title": "style: aplicar cargo fmt a todo el codebase",
+      "description": "Reformateo con cargo fmt sobre src/cli, src/client, src/mcp, src/models, src/operations y src/tui. Confirmado con git stash + cargo fmt sobre HEAD que el diff es 100% formato, sin cambios funcionales.",
+      "acceptance": [
+        "cargo fmt --check pasa sin diffs pendientes",
+        "cargo clippy --all-targets --all-features -- -D warnings no tira warnings",
+        "cargo test sigue en verde (sin regresiones funcionales, ya que el diff es solo formato)"
+      ],
+      "status": "done"
+    }
+  ]
+}

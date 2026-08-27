@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::client::HteamClient;
+use crate::client::{HteamClient, UpdateCardPatch};
 use crate::models::{Card, CardDetail, Label, List};
 
 pub async fn list_lists(client: &HteamClient, board: Option<u64>) -> Result<Vec<List>> {
@@ -45,11 +45,19 @@ pub async fn move_card(
         .await
 }
 
-pub async fn update_description(client: &HteamClient, card_id: u64, description: &str) -> Result<()> {
+pub async fn update_description(
+    client: &HteamClient,
+    card_id: u64,
+    description: &str,
+) -> Result<()> {
     client.update_card_description(card_id, description).await
 }
 
-pub async fn card_labels(client: &HteamClient, card_id: u64, board: Option<u64>) -> Result<Vec<Label>> {
+pub async fn card_labels(
+    client: &HteamClient,
+    card_id: u64,
+    board: Option<u64>,
+) -> Result<Vec<Label>> {
     client.get_card_labels(card_id, board).await
 }
 
@@ -67,6 +75,16 @@ pub async fn update_card(
 ) -> Result<()> {
     let detail = client.get_card_detail(card_id).await?;
     client
-        .update_card_full(card_id, board, &detail, name, description, priority, responsible)
+        .update_card_full(
+            card_id,
+            board,
+            UpdateCardPatch {
+                detail: &detail,
+                name,
+                description,
+                priority,
+                responsible,
+            },
+        )
         .await
 }

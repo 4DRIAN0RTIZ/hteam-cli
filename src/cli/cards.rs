@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use colored::Colorize;
-use tabled::{Table, settings::Style};
+use tabled::{settings::Style, Table};
 
 use crate::operations::{self, Session};
 
@@ -276,9 +276,7 @@ async fn card_detail(args: DetailArgs, json: bool) -> Result<()> {
     }
 
     if !detail.labels.is_empty() {
-        let labels: Vec<String> = detail.labels.iter()
-            .map(|l| l.name.clone())
-            .collect();
+        let labels: Vec<String> = detail.labels.iter().map(|l| l.name.clone()).collect();
         println!("   Labels: {}", labels.join(", "));
     }
 
@@ -318,12 +316,17 @@ async fn move_card(args: MoveArgs, board: Option<u64>, json: bool) -> Result<()>
     operations::cards::move_card(&session.client, args.card_id, args.from, args.to, board).await?;
 
     if json {
-        println!("{{\"success\": true, \"card_id\": {}, \"from_list\": {}, \"to_list\": {}}}",
-                 args.card_id, from_list, args.to);
+        println!(
+            "{{\"success\": true, \"card_id\": {}, \"from_list\": {}, \"to_list\": {}}}",
+            args.card_id, from_list, args.to
+        );
         return Ok(());
     }
 
-    println!("\n✅ Card {} movido de lista {} a lista {}", args.card_id, from_list, args.to);
+    println!(
+        "\n✅ Card {} movido de lista {} a lista {}",
+        args.card_id, from_list, args.to
+    );
     println!();
 
     Ok(())
@@ -348,7 +351,15 @@ async fn update_desc(args: UpdateDescArgs, json: bool) -> Result<()> {
 async fn post_comment(args: CommentArgs, board: Option<u64>, json: bool) -> Result<()> {
     let session = Session::open().await?;
 
-    operations::comments::post_comment(&session.client, args.card_id, &args.text, board, args.follow, args.date.as_deref()).await?;
+    operations::comments::post_comment(
+        &session.client,
+        args.card_id,
+        &args.text,
+        board,
+        args.follow,
+        args.date.as_deref(),
+    )
+    .await?;
 
     if json {
         println!("{{\"success\": true, \"card_id\": {}}}", args.card_id);
@@ -396,7 +407,10 @@ async fn card_labels(args: LabelsArgs, board: Option<u64>, json: bool) -> Result
     }
 
     if labels.is_empty() {
-        println!("⚠️  No se encontraron labels para el card {}.", args.card_id);
+        println!(
+            "⚠️  No se encontraron labels para el card {}.",
+            args.card_id
+        );
         return Ok(());
     }
 
@@ -411,8 +425,10 @@ async fn card_labels(args: LabelsArgs, board: Option<u64>, json: bool) -> Result
 
 async fn update_card(args: UpdateArgs, board: Option<u64>, json: bool) -> Result<()> {
     let session = Session::open().await?;
-    let board_number = operations::resolve_board_number(&session.config, board)
-        .ok_or_else(|| anyhow::anyhow!("No hay board configurado. Usa --board o 'hteam board switch'."))?;
+    let board_number =
+        operations::resolve_board_number(&session.config, board).ok_or_else(|| {
+            anyhow::anyhow!("No hay board configurado. Usa --board o 'hteam board switch'.")
+        })?;
 
     operations::cards::update_card(
         &session.client,
@@ -422,7 +438,8 @@ async fn update_card(args: UpdateArgs, board: Option<u64>, json: bool) -> Result
         args.description.as_deref(),
         args.priority.as_deref(),
         args.responsible.as_deref(),
-    ).await?;
+    )
+    .await?;
 
     if json {
         println!("{{\"success\": true, \"card_id\": {}}}", args.card_id);

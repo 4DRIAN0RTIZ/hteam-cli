@@ -40,8 +40,9 @@ impl Drop for TerminalGuard {
 
 pub async fn run(board: Option<u64>) -> Result<()> {
     let session = Session::open().await?;
-    let board_number = operations::resolve_board_number(&session.config, board)
-        .context("No se especificó el board number. Usa --board o configura uno con 'hteam board switch'.")?;
+    let board_number = operations::resolve_board_number(&session.config, board).context(
+        "No se especificó el board number. Usa --board o configura uno con 'hteam board switch'.",
+    )?;
 
     let hidden_lists: HashSet<String> = session
         .config
@@ -210,10 +211,8 @@ async fn run_loop(
                             events::move_project_selection(app, -1);
                         }
                     }
-                    KeyCode::Enter => {
-                        if !app.projects_detail_focused {
-                            events::select_known_project(client, app).await;
-                        }
+                    KeyCode::Enter if !app.projects_detail_focused => {
+                        events::select_known_project(client, app).await;
                     }
                     _ => {}
                 }

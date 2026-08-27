@@ -18,5 +18,8 @@ pub async fn stop_working(client: &HteamClient, working_id: u64) -> Result<()> {
 /// The "working on it" record id for `card_id` within `working_on`, if any —
 /// this is what `stop_working` needs, not the card id itself.
 pub fn working_id_for(working_on: &[WorkingOnStatus], card_id: u64) -> Option<u64> {
-    working_on.iter().find(|w| w.card_id == card_id).map(|w| w.id)
+    working_on
+        .iter()
+        .find(|w| w.card_id == card_id)
+        .map(|w| w.id)
 }

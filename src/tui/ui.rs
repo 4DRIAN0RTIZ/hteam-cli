@@ -57,9 +57,19 @@ fn draw_title_bar(frame: &mut Frame, app: &App, area: Rect) {
         return;
     }
 
-    let user_width = user_line.as_ref().map(|s| s.chars().count() as u16).unwrap_or(0);
-    let gap_width = if user_line.is_some() && remaining.is_some() { 2 } else { 0 };
-    let remaining_width = remaining.as_ref().map(|s| s.chars().count() as u16).unwrap_or(0);
+    let user_width = user_line
+        .as_ref()
+        .map(|s| s.chars().count() as u16)
+        .unwrap_or(0);
+    let gap_width = if user_line.is_some() && remaining.is_some() {
+        2
+    } else {
+        0
+    };
+    let remaining_width = remaining
+        .as_ref()
+        .map(|s| s.chars().count() as u16)
+        .unwrap_or(0);
 
     let cols = Layout::horizontal([
         Constraint::Min(0),
@@ -77,7 +87,11 @@ fn draw_title_bar(frame: &mut Frame, app: &App, area: Rect) {
 
     if let Some(remaining) = remaining {
         let working_hours = Paragraph::new(remaining)
-            .style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
+            .style(
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
+            )
             .alignment(Alignment::Right);
         frame.render_widget(working_hours, cols[3]);
     }
@@ -94,8 +108,8 @@ fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
     let version = format!("v{} ", env!("CARGO_PKG_VERSION"));
     let version_width = version.chars().count() as u16;
 
-    let cols = Layout::horizontal([Constraint::Min(0), Constraint::Length(version_width)])
-        .split(area);
+    let cols =
+        Layout::horizontal([Constraint::Min(0), Constraint::Length(version_width)]).split(area);
 
     frame.render_widget(Paragraph::new(status), cols[0]);
     frame.render_widget(
@@ -108,7 +122,12 @@ fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
 
 fn draw_help_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(70, 85, frame.area());
-    let inner = draw_frame(frame, area, " Ayuda — j/k scroll · Esc/q/? cerrar ", Color::White);
+    let inner = draw_frame(
+        frame,
+        area,
+        " Ayuda — j/k scroll · Esc/q/? cerrar ",
+        Color::White,
+    );
 
     let text = [
         "Board",
@@ -144,7 +163,9 @@ fn draw_help_popup(frame: &mut Frame, app: &App) {
     ]
     .join("\n");
 
-    let p = Paragraph::new(text).wrap(Wrap { trim: true }).scroll((app.help_scroll.offset(), 0));
+    let p = Paragraph::new(text)
+        .wrap(Wrap { trim: true })
+        .scroll((app.help_scroll.offset(), 0));
     frame.render_widget(p, inner);
 }
 
@@ -240,7 +261,8 @@ fn draw_comments_popup(frame: &mut Frame, app: &App) {
         let max_input_h = inner.height.saturating_sub(3).max(4 + DATE_FIELD_HEIGHT);
         let input_h = wanted.clamp(4 + DATE_FIELD_HEIGHT, max_input_h);
 
-        let chunks = Layout::vertical([Constraint::Min(0), Constraint::Length(input_h)]).split(inner);
+        let chunks =
+            Layout::vertical([Constraint::Min(0), Constraint::Length(input_h)]).split(inner);
         draw_comment_list(frame, app, chunks[0]);
         draw_comment_input(frame, app, chunks[1], text_width);
     } else {
@@ -260,18 +282,25 @@ fn draw_comment_list(frame: &mut Frame, app: &App, area: Rect) {
             .collect::<Vec<_>>()
             .join("\n")
     };
-    let p = Paragraph::new(text).wrap(Wrap { trim: true }).scroll((app.comments_scroll.offset(), 0));
+    let p = Paragraph::new(text)
+        .wrap(Wrap { trim: true })
+        .scroll((app.comments_scroll.offset(), 0));
     frame.render_widget(p, area);
 }
 
 fn draw_comment_input(frame: &mut Frame, app: &App, area: Rect, text_width: u16) {
-    let chunks = Layout::vertical([Constraint::Length(DATE_FIELD_HEIGHT), Constraint::Min(1)]).split(area);
+    let chunks =
+        Layout::vertical([Constraint::Length(DATE_FIELD_HEIGHT), Constraint::Min(1)]).split(area);
     draw_comment_date_field(frame, app, chunks[0]);
     draw_comment_text_field(frame, app, chunks[1], text_width);
 }
 
 fn draw_comment_date_field(frame: &mut Frame, app: &App, area: Rect) {
-    let border_color = if app.comment_date_focused { Color::Yellow } else { Color::DarkGray };
+    let border_color = if app.comment_date_focused {
+        Color::Yellow
+    } else {
+        Color::DarkGray
+    };
     let block = Block::default()
         .title(" Fecha (YYYY-MM-DD HH:MM) — Tab enfoca ")
         .borders(Borders::ALL)
@@ -293,7 +322,11 @@ fn draw_comment_date_field(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_comment_text_field(frame: &mut Frame, app: &App, area: Rect, text_width: u16) {
-    let border_color = if app.comment_date_focused { Color::DarkGray } else { Color::Yellow };
+    let border_color = if app.comment_date_focused {
+        Color::DarkGray
+    } else {
+        Color::Yellow
+    };
     let title = if app.comment_follow {
         " Comentario (@ para mencionar) · 🔔 seguimiento ON "
     } else {
@@ -310,7 +343,11 @@ fn draw_comment_text_field(frame: &mut Frame, app: &App, area: Rect, text_width:
     let mut text = app.comment_input.as_str().to_string();
     if !app.mention_suggestions.is_empty() {
         for (i, user) in app.mention_suggestions.iter().take(5).enumerate() {
-            let marker = if i == app.mention_selected { "▶" } else { " " };
+            let marker = if i == app.mention_selected {
+                "▶"
+            } else {
+                " "
+            };
             text.push_str(&format!("\n{} {}", marker, user.text));
         }
     }
@@ -318,7 +355,9 @@ fn draw_comment_text_field(frame: &mut Frame, app: &App, area: Rect, text_width:
     // Once the box has hit its cap, scroll so the lines you just typed stay
     // in view instead of silently clipping off the bottom.
     let scroll_y = content_rows.saturating_sub(inner.height);
-    let p = Paragraph::new(text).wrap(Wrap { trim: true }).scroll((scroll_y, 0));
+    let p = Paragraph::new(text)
+        .wrap(Wrap { trim: true })
+        .scroll((scroll_y, 0));
     frame.render_widget(p, inner);
 }
 
@@ -402,8 +441,16 @@ fn draw_known_projects_list(frame: &mut Frame, app: &App, area: Rect) {
             .iter()
             .enumerate()
             .map(|(i, id)| {
-                let marker = if i == app.selected_project_idx { "▶" } else { " " };
-                let active = if Some(*id) == app.active_project { " •" } else { "" };
+                let marker = if i == app.selected_project_idx {
+                    "▶"
+                } else {
+                    " "
+                };
+                let active = if Some(*id) == app.active_project {
+                    " •"
+                } else {
+                    ""
+                };
                 format!("{} #{}{}", marker, id, active)
             })
             .collect::<Vec<_>>()
@@ -489,7 +536,12 @@ fn draw_board_switch_popup(frame: &mut Frame, app: &App) {
     );
 
     if app.available_boards.is_empty() {
-        let msg = if app.status.as_deref().map(|s| s.contains("Cargando")).unwrap_or(false) {
+        let msg = if app
+            .status
+            .as_deref()
+            .map(|s| s.contains("Cargando"))
+            .unwrap_or(false)
+        {
             "Cargando boards..."
         } else {
             "No se pudieron cargar los boards. Presiona 'r' para reintentar."
@@ -510,8 +562,16 @@ fn draw_board_switch_popup(frame: &mut Frame, app: &App) {
         .iter()
         .enumerate()
         .map(|(i, b)| {
-            let marker = if i == app.selected_board_idx { "▶" } else { " " };
-            let active = if b.id == app.board_number { " •" } else { "  " };
+            let marker = if i == app.selected_board_idx {
+                "▶"
+            } else {
+                " "
+            };
+            let active = if b.id == app.board_number {
+                " •"
+            } else {
+                "  "
+            };
             let name = trunc_str(&b.name, 28);
             let service = trunc_str(&b.service, 32);
             let tasks = format!("{}/{}", b.total_tasks_closed, b.total_tasks);
@@ -622,7 +682,11 @@ fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
             let p = Paragraph::new(text)
                 .style(body_style)
                 .wrap(Wrap { trim: true })
-                .block(Block::default().borders(Borders::ALL).border_style(border_style));
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_style(border_style),
+                );
             frame.render_widget(p, rect);
         }
     }
