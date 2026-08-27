@@ -16,7 +16,7 @@
    instrucciones puntuales que te dé el usuario, aplicando igual las reglas
    de `docs/` y `CHECKPOINTS.md`.
 4. Cada que vayas a implementar algo, debes de asegurarte de que no hay cambios remotos sin bajar en las ramas main y dev.
-5. Crear rama segun la feature partiendo de la rama `dev`
+5. Crear rama siguiendo el formato conventional commits (feat/fix/etc) segun la feature partiendo de la rama `dev`
 
 ## 2. Mapa del repositorio
 

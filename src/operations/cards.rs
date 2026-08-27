@@ -88,3 +88,131 @@ pub async fn update_card(
         )
         .await
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{AuthConfig, Config};
+
+    fn client(server_url: &str) -> HteamClient {
+        let config = Config {
+            auth: AuthConfig {
+                board_number: Some(483),
+                csrf_token: Some("csrf".to_string()),
+                ..AuthConfig::default()
+            },
+            ..Config::default()
+        };
+        HteamClient::new_for_test(config, server_url.to_string(), server_url.to_string())
+            .expect("test client")
+    }
+
+    #[tokio::test]
+    async fn test_list_lists_delegates_to_client() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/operation/care/operations/483/lists/")
+            .match_query(mockito::Matcher::UrlEncoded(
+                "format".to_string(),
+                "json".to_string(),
+            ))
+            .with_status(200)
+            .with_body(r#"[{"id":1,"name":"Open","total_board_cards":2}]"#)
+            .create_async()
+            .await;
+
+        let lists = list_lists(&client(&server.url()), Some(483))
+            .await
+            .expect("lists");
+
+        assert_eq!(lists.len(), 1);
+        assert_eq!(lists[0].name, "Open");
+        assert_eq!(lists[0].card_count, Some(2));
+    }
+
+    #[tokio::test]
+    async fn test_list_cards_returns_cards_and_board_id() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/operation/care/operations/483/lists/1/cards/")
+            .match_query(mockito::Matcher::UrlEncoded(
+                "format".to_string(),
+                "json".to_string(),
+            ))
+            .with_status(200)
+            .with_body(
+                r#"{"id":1,"name":"Open","cardlist_list":[{"id":10,"board_id":99,"card":{"id":42,"title":"Fix bug","subtitle":"desc","labels_list":[]},"is_closed":false,"card_type":0,"time_status":0,"get_time_status":"","position":1}]}"#,
+            )
+            .create_async()
+            .await;
+
+        let (cards, board_id) = list_cards(&client(&server.url()), 1, Some(483))
+            .await
+            .expect("cards");
+
+        assert_eq!(board_id, Some(99));
+        assert_eq!(cards[0].id, 42);
+        assert_eq!(cards[0].name, "Fix bug");
+    }
+
+    #[tokio::test]
+    async fn test_move_card_defaults_from_list_to_open() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("POST", "/boards/care/labels/update_card_position/")
+            .match_body(mockito::Matcher::PartialJson(serde_json::json!({
+                "board_id": 483,
+                "card_id": 42,
+                "from_list": 1,
+                "to_list": 2,
+                "card_type": 0
+            })))
+            .with_status(204)
+            .create_async()
+            .await;
+
+        move_card(&client(&server.url()), 42, None, 2, Some(483))
+            .await
+            .expect("move card");
+    }
+
+    #[tokio::test]
+    async fn test_update_card_fetches_detail_and_posts_patch() {
+        let mut server = mockito::Server::new_async().await;
+        let _detail = server
+            .mock("GET", "/operation/care/tasks/42/")
+            .match_query(mockito::Matcher::UrlEncoded(
+                "format".to_string(),
+                "json".to_string(),
+            ))
+            .with_status(200)
+            .with_body(
+                r#"{"id":42,"name":"Old","description":"old desc","labels":[],"list":null,"priority":3}"#,
+            )
+            .create_async()
+            .await;
+        let _update = server
+            .mock("POST", "/operations/483/tasks/42/edit/")
+            .match_body(mockito::Matcher::AllOf(vec![
+                mockito::Matcher::Regex("name=New".to_string()),
+                mockito::Matcher::Regex("description=new\\+desc".to_string()),
+                mockito::Matcher::Regex("priority=2".to_string()),
+                mockito::Matcher::Regex("id=42".to_string()),
+            ]))
+            .with_status(200)
+            .create_async()
+            .await;
+
+        update_card(
+            &client(&server.url()),
+            42,
+            483,
+            Some("New"),
+            Some("new desc"),
+            Some("2"),
+            None,
+        )
+        .await
+        .expect("update card");
+    }
+}

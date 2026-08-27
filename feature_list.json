@@ -4,7 +4,12 @@
   "rules": {
     "one_feature_at_a_time": true,
     "require_tests_to_close": true,
-    "valid_status": ["pending", "in_progress", "done", "blocked"]
+    "valid_status": [
+      "pending",
+      "in_progress",
+      "done",
+      "blocked"
+    ]
   },
   "features": [
     {
@@ -18,6 +23,56 @@
         "cargo test sigue en verde (sin regresiones funcionales, ya que el diff es solo formato)"
       ],
       "status": "done"
+    },
+    {
+      "id": 2,
+      "name": "unit_tests_operations",
+      "title": "test: agregar unit tests a src/operations/",
+      "description": "Cubrir con #[cfg(test)] mod tests la lógica de operations/ (cards, boards, working, comments, daily_work, users, projects, reminders, session, checkin), mockeando HTTP con mockito (ya en dev-dependencies). Ver Nivel 2 en docs/verification.md.",
+      "acceptance": [
+        "Cada archivo de src/operations/ que exponga lógica no trivial tiene su propio mod tests",
+        "Las respuestas HTTP se mockean con mockito, sin requests reales a hteam.mx",
+        "cargo test pasa en verde",
+        "cargo clippy --all-targets --all-features -- -D warnings no tira warnings"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 3,
+      "name": "unit_tests_client",
+      "title": "test: agregar unit tests a src/client/mod.rs",
+      "description": "Cubrir con #[cfg(test)] mod tests el cliente HTTP hacia la API de Hteam, mockeando respuestas (éxito, error, distintos status codes) con mockito.",
+      "acceptance": [
+        "src/client/mod.rs tiene mod tests cubriendo los casos principales de éxito y error",
+        "Las respuestas HTTP se mockean con mockito, sin requests reales a hteam.mx",
+        "cargo test pasa en verde",
+        "cargo clippy --all-targets --all-features -- -D warnings no tira warnings"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 4,
+      "name": "unit_tests_models",
+      "title": "test: agregar unit tests a src/models/mod.rs",
+      "description": "Cubrir con #[cfg(test)] mod tests la (de)serialización y construcción de los structs/enums de models/, sin necesidad de mockear HTTP.",
+      "acceptance": [
+        "src/models/mod.rs tiene mod tests cubriendo (de)serialización de los tipos principales",
+        "cargo test pasa en verde",
+        "cargo clippy --all-targets --all-features -- -D warnings no tira warnings"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 5,
+      "name": "unit_tests_config",
+      "title": "test: agregar unit tests a src/config/mod.rs",
+      "description": "Cubrir con #[cfg(test)] mod tests la carga y resolución de configuración (board por defecto, credenciales, etc.) en config/.",
+      "acceptance": [
+        "src/config/mod.rs tiene mod tests cubriendo la resolución de configuración",
+        "cargo test pasa en verde",
+        "cargo clippy --all-targets --all-features -- -D warnings no tira warnings"
+      ],
+      "status": "pending"
     }
   ]
 }
