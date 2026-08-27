@@ -2,13 +2,12 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use rmcp::{
-    ServiceExt,
     handler::server::wrapper::Parameters,
     model::{CallToolResult, Content},
     schemars::{self, JsonSchema},
     tool, tool_router,
     transport::stdio,
-    ErrorData as McpError,
+    ErrorData as McpError, ServiceExt,
 };
 use serde::Deserialize;
 
@@ -109,9 +108,13 @@ struct CommentParams {
     comment: String,
     #[schemars(description = "ID del board (opcional)")]
     board: Option<u64>,
-    #[schemars(description = "Marcar el comentario para seguimiento (recibir notificaciones de respuestas); false por defecto")]
+    #[schemars(
+        description = "Marcar el comentario para seguimiento (recibir notificaciones de respuestas); false por defecto"
+    )]
     follow: Option<bool>,
-    #[schemars(description = "Fecha del comentario, formato \"YYYY-MM-DD HH:MM\" en hora local (opcional; por defecto ahora)")]
+    #[schemars(
+        description = "Fecha del comentario, formato \"YYYY-MM-DD HH:MM\" en hora local (opcional; por defecto ahora)"
+    )]
     date: Option<String>,
 }
 
@@ -152,7 +155,9 @@ pub struct HteamMcpServer {
 
 impl HteamMcpServer {
     pub fn new(client: HteamClient) -> Self {
-        Self { client: Arc::new(client) }
+        Self {
+            client: Arc::new(client),
+        }
     }
 }
 
@@ -165,7 +170,9 @@ impl HteamMcpServer {
         &self,
         Parameters(BoardParam { board }): Parameters<BoardParam>,
     ) -> Result<CallToolResult, McpError> {
-        let lists = operations::cards::list_lists(&self.client, board).await.map_err(err)?;
+        let lists = operations::cards::list_lists(&self.client, board)
+            .await
+            .map_err(err)?;
         ok(lists)
     }
 
@@ -176,7 +183,9 @@ impl HteamMcpServer {
         &self,
         Parameters(ListCardsParams { list_id, board }): Parameters<ListCardsParams>,
     ) -> Result<CallToolResult, McpError> {
-        let (cards, _) = operations::cards::list_cards(&self.client, list_id, board).await.map_err(err)?;
+        let (cards, _) = operations::cards::list_cards(&self.client, list_id, board)
+            .await
+            .map_err(err)?;
         ok(cards)
     }
 
@@ -185,7 +194,9 @@ impl HteamMcpServer {
         &self,
         Parameters(BoardParam { board }): Parameters<BoardParam>,
     ) -> Result<CallToolResult, McpError> {
-        let cards = operations::cards::open_cards(&self.client, board).await.map_err(err)?;
+        let cards = operations::cards::open_cards(&self.client, board)
+            .await
+            .map_err(err)?;
         ok(cards)
     }
 
@@ -194,7 +205,9 @@ impl HteamMcpServer {
         &self,
         Parameters(BoardParam { board }): Parameters<BoardParam>,
     ) -> Result<CallToolResult, McpError> {
-        let cards = operations::cards::closed_cards(&self.client, board).await.map_err(err)?;
+        let cards = operations::cards::closed_cards(&self.client, board)
+            .await
+            .map_err(err)?;
         ok(cards)
     }
 
@@ -203,7 +216,9 @@ impl HteamMcpServer {
         &self,
         Parameters(CardParams { card_id }): Parameters<CardParams>,
     ) -> Result<CallToolResult, McpError> {
-        let detail = operations::cards::card_detail(&self.client, card_id).await.map_err(err)?;
+        let detail = operations::cards::card_detail(&self.client, card_id)
+            .await
+            .map_err(err)?;
         ok(detail)
     }
 
@@ -212,7 +227,9 @@ impl HteamMcpServer {
         &self,
         Parameters(CardLabelsParams { card_id, board }): Parameters<CardLabelsParams>,
     ) -> Result<CallToolResult, McpError> {
-        let labels = operations::cards::card_labels(&self.client, card_id, board).await.map_err(err)?;
+        let labels = operations::cards::card_labels(&self.client, card_id, board)
+            .await
+            .map_err(err)?;
         ok(labels)
     }
 
@@ -230,7 +247,12 @@ impl HteamMcpServer {
     #[tool(description = "Mover un card de una lista a otra")]
     async fn card_move(
         &self,
-        Parameters(MoveCardParams { card_id, to_list, from_list, board }): Parameters<MoveCardParams>,
+        Parameters(MoveCardParams {
+            card_id,
+            to_list,
+            from_list,
+            board,
+        }): Parameters<MoveCardParams>,
     ) -> Result<CallToolResult, McpError> {
         operations::cards::move_card(&self.client, card_id, from_list, to_list, board)
             .await
@@ -241,7 +263,10 @@ impl HteamMcpServer {
     #[tool(description = "Actualizar la descripción de un card (PATCH rápido)")]
     async fn card_update_desc(
         &self,
-        Parameters(UpdateDescParams { card_id, description }): Parameters<UpdateDescParams>,
+        Parameters(UpdateDescParams {
+            card_id,
+            description,
+        }): Parameters<UpdateDescParams>,
     ) -> Result<CallToolResult, McpError> {
         operations::cards::update_description(&self.client, card_id, &description)
             .await
@@ -252,15 +277,26 @@ impl HteamMcpServer {
     #[tool(description = "Actualizar nombre, descripción, prioridad o responsable de un card")]
     async fn card_update(
         &self,
-        Parameters(UpdateCardParams { card_id, board, name, description, priority, responsible }): Parameters<UpdateCardParams>,
+        Parameters(UpdateCardParams {
+            card_id,
+            board,
+            name,
+            description,
+            priority,
+            responsible,
+        }): Parameters<UpdateCardParams>,
     ) -> Result<CallToolResult, McpError> {
         operations::cards::update_card(
-            &self.client, card_id, board,
-            name.as_deref(), description.as_deref(),
-            priority.as_deref(), responsible.as_deref(),
+            &self.client,
+            card_id,
+            board,
+            name.as_deref(),
+            description.as_deref(),
+            priority.as_deref(),
+            responsible.as_deref(),
         )
-            .await
-            .map_err(err)?;
+        .await
+        .map_err(err)?;
         ok(serde_json::json!({"success": true, "card_id": card_id}))
     }
 
@@ -269,18 +305,33 @@ impl HteamMcpServer {
         &self,
         Parameters(CardParams { card_id }): Parameters<CardParams>,
     ) -> Result<CallToolResult, McpError> {
-        let comments = operations::comments::list_comments(&self.client, card_id).await.map_err(err)?;
+        let comments = operations::comments::list_comments(&self.client, card_id)
+            .await
+            .map_err(err)?;
         ok(comments)
     }
 
     #[tool(description = "Agregar un comentario a un card")]
     async fn card_comment(
         &self,
-        Parameters(CommentParams { card_id, comment, board, follow, date }): Parameters<CommentParams>,
+        Parameters(CommentParams {
+            card_id,
+            comment,
+            board,
+            follow,
+            date,
+        }): Parameters<CommentParams>,
     ) -> Result<CallToolResult, McpError> {
-        operations::comments::post_comment(&self.client, card_id, &comment, board, follow.unwrap_or(false), date.as_deref())
-            .await
-            .map_err(err)?;
+        operations::comments::post_comment(
+            &self.client,
+            card_id,
+            &comment,
+            board,
+            follow.unwrap_or(false),
+            date.as_deref(),
+        )
+        .await
+        .map_err(err)?;
         ok(serde_json::json!({"success": true, "card_id": card_id}))
     }
 
@@ -289,7 +340,9 @@ impl HteamMcpServer {
         &self,
         Parameters(CardParams { card_id }): Parameters<CardParams>,
     ) -> Result<CallToolResult, McpError> {
-        operations::reminders::create(&self.client, card_id).await.map_err(err)?;
+        operations::reminders::create(&self.client, card_id)
+            .await
+            .map_err(err)?;
         ok(serde_json::json!({"success": true, "card_id": card_id}))
     }
 
@@ -297,7 +350,9 @@ impl HteamMcpServer {
 
     #[tool(description = "Listar los cards en los que estás trabajando actualmente")]
     async fn working_list(&self) -> Result<CallToolResult, McpError> {
-        let working = operations::working::list_working(&self.client).await.map_err(err)?;
+        let working = operations::working::list_working(&self.client)
+            .await
+            .map_err(err)?;
         ok(working)
     }
 
@@ -306,16 +361,22 @@ impl HteamMcpServer {
         &self,
         Parameters(CardParams { card_id }): Parameters<CardParams>,
     ) -> Result<CallToolResult, McpError> {
-        operations::working::start_working(&self.client, card_id).await.map_err(err)?;
+        operations::working::start_working(&self.client, card_id)
+            .await
+            .map_err(err)?;
         ok(serde_json::json!({"success": true, "card_id": card_id}))
     }
 
-    #[tool(description = "Dejar de trabajar en un card (requiere el ID del registro working-on-it, no del card)")]
+    #[tool(
+        description = "Dejar de trabajar en un card (requiere el ID del registro working-on-it, no del card)"
+    )]
     async fn working_stop(
         &self,
         Parameters(WorkingStopParams { working_id }): Parameters<WorkingStopParams>,
     ) -> Result<CallToolResult, McpError> {
-        operations::working::stop_working(&self.client, working_id).await.map_err(err)?;
+        operations::working::stop_working(&self.client, working_id)
+            .await
+            .map_err(err)?;
         ok(serde_json::json!({"success": true, "working_id": working_id}))
     }
 
@@ -326,7 +387,9 @@ impl HteamMcpServer {
         &self,
         Parameters(ProjectParams { project_id }): Parameters<ProjectParams>,
     ) -> Result<CallToolResult, McpError> {
-        let milestones = operations::projects::milestones(&self.client, project_id).await.map_err(err)?;
+        let milestones = operations::projects::milestones(&self.client, project_id)
+            .await
+            .map_err(err)?;
         ok(milestones)
     }
 
@@ -335,7 +398,9 @@ impl HteamMcpServer {
         &self,
         Parameters(ProjectParams { project_id }): Parameters<ProjectParams>,
     ) -> Result<CallToolResult, McpError> {
-        let resp = operations::projects::tasks(&self.client, project_id).await.map_err(err)?;
+        let resp = operations::projects::tasks(&self.client, project_id)
+            .await
+            .map_err(err)?;
         ok(resp)
     }
 
@@ -346,32 +411,45 @@ impl HteamMcpServer {
         &self,
         Parameters(UsersSearchParams { query }): Parameters<UsersSearchParams>,
     ) -> Result<CallToolResult, McpError> {
-        let users = operations::users::search(&self.client, &query).await.map_err(err)?;
+        let users = operations::users::search(&self.client, &query)
+            .await
+            .map_err(err)?;
         ok(users)
     }
 
     #[tool(description = "Ver recordatorios pendientes")]
     async fn reminders(&self) -> Result<CallToolResult, McpError> {
-        let items = operations::reminders::list(&self.client).await.map_err(err)?;
+        let items = operations::reminders::list(&self.client)
+            .await
+            .map_err(err)?;
         ok(items)
     }
 
     #[tool(description = "Registrar entrada del día (check in)")]
     async fn check_in(&self) -> Result<CallToolResult, McpError> {
-        let result = operations::checkin::check_in(&self.client).await.map_err(err)?;
+        let result = operations::checkin::check_in(&self.client)
+            .await
+            .map_err(err)?;
         ok(result)
     }
 
     #[tool(description = "Ver el historial de trabajo diario del equipo (daily work log)")]
     async fn daily_work(
         &self,
-        Parameters(DailyWorkParams { user, activity_type, range }): Parameters<DailyWorkParams>,
+        Parameters(DailyWorkParams {
+            user,
+            activity_type,
+            range,
+        }): Parameters<DailyWorkParams>,
     ) -> Result<CallToolResult, McpError> {
         let entries = operations::daily_work::history(
-            &self.client, user.as_deref(), activity_type.as_deref(), range.as_deref(),
+            &self.client,
+            user.as_deref(),
+            activity_type.as_deref(),
+            range.as_deref(),
         )
-            .await
-            .map_err(err)?;
+        .await
+        .map_err(err)?;
         ok(entries)
     }
 }
@@ -382,10 +460,14 @@ pub async fn run() -> Result<()> {
     let session = Session::open().await?;
     let server = HteamMcpServer::new(session.client);
 
-    let service = server.serve(stdio()).await
+    let service = server
+        .serve(stdio())
+        .await
         .inspect_err(|e| eprintln!("MCP server error: {e:?}"))?;
 
-    service.waiting().await
+    service
+        .waiting()
+        .await
         .inspect_err(|e| eprintln!("MCP service error: {e:?}"))?;
 
     Ok(())

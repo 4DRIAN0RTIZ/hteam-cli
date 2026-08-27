@@ -15,8 +15,12 @@ pub async fn list_comments(client: &HteamClient, card_id: u64) -> Result<Vec<Com
 /// shifted by the local UTC offset.
 pub fn resolve_comment_date(date: Option<&str>) -> Result<NaiveDateTime> {
     match date.map(str::trim).filter(|s| !s.is_empty()) {
-        Some(s) => NaiveDateTime::parse_from_str(s, COMMENT_DATE_FORMAT)
-            .with_context(|| format!("Fecha inválida '{}', formato esperado: {}", s, COMMENT_DATE_FORMAT)),
+        Some(s) => NaiveDateTime::parse_from_str(s, COMMENT_DATE_FORMAT).with_context(|| {
+            format!(
+                "Fecha inválida '{}', formato esperado: {}",
+                s, COMMENT_DATE_FORMAT
+            )
+        }),
         None => Ok(Local::now().naive_local()),
     }
 }
@@ -30,7 +34,9 @@ pub async fn post_comment(
     date: Option<&str>,
 ) -> Result<()> {
     let date = resolve_comment_date(date)?;
-    client.post_comment(card_id, text, board, follow, date).await
+    client
+        .post_comment(card_id, text, board, follow, date)
+        .await
 }
 
 /// Returns the partial username being typed if `text` ends in an unfinished

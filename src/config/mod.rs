@@ -136,10 +136,18 @@ impl Config {
         self.auth.board_number = Some(board_number);
     }
 
+    #[expect(
+        dead_code,
+        reason = "variables are part of the persisted config schema"
+    )]
     pub fn get_variable(&self, name: &str) -> Option<&String> {
         self.variables.get(name)
     }
 
+    #[expect(
+        dead_code,
+        reason = "variables are part of the persisted config schema"
+    )]
     pub fn set_variable(&mut self, name: String, value: String) {
         self.variables.insert(name, value);
     }

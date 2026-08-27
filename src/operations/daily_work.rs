@@ -9,5 +9,7 @@ pub async fn history(
     activity_type: Option<&str>,
     range: Option<&str>,
 ) -> Result<Vec<DailyWorkEntry>> {
-    client.get_daily_work_history(user, activity_type, range).await
+    client
+        .get_daily_work_history(user, activity_type, range)
+        .await
 }

@@ -26,7 +26,12 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, area: Rect) -> Rect {
 /// Clears `area`, draws a bordered block titled `title` in `border_color`,
 /// and returns the inner content rect — the `Clear` + `Block` boilerplate
 /// every popup repeated by hand.
-pub fn draw_frame(frame: &mut Frame, area: Rect, title: impl Into<String>, border_color: Color) -> Rect {
+pub fn draw_frame(
+    frame: &mut Frame,
+    area: Rect,
+    title: impl Into<String>,
+    border_color: Color,
+) -> Rect {
     frame.render_widget(Clear, area);
     let block = Block::default()
         .title(title.into())
