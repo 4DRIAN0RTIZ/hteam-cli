@@ -46,3 +46,67 @@ pub fn current_board(config: &Config) -> Option<(u64, String)> {
         .unwrap_or_else(|| "Desconocido".to_string());
     Some((id, name))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mockito::Matcher;
+
+    fn client(server_url: &str) -> HteamClient {
+        HteamClient::new_for_test(
+            Config::default(),
+            server_url.to_string(),
+            server_url.to_string(),
+        )
+        .expect("test client")
+    }
+
+    #[tokio::test]
+    async fn test_list_live_returns_datatable_boards() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/operation/care/operations/")
+            .match_query(Matcher::AllOf(vec![
+                Matcher::UrlEncoded("format".to_string(), "datatables".to_string()),
+                Matcher::UrlEncoded("status".to_string(), "Execution".to_string()),
+            ]))
+            .with_status(200)
+            .with_body(
+                r#"{"data":[{"id":483,"name":"Ops","service":"Managed","total_tasks":10,"total_tasks_closed":3}]}"#,
+            )
+            .create_async()
+            .await;
+
+        let boards = list_live(&client(&server.url())).await.expect("boards");
+
+        assert_eq!(boards.len(), 1);
+        assert_eq!(boards[0].id, 483);
+        assert_eq!(boards[0].name, "Ops");
+    }
+
+    #[test]
+    fn test_current_board_returns_configured_name() {
+        let mut config = Config::default();
+        config.set_board_number(483);
+        config.boards.insert(
+            "483".to_string(),
+            BoardInfo {
+                name: "Ops".to_string(),
+                last_used: None,
+            },
+        );
+
+        assert_eq!(current_board(&config), Some((483, "Ops".to_string())));
+    }
+
+    #[test]
+    fn test_current_board_uses_placeholder_for_unknown_name() {
+        let mut config = Config::default();
+        config.set_board_number(483);
+
+        assert_eq!(
+            current_board(&config),
+            Some((483, "Desconocido".to_string()))
+        );
+    }
+}

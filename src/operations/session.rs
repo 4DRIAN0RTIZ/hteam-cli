@@ -28,3 +28,35 @@ pub fn resolve_board_number(config: &Config, override_board: Option<u64>) -> Opt
         .or(config.auth.board_number)
         .or_else(|| config.load_last_ticket().ok().flatten())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::AuthConfig;
+
+    #[test]
+    fn test_resolve_board_number_prefers_override() {
+        let config = Config {
+            auth: AuthConfig {
+                board_number: Some(483),
+                ..AuthConfig::default()
+            },
+            ..Config::default()
+        };
+
+        assert_eq!(resolve_board_number(&config, Some(999)), Some(999));
+    }
+
+    #[test]
+    fn test_resolve_board_number_uses_configured_default() {
+        let config = Config {
+            auth: AuthConfig {
+                board_number: Some(483),
+                ..AuthConfig::default()
+            },
+            ..Config::default()
+        };
+
+        assert_eq!(resolve_board_number(&config, None), Some(483));
+    }
+}

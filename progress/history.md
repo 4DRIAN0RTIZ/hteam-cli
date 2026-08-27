@@ -67,3 +67,35 @@ Si se cierra la sesión, decidir si corregir los errores de clippy existentes o 
 ## Próximo paso
 
 Revisar el diff y preparar commit/PR de `feature/cargo-fmt-codebase`.
+
+
+## 2026-08-27 — Feature #2: unit_tests_operations
+
+- **Feature en curso:** #2 `unit_tests_operations` — test: agregar unit tests a `src/operations/`
+- **Inicio:** 2026-08-27
+- **Agente:** Pi
+
+## Plan
+
+- Verificar entorno y estado de ramas `main`/`dev` antes de tocar código.
+- Revisar `src/operations/` para elegir una primera tanda coherente de tests.
+- Agregar unit tests con `mockito` sin requests reales.
+- Ejecutar `cargo fmt`, `cargo test`, clippy/`./init.sh` y documentar resultados.
+
+## Bitácora
+
+- Ejecutado `./init.sh`: entorno inicial verde, pero todavía sin tests (`0 passed`).
+- Ejecutado `git fetch --all --prune`; `dev` está al día con `origin/dev`. Se creó la rama `test/unit-tests-operations` desde `dev`.
+- Se preservó el cambio existente en `AGENTS.md` y no se tocó como parte de la feature.
+- `feature_list.json` actualizado: feature #2 en `in_progress`.
+
+## Próximo paso
+
+Inspeccionar los módulos de `src/operations/` y empezar por tests de funciones con entradas/salidas acotadas o HTTP mockeable.
+- Inspeccionados `src/operations/*.rs`; los wrappers HTTP dependen de URLs constantes en `HteamClient`, así que se preparó un constructor `#[cfg(test)]` para apuntar a `mockito` sin tocar producción.
+- Agregada infraestructura de test `HteamClient::new_for_test` para redirigir API/site a `mockito` solo en `#[cfg(test)]`.
+- Agregados 27 unit tests cubriendo wrappers y lógica de `operations/` (boards, cards, checkin, comments, daily_work, projects, reminders, session, users, working) más cobertura mínima del helper del cliente tocado.
+- Ejecutado `cargo fmt && cargo test`: 27 tests en verde.
+- Ejecutado `cargo clippy --all-targets --all-features -- -D warnings`: verde.
+- Ejecutado `./init.sh`: verde; `cargo fmt --check`, clippy y 27 tests pasan.
+- Feature #2 marcada como `done` en `feature_list.json`.
