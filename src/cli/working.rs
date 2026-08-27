@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
-use tabled::{Table, settings::Style};
+use tabled::{settings::Style, Table};
 
 use crate::operations::{self, Session};
 

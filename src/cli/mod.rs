@@ -1,5 +1,4 @@
 use anyhow::Result;
-use serde_json;
 use std::io;
 
 pub mod board;
@@ -157,7 +156,7 @@ async fn checkin(json: bool) -> Result<()> {
 
 async fn reminders(json: bool) -> Result<()> {
     use crate::operations::{self, Session};
-    use tabled::{Table, settings::Style};
+    use tabled::{settings::Style, Table};
 
     let session = Session::open().await?;
     let items = operations::reminders::list(&session.client).await?;
@@ -182,7 +181,7 @@ async fn reminders(json: bool) -> Result<()> {
 
 async fn daily_work(args: DailyWorkArgs, json: bool) -> Result<()> {
     use crate::operations::{self, Session};
-    use tabled::{Table, settings::Style};
+    use tabled::{settings::Style, Table};
 
     let session = Session::open().await?;
     let entries = operations::daily_work::history(
@@ -213,7 +212,7 @@ async fn daily_work(args: DailyWorkArgs, json: bool) -> Result<()> {
 
 async fn search_users(args: UsersArgs, json: bool) -> Result<()> {
     use crate::operations::{self, Session};
-    use tabled::{Table, settings::Style};
+    use tabled::{settings::Style, Table};
 
     let session = Session::open().await?;
     let users = operations::users::search(&session.client, &args.query).await?;
