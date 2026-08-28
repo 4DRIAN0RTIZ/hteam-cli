@@ -1,2 +1,14 @@
 /target
 release.sh
+
+# Agent harness (local-only, not shared via remote)
+/feature_list.json
+/AGENTS.md
+/CLAUDE.md
+/.claude/
+/init.sh
+/CHECKPOINTS.md
+/progress/
+/docs/architecture.md
+/docs/conventions.md
+/docs/verification.md
