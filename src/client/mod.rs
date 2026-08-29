@@ -1294,7 +1294,23 @@ impl HteamClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::AuthConfig;
     use mockito::Matcher;
+
+    fn authenticated_client(server_url: &str) -> HteamClient {
+        let config = Config {
+            auth: AuthConfig {
+                session_id: Some("session".to_string()),
+                csrf_token: Some("csrf".to_string()),
+                access_token: Some("access".to_string()),
+                board_number: Some(483),
+                ..AuthConfig::default()
+            },
+            ..Config::default()
+        };
+        HteamClient::new_for_test(config, server_url.to_string(), server_url.to_string())
+            .expect("test client")
+    }
 
     #[tokio::test]
     async fn test_new_for_test_uses_mock_base_url() {
@@ -1319,6 +1335,113 @@ mod tests {
         let lists = client.get_lists(Some(483)).await.expect("lists");
 
         assert_eq!(lists[0].name, "Open");
+    }
+
+    #[tokio::test]
+    async fn test_get_lists_sends_auth_headers_and_parses_response() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/operation/care/operations/483/lists/")
+            .match_query(Matcher::UrlEncoded(
+                "format".to_string(),
+                "json".to_string(),
+            ))
+            .match_header("cookie", "sessionid=session; csrftoken=csrf")
+            .match_header("x-csrftoken", "csrf")
+            .match_header("authorization", "Bearer access")
+            .match_header("x-requested-with", "XMLHttpRequest")
+            .with_status(200)
+            .with_body(r#"[{"id":1,"name":"Open","total_board_cards":3}]"#)
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        let lists = client.get_lists(None).await.expect("lists");
+
+        assert_eq!(lists.len(), 1);
+        assert_eq!(lists[0].id, 1);
+        assert_eq!(lists[0].name, "Open");
+        assert_eq!(lists[0].card_count, Some(3));
+    }
+
+    #[tokio::test]
+    async fn test_get_lists_returns_http_error_body() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/operation/care/operations/483/lists/")
+            .match_query(Matcher::UrlEncoded(
+                "format".to_string(),
+                "json".to_string(),
+            ))
+            .with_status(500)
+            .with_body("boom")
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        let err = client.get_lists(None).await.expect_err("http error");
+
+        assert!(err
+            .to_string()
+            .contains("Error HTTP 500 Internal Server Error: boom"));
+    }
+
+    #[tokio::test]
+    async fn test_get_cards_fails_on_invalid_json_response() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/operation/care/operations/483/lists/1/cards/")
+            .match_query(Matcher::UrlEncoded(
+                "format".to_string(),
+                "json".to_string(),
+            ))
+            .with_status(200)
+            .with_body(r#"{"unexpected":true}"#)
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        let err = client.get_cards(1, None).await.expect_err("json error");
+        let err_text = format!("{err:#}");
+
+        assert!(err_text.contains("missing field"), "{err_text}");
+    }
+
+    #[tokio::test]
+    async fn test_test_auth_returns_false_for_forbidden_status() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/operation/care/operations/483/lists/")
+            .match_query(Matcher::UrlEncoded(
+                "format".to_string(),
+                "json".to_string(),
+            ))
+            .with_status(403)
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        assert!(!client.test_auth().await.expect("auth check"));
+    }
+
+    #[tokio::test]
+    async fn test_check_in_posts_json_and_parses_response() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("POST", "/tr/checkworkshifs/check_in/")
+            .match_body("{}")
+            .match_header("content-type", "application/json")
+            .with_status(200)
+            .with_body(r#"{"check_in":"2026-08-28T09:00:00","shift_id":7}"#)
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        let result = client.check_in().await.expect("check in");
+
+        assert_eq!(result.check_in.as_deref(), Some("2026-08-28T09:00:00"));
+        assert_eq!(result.shift_id, Some(7));
+        assert_eq!(result.check_out, None);
     }
 
     #[test]
