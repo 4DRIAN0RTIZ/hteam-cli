@@ -483,3 +483,327 @@ impl std::fmt::Display for Label {
         write!(f, "{}", self.name)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn list_deserializes_and_renames_card_count() {
+        let list: List = serde_json::from_value(json!({
+            "id": 1,
+            "name": "Backlog",
+            "total_board_cards": 3
+        }))
+        .unwrap();
+
+        assert_eq!(list.id, 1);
+        assert_eq!(list.name, "Backlog");
+        assert_eq!(list.card_count, Some(3));
+    }
+
+    #[test]
+    fn card_deserializes_title_and_subtitle_renames() {
+        let card: Card = serde_json::from_value(json!({
+            "id": 42,
+            "title": "Fix bug",
+            "subtitle": "Details here",
+            "labels_list": [{"id": 1, "name": "bug", "color": "#fff"}]
+        }))
+        .unwrap();
+
+        assert_eq!(card.name, "Fix bug");
+        assert_eq!(card.description.as_deref(), Some("Details here"));
+        assert_eq!(card.labels.len(), 1);
+        assert_eq!(card.labels[0].name, "bug");
+    }
+
+    #[test]
+    fn deserialize_labels_parses_array_of_valid_labels() {
+        let detail: CardDetail = serde_json::from_value(json!({
+            "id": 1,
+            "name": "Card",
+            "description": null,
+            "labels": [{"id": 1, "name": "bug", "color": "#fff"}]
+        }))
+        .unwrap();
+
+        assert_eq!(detail.labels.len(), 1);
+        assert_eq!(detail.labels[0].name, "bug");
+    }
+
+    #[test]
+    fn deserialize_labels_skips_invalid_array_items() {
+        let detail: CardDetail = serde_json::from_value(json!({
+            "id": 1,
+            "name": "Card",
+            "description": null,
+            "labels": [{"id": 1, "name": "bug", "color": "#fff"}, "not-a-label"]
+        }))
+        .unwrap();
+
+        assert_eq!(detail.labels.len(), 1);
+    }
+
+    #[test]
+    fn deserialize_labels_returns_empty_for_number_or_string() {
+        let from_number: CardDetail = serde_json::from_value(json!({
+            "id": 1,
+            "name": "Card",
+            "description": null,
+            "labels": 0
+        }))
+        .unwrap();
+        let from_string: CardDetail = serde_json::from_value(json!({
+            "id": 1,
+            "name": "Card",
+            "description": null,
+            "labels": "none"
+        }))
+        .unwrap();
+
+        assert!(from_number.labels.is_empty());
+        assert!(from_string.labels.is_empty());
+    }
+
+    #[test]
+    fn working_on_response_converts_into_status() {
+        let resp = WorkingOnResponse {
+            id: 1,
+            user: 2,
+            object_id: 99,
+            content_type: 3,
+            created_at: "2026-08-28T00:00:00Z".to_string(),
+            updated_at: "2026-08-28T00:00:00Z".to_string(),
+            content_object: ContentObject {
+                title: "My Card".to_string(),
+                url: "/cards/99".to_string(),
+            },
+        };
+
+        let status: WorkingOnStatus = resp.into();
+
+        assert_eq!(status.card_id, 99);
+        assert_eq!(status.card_name, "My Card");
+        assert_eq!(status.started_at, "2026-08-28T00:00:00Z");
+    }
+
+    #[test]
+    fn project_milestone_deserializes_from_tuple() {
+        let milestone: ProjectMilestone =
+            serde_json::from_value(json!(["Sprint 1", 0.5, "/milestones/1"])).unwrap();
+
+        assert_eq!(milestone.name, "Sprint 1");
+        assert_eq!(milestone.progress, 0.5);
+        assert_eq!(milestone.url, "/milestones/1");
+    }
+
+    #[test]
+    fn display_progress_handles_fraction_and_percentage_scales() {
+        assert_eq!(display_progress(&0.5), "█████░░░░░ 50%");
+        assert_eq!(display_progress(&50.0), "█████░░░░░ 50%");
+    }
+
+    #[test]
+    fn display_progress_clamps_over_100() {
+        assert_eq!(display_progress(&150.0), "██████████ 100%");
+    }
+
+    #[test]
+    fn display_closed_renders_check_or_box() {
+        assert_eq!(display_closed(&true), "✅");
+        assert_eq!(display_closed(&false), "🔲");
+    }
+
+    #[test]
+    fn display_milestone_and_responsible_handle_none() {
+        assert_eq!(display_milestone(&None), "-");
+        assert_eq!(display_responsible(&None), "-");
+    }
+
+    #[test]
+    fn display_milestone_and_responsible_handle_some() {
+        let milestone = Some(ProjectMilestoneRef {
+            id: 1,
+            name: "Sprint 1".to_string(),
+        });
+        let responsible = Some(ProjectResponsible {
+            email: "a@b.com".to_string(),
+            username: "abrown".to_string(),
+        });
+
+        assert_eq!(display_milestone(&milestone), "Sprint 1");
+        assert_eq!(display_responsible(&responsible), "abrown");
+    }
+
+    #[test]
+    fn reminder_deserializes_with_defaults_when_optional_fields_missing() {
+        let reminder: Reminder = serde_json::from_value(json!({
+            "id": 1,
+            "object_id": 99
+        }))
+        .unwrap();
+
+        assert_eq!(reminder.reminder_type, None);
+        assert_eq!(reminder.reminder_date, None);
+        assert!(reminder.content_object.is_none());
+    }
+
+    #[test]
+    fn display_content_title_handles_some_and_none() {
+        let some = Some(ContentObject {
+            title: "Card title".to_string(),
+            url: "/x".to_string(),
+        });
+
+        assert_eq!(display_content_title(&some), "Card title");
+        assert_eq!(display_content_title(&None), "-");
+    }
+
+    #[test]
+    fn user_suggestion_deserializes_id_as_string() {
+        let suggestion: UserSuggestion = serde_json::from_value(json!({
+            "id": "8",
+            "selected_text": "oscarc",
+            "text": "oscarc (oscarc@ditra.mx)"
+        }))
+        .unwrap();
+
+        assert_eq!(suggestion.id, "8");
+        assert_eq!(suggestion.selected_text, "oscarc");
+    }
+
+    #[test]
+    fn check_in_result_deserializes_with_defaults() {
+        let result: CheckInResult = serde_json::from_value(json!({
+            "check_in": "2026-08-28T08:00:00Z"
+        }))
+        .unwrap();
+
+        assert_eq!(result.check_in.as_deref(), Some("2026-08-28T08:00:00Z"));
+        assert_eq!(result.check_out, None);
+        assert_eq!(result.shift_id, None);
+    }
+
+    #[test]
+    fn work_shift_resume_deserializes_last_record() {
+        let resume: WorkShiftResume = serde_json::from_value(json!({
+            "last": {
+                "id": 1,
+                "user": {"id": 2, "username": "abrown"},
+                "check_in": "2026-08-28T08:00:00Z",
+                "check_out": null
+            }
+        }))
+        .unwrap();
+
+        let last = resume.last.expect("expected last record");
+        assert_eq!(last.user.username, "abrown");
+        assert_eq!(last.check_out, None);
+    }
+
+    #[test]
+    fn truncate_comment_keeps_short_strings_untouched() {
+        assert_eq!(truncate_comment("short comment"), "short comment");
+    }
+
+    #[test]
+    fn truncate_comment_truncates_long_strings_with_ellipsis() {
+        let long = "a".repeat(90);
+
+        let truncated = truncate_comment(&long);
+
+        assert_eq!(truncated.chars().count(), 80);
+        assert!(truncated.ends_with('…'));
+    }
+
+    #[test]
+    fn truncate_comment_replaces_newlines_with_spaces() {
+        assert_eq!(truncate_comment("line one\nline two"), "line one line two");
+    }
+
+    #[test]
+    fn display_option_handles_some_and_none() {
+        assert_eq!(display_option(&Some(42)), "42");
+        assert_eq!(display_option::<u64>(&None), "-");
+    }
+
+    #[test]
+    fn display_labels_handles_empty_and_non_empty() {
+        assert_eq!(display_labels(&[]), "-");
+
+        let labels = vec![
+            Label {
+                id: 1,
+                name: "bug".to_string(),
+                color: "#fff".to_string(),
+            },
+            Label {
+                id: 2,
+                name: "urgent".to_string(),
+                color: "#000".to_string(),
+            },
+        ];
+        assert_eq!(display_labels(&labels), "bug, urgent");
+    }
+
+    #[test]
+    fn comment_deserializes_with_defaults() {
+        let comment: Comment = serde_json::from_value(json!({
+            "id": 1,
+            "user_name": "abrown",
+            "comment": "Looks good"
+        }))
+        .unwrap();
+
+        assert_eq!(comment.submit_date, "");
+        assert_eq!(comment.level, 0);
+        assert!(!comment.is_removed);
+        assert_eq!(comment.parent_id, None);
+    }
+
+    #[test]
+    fn daily_work_entry_deserializes() {
+        let entry: DailyWorkEntry = serde_json::from_value(json!({
+            "user": "abrown",
+            "activity": "Commented on card",
+            "timestamp": "2026-08-28T08:00:00Z",
+            "relative": "hace 2 horas"
+        }))
+        .unwrap();
+
+        assert_eq!(entry.user, "abrown");
+        assert_eq!(entry.target_url, None);
+    }
+
+    #[test]
+    fn board_entry_and_response_deserialize() {
+        let boards: BoardsResponse = serde_json::from_value(json!({
+            "data": [{
+                "id": 1,
+                "name": "Ops",
+                "service": "care",
+                "responsible": "abrown",
+                "total_tasks": 10,
+                "total_tasks_closed": 4
+            }]
+        }))
+        .unwrap();
+
+        assert_eq!(boards.data.len(), 1);
+        assert_eq!(boards.data[0].name, "Ops");
+        assert_eq!(boards.data[0].total_tasks_closed, 4);
+    }
+
+    #[test]
+    fn label_display_renders_name() {
+        let label = Label {
+            id: 1,
+            name: "bug".to_string(),
+            color: "#fff".to_string(),
+        };
+
+        assert_eq!(label.to_string(), "bug");
+    }
+}
