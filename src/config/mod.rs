@@ -136,17 +136,23 @@ impl Config {
         self.auth.board_number = Some(board_number);
     }
 
-    #[expect(
-        dead_code,
-        reason = "variables are part of the persisted config schema"
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "variables are part of the persisted config schema"
+        )
     )]
     pub fn get_variable(&self, name: &str) -> Option<&String> {
         self.variables.get(name)
     }
 
-    #[expect(
-        dead_code,
-        reason = "variables are part of the persisted config schema"
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "variables are part of the persisted config schema"
+        )
     )]
     pub fn set_variable(&mut self, name: String, value: String) {
         self.variables.insert(name, value);
@@ -171,5 +177,177 @@ impl Config {
         let path = Self::get_last_ticket_path()?;
         fs::write(&path, board_number.to_string())?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::NaiveTime;
+
+    #[test]
+    fn config_default_has_no_auth_and_empty_collections() {
+        let config = Config::default();
+
+        assert!(!config.is_authenticated());
+        assert!(config.boards.is_empty());
+        assert!(config.variables.is_empty());
+        assert!(config.tui.hidden_lists.is_empty());
+    }
+
+    #[test]
+    fn is_authenticated_requires_session_id_and_csrf_token() {
+        let mut config = Config::default();
+        assert!(!config.is_authenticated());
+
+        config.auth.session_id = Some("sid".to_string());
+        assert!(!config.is_authenticated());
+
+        config.auth.csrf_token = Some("csrf".to_string());
+        assert!(config.is_authenticated());
+    }
+
+    #[test]
+    fn board_number_getter_and_setter_round_trip() {
+        let mut config = Config::default();
+        assert_eq!(config.get_board_number(), None);
+
+        config.set_board_number(42);
+
+        assert_eq!(config.get_board_number(), Some(42));
+    }
+
+    #[test]
+    fn variable_getter_and_setter_round_trip() {
+        let mut config = Config::default();
+        assert_eq!(config.get_variable("env"), None);
+
+        config.set_variable("env".to_string(), "prod".to_string());
+
+        assert_eq!(config.get_variable("env"), Some(&"prod".to_string()));
+    }
+
+    #[test]
+    fn config_round_trips_through_toml() {
+        let mut original = Config::default();
+        original.auth.session_id = Some("sid".to_string());
+        original.auth.csrf_token = Some("csrf".to_string());
+        original.auth.board_number = Some(7);
+        original
+            .variables
+            .insert("env".to_string(), "prod".to_string());
+        original.tui.hidden_lists = vec!["Done".to_string()];
+        original.working_hours.start = Some("09:00".to_string());
+        original.working_hours.end = Some("18:00".to_string());
+
+        let serialized = toml::to_string_pretty(&original).expect("serializes to TOML");
+        let parsed: Config = toml::from_str(&serialized).expect("parses back from TOML");
+
+        assert_eq!(parsed.auth.session_id, original.auth.session_id);
+        assert_eq!(parsed.auth.board_number, original.auth.board_number);
+        assert_eq!(parsed.variables.get("env"), Some(&"prod".to_string()));
+        assert_eq!(parsed.tui.hidden_lists, vec!["Done".to_string()]);
+        assert_eq!(parsed.working_hours.start.as_deref(), Some("09:00"));
+    }
+
+    #[test]
+    fn config_deserializes_from_partial_toml_with_defaults() {
+        let toml_str = r#"
+            [auth]
+            session_id = "sid"
+        "#;
+
+        let config: Config = toml::from_str(toml_str).expect("parses partial config");
+
+        assert_eq!(config.auth.session_id.as_deref(), Some("sid"));
+        assert!(config.boards.is_empty());
+        assert!(config.variables.is_empty());
+        assert!(config.tui.hidden_lists.is_empty());
+        assert_eq!(config.working_hours.start, None);
+    }
+
+    #[test]
+    fn board_info_skips_serializing_last_used_when_none() {
+        let board = BoardInfo {
+            name: "Ops".to_string(),
+            last_used: None,
+        };
+
+        let serialized = toml::to_string(&board).expect("serializes board info");
+
+        assert!(!serialized.contains("last_used"));
+    }
+
+    #[test]
+    fn remaining_display_returns_none_when_unconfigured() {
+        let hours = WorkingHoursConfig::default();
+
+        assert_eq!(
+            hours.remaining_display(NaiveTime::from_hms_opt(10, 0, 0).unwrap()),
+            None
+        );
+    }
+
+    #[test]
+    fn remaining_display_returns_none_outside_range() {
+        let hours = WorkingHoursConfig {
+            start: Some("09:00".to_string()),
+            end: Some("18:00".to_string()),
+        };
+
+        assert_eq!(
+            hours.remaining_display(NaiveTime::from_hms_opt(8, 0, 0).unwrap()),
+            None
+        );
+        assert_eq!(
+            hours.remaining_display(NaiveTime::from_hms_opt(19, 0, 0).unwrap()),
+            None
+        );
+    }
+
+    #[test]
+    fn remaining_display_formats_time_left_within_range() {
+        let hours = WorkingHoursConfig {
+            start: Some("09:00".to_string()),
+            end: Some("18:00".to_string()),
+        };
+
+        let display = hours
+            .remaining_display(NaiveTime::from_hms_opt(17, 15, 0).unwrap())
+            .expect("should be within range");
+
+        assert_eq!(display, " 0h 45m restantes ");
+    }
+
+    #[test]
+    fn remaining_display_returns_none_for_invalid_time_format() {
+        let hours = WorkingHoursConfig {
+            start: Some("not-a-time".to_string()),
+            end: Some("18:00".to_string()),
+        };
+
+        assert_eq!(
+            hours.remaining_display(NaiveTime::from_hms_opt(10, 0, 0).unwrap()),
+            None
+        );
+    }
+
+    #[test]
+    fn config_file_path_is_under_config_dir() {
+        let config_dir = Config::config_dir().expect("resolves config dir");
+        let config_file = Config::config_file().expect("resolves config file");
+
+        assert_eq!(config_file, config_dir.join("config.toml"));
+        assert!(config_dir.ends_with("hteam"));
+    }
+
+    #[test]
+    fn last_ticket_path_is_under_home_dir() {
+        let path = Config::get_last_ticket_path().expect("resolves last ticket path");
+
+        assert_eq!(
+            path.file_name().and_then(|n| n.to_str()),
+            Some(".last_ticket")
+        );
     }
 }
