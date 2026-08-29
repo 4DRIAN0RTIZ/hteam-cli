@@ -691,13 +691,13 @@ impl HteamClient {
         let date_str = date.format(COMMENT_DATE_FORMAT).to_string();
         let mut fields = vec![
             format!("csrfmiddlewaretoken={}", encode(&csrf)),
-            format!("next=%2Fcomments%2Fsent%2F"),
-            format!("content_type=processes.task"),
+            "next=%2Fcomments%2Fsent%2F".to_string(),
+            "content_type=processes.task".to_string(),
             format!("object_pk={}", card_id),
             format!("timestamp={}", timestamp),
             format!("security_hash={}", security_hash),
-            format!("reply_to=0"),
-            format!("honeypot="),
+            "reply_to=0".to_string(),
+            "honeypot=".to_string(),
             format!("comment={}", encode(comment)),
         ];
         // Mirrors the HTML checkbox: only sent when checked, omitted otherwise.
