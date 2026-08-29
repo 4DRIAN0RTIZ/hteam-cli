@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "runId": "a853baf1-e9f6-4a5b-8c0e-7608b26c3235",
+  "mode": "update",
+  "phase": "planning",
+  "startedAt": "2026-08-29T04:34:19.305Z",
+  "language": "en",
+  "languageChanged": false,
+  "requiredRewritePages": [],
+  "initialPages": [
+    "/openwiki/architecture/system-overview.md",
+    "/openwiki/concepts/cards-and-board-state.md",
+    "/openwiki/concepts/session-configuration.md",
+    "/openwiki/integrations/hteam-api.md",
+    "/openwiki/integrations/mcp-server.md",
+    "/openwiki/operations/terminal-experiences.md",
+    "/openwiki/quickstart.md",
+    "/openwiki/testing/verification-strategy.md",
+    "/openwiki/workflows/card-mutations-and-comments.md"
+  ],
+  "sourceFingerprint": "sha256:f7ab2df2d6745f436ed8cdc84aef670200263f8ea1d0b923de9e2f21d2e834f1",
+  "actor": {
+    "producerActor": "openwiki/0.4.3",
+    "metadataModel": "gpt-5.6-terra"
+  },
+  "previousLastUpdate": {
+    "updatedAt": "2026-08-29T04:30:06.897Z",
+    "command": "update",
+    "gitHead": "be3bcf30d75029afb7cb1ddf7e2adeab4a3e4d8f",
+    "model": "gpt-5.6-terra",
+    "status": "complete",
+    "language": "en"
+  },
+  "baseGitHead": "be3bcf30d75029afb7cb1ddf7e2adeab4a3e4d8f",
+  "wikiGoal": "A code wiki for this repository.",
+  "beforeContentSnapshot": "ad48f86ea7cf227a49e4b1904016705df61a4a85327fbe59f61f4882cf678af3",
+  "preparedWiki": {
+    "generatedProvenance": [
+      {
+        "page": "/openwiki/architecture/system-overview.md",
+        "bodyHash": "7154a91814d747891b3a3bf59e3fce59ceda5d00fa2408bd851f1c293d15d659",
+        "generated": {
+          "by": "openwiki/0.4.3",
+          "at": "2026-08-29T04:08:29.740Z"
+        }
+      },
+      {
+        "page": "/openwiki/concepts/cards-and-board-state.md",
+        "bodyHash": "a8c46de8dda663d5d72e4d43db72d13c70a7ecd430090765604eab8dff798788",
+        "generated": {
+          "by": "openwiki/0.4.3",
+          "at": "2026-08-29T04:08:29.740Z"
+        }
+      },
+      {
+        "page": "/openwiki/concepts/session-configuration.md",
+        "bodyHash": "4ceb2036f8011a89126984aab448b01acaf04b8b6431a5a3f91c27f83d0c7140",
+        "generated": {
+          "by": "openwiki/0.4.3",
+          "at": "2026-08-29T04:08:29.740Z"
+        }
+      },
+      {
+        "page": "/openwiki/integrations/hteam-api.md",
+        "bodyHash": "36f575e73a55738de98b752742738ff5e0c0316183fb4ee24052e79387494004",
+        "generated": {
+          "by": "openwiki/0.4.3",
+          "at": "2026-08-29T04:08:29.740Z"
+        }
+      },
+      {
+        "page": "/openwiki/integrations/mcp-server.md",
+        "bodyHash": "929d2ba4bc9dfda71e70bf2db52bdcfea61238c9a904936487f8a3f642a78c77",
+        "generated": {
+          "by": "openwiki/0.4.3",
+          "at": "2026-08-29T04:08:29.740Z"
+        }
+      },
+      {
+        "page": "/openwiki/operations/terminal-experiences.md",
+        "bodyHash": "b5e56d0784fa4e6912a40a601b59ead300e9d69823663ea88d7eb22ca321288d",
+        "generated": {
+          "by": "openwiki/0.4.3",
+          "at": "2026-08-29T04:08:29.740Z"
+        }
+      },
+      {
+        "page": "/openwiki/quickstart.md",
+        "bodyHash": "19823cbc363731de01b3818687ebdf7fc1673373c30bb99d4b1803b1e9d0be3d",
+        "generated": {
+          "by": "openwiki/0.4.3",
+          "at": "2026-08-29T04:08:29.740Z"
+        }
+      },
+      {
+        "page": "/openwiki/testing/verification-strategy.md",
+        "bodyHash": "81dc1fe397547eed4bb5325e3210f14629f2065986a296ce3565fcde7681a51e",
+        "generated": {
+          "by": "openwiki/0.4.3",
+          "at": "2026-08-29T04:08:29.740Z"
+        }
+      },
+      {
+        "page": "/openwiki/workflows/card-mutations-and-comments.md",
+        "bodyHash": "76dcece050f36c890a80c99f8c4fefc81bed34bd3d731be7a64f3fcf180516f6",
+        "generated": {
+          "by": "openwiki/0.4.3",
+          "at": "2026-08-29T04:08:29.740Z"
+        }
+      }
+    ]
+  }
+}
