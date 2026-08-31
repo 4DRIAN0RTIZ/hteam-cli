@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use crate::config::WorkingHoursConfig;
 use crate::models::{
     BoardEntry, Card, Comment, List, ProjectMilestone, ProjectTask, Reminder, UserSuggestion,
-    WorkShiftRecord, WorkingOnStatus,
+    WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
 };
 
 use super::widgets::{Scroll, TextInput};
@@ -61,6 +61,12 @@ pub struct App {
     pub project_milestones: Vec<ProjectMilestone>,
     pub project_tasks: Vec<ProjectTask>,
     pub show_projects: bool,
+    /// Weekly objectives loaded from SharePad/cache for the read-only popup.
+    pub weekly_objectives: Option<WeeklyObjectivesSet>,
+    pub weekly_objectives_from_cache: bool,
+    pub weekly_objectives_synced_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub weekly_objectives_error: Option<String>,
+    pub show_weekly_objectives: bool,
     /// True while typing a new project id inside the projects popup.
     pub composing_project: bool,
     pub project_input: TextInput,
@@ -79,6 +85,8 @@ pub struct App {
     pub help_scroll: Scroll,
     /// Scroll offset para el popup de reminders.
     pub reminders_scroll: Scroll,
+    /// Scroll offset para el popup de objetivos semanales.
+    pub weekly_objectives_scroll: Scroll,
     /// Scroll offset para la lista de comentarios (solo en modo lectura, no al componer).
     pub comments_scroll: Scroll,
     /// True cuando el foco del popup de proyectos está en el panel de detalle (derecha).
@@ -127,6 +135,11 @@ impl App {
             project_milestones: Vec::new(),
             project_tasks: Vec::new(),
             show_projects: false,
+            weekly_objectives: None,
+            weekly_objectives_from_cache: false,
+            weekly_objectives_synced_at: None,
+            weekly_objectives_error: None,
+            show_weekly_objectives: false,
             composing_project: false,
             project_input: TextInput::default(),
             composing_card: false,
@@ -138,6 +151,7 @@ impl App {
             selected_board_idx: 0,
             help_scroll: Scroll::default(),
             reminders_scroll: Scroll::default(),
+            weekly_objectives_scroll: Scroll::default(),
             comments_scroll: Scroll::default(),
             projects_detail_focused: false,
             projects_scroll: Scroll::default(),
