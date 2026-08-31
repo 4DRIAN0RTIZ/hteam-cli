@@ -241,9 +241,6 @@ fn draw_weekly_objectives_popup(frame: &mut Frame, app: &App) {
 
         for objective in &set.objectives {
             lines.push(format!("## {}", objective.name));
-            if objective.tasks.is_empty() {
-                lines.push("   (sin tareas)".to_string());
-            }
             for task in &objective.tasks {
                 let mark = if task.done { "x" } else { " " };
                 lines.push(format!("   [{}] {}", mark, task.description));
