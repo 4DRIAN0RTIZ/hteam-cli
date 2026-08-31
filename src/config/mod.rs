@@ -1,8 +1,11 @@
 use anyhow::{Context, Result};
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
+
+use crate::models::{WeeklyObjective, WeeklyObjectivesSet};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AuthConfig {
@@ -66,6 +69,73 @@ fn parse_time(s: &str) -> Option<chrono::NaiveTime> {
     chrono::NaiveTime::parse_from_str(s, "%H:%M").ok()
 }
 
+/// Cuánto tiempo se considera "fresco" el cache de objetivos semanales antes
+/// de que `hteam objectives show` vuelva a pegarle a SharePad.
+const WEEKLY_OBJECTIVES_CACHE_TTL_HOURS: i64 = 24;
+
+/// Notebook público de SharePad usado por defecto por `hteam objectives show`
+/// — configurable vía `[weekly_objectives] source_url` en `config.toml`.
+pub const DEFAULT_WEEKLY_OBJECTIVES_SOURCE_URL: &str = "https://sharepad.in/n/okr-semanales";
+
+fn default_weekly_objectives_source_url() -> String {
+    DEFAULT_WEEKLY_OBJECTIVES_SOURCE_URL.to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WeeklyObjectivesConfig {
+    /// URL del notebook público de SharePad a scrapear.
+    #[serde(default = "default_weekly_objectives_source_url")]
+    pub source_url: String,
+    /// Timestamp RFC3339 de la última sincronización exitosa (mismo formato
+    /// que `BoardInfo::last_used`). `None` si nunca se sincronizó.
+    #[serde(default)]
+    pub last_synced_at: Option<String>,
+    /// Título del último resultado scrapeado exitosamente.
+    #[serde(default)]
+    pub cached_title: Option<String>,
+    /// Objetivos (con sus tareas) del último resultado scrapeado exitosamente.
+    #[serde(default)]
+    pub cached_objectives: Vec<WeeklyObjective>,
+}
+
+impl Default for WeeklyObjectivesConfig {
+    fn default() -> Self {
+        Self {
+            source_url: default_weekly_objectives_source_url(),
+            last_synced_at: None,
+            cached_title: None,
+            cached_objectives: Vec::new(),
+        }
+    }
+}
+
+impl WeeklyObjectivesConfig {
+    /// `true` cuando `last_synced_at` existe y tiene menos de 24h respecto a
+    /// `now`. `--force` se resuelve en el caller (`operations::objectives`),
+    /// no acá, para mantener esta función puramente sobre la antigüedad del
+    /// cache.
+    pub fn is_cache_fresh(&self, now: DateTime<Utc>) -> bool {
+        self.last_synced_at
+            .as_deref()
+            .and_then(|ts| DateTime::parse_from_rfc3339(ts).ok())
+            .map(|synced_at| {
+                now.signed_duration_since(synced_at)
+                    < Duration::hours(WEEKLY_OBJECTIVES_CACHE_TTL_HOURS)
+            })
+            .unwrap_or(false)
+    }
+
+    /// Reconstruye el último resultado cacheado, si hay uno completo
+    /// (requiere al menos un título guardado).
+    pub fn cached_set(&self) -> Option<WeeklyObjectivesSet> {
+        let title = self.cached_title.clone()?;
+        Some(WeeklyObjectivesSet {
+            title,
+            objectives: self.cached_objectives.clone(),
+        })
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
     pub auth: AuthConfig,
@@ -77,6 +147,8 @@ pub struct Config {
     pub tui: TuiConfig,
     #[serde(default)]
     pub working_hours: WorkingHoursConfig,
+    #[serde(default)]
+    pub weekly_objectives: WeeklyObjectivesConfig,
 }
 
 impl Config {
@@ -349,5 +421,153 @@ mod tests {
             path.file_name().and_then(|n| n.to_str()),
             Some(".last_ticket")
         );
+    }
+
+    #[test]
+    fn weekly_objectives_default_uses_sharepad_url() {
+        let config = Config::default();
+
+        assert_eq!(
+            config.weekly_objectives.source_url,
+            DEFAULT_WEEKLY_OBJECTIVES_SOURCE_URL
+        );
+        assert_eq!(config.weekly_objectives.last_synced_at, None);
+        assert!(config.weekly_objectives.cached_objectives.is_empty());
+    }
+
+    #[test]
+    fn weekly_objectives_deserializes_from_config_missing_the_section() {
+        let toml_str = r#"
+            [auth]
+            session_id = "sid"
+        "#;
+
+        let config: Config = toml::from_str(toml_str).expect("parses config without section");
+
+        assert_eq!(
+            config.weekly_objectives.source_url,
+            DEFAULT_WEEKLY_OBJECTIVES_SOURCE_URL
+        );
+    }
+
+    #[test]
+    fn weekly_objectives_round_trips_source_url_and_cache_through_toml() {
+        let mut original = Config::default();
+        original.weekly_objectives.source_url = "https://sharepad.in/n/otro-notebook".to_string();
+        original.weekly_objectives.last_synced_at = Some("2026-08-30T10:00:00+00:00".to_string());
+        original.weekly_objectives.cached_title = Some("Objetivos semanales".to_string());
+        original.weekly_objectives.cached_objectives = vec![WeeklyObjective {
+            name: "Demo CCL".to_string(),
+            tasks: vec![crate::models::WeeklyTask {
+                description: "Tarea 1 xd".to_string(),
+                done: false,
+            }],
+        }];
+
+        let serialized = toml::to_string_pretty(&original).expect("serializes to TOML");
+        let parsed: Config = toml::from_str(&serialized).expect("parses back from TOML");
+
+        assert_eq!(
+            parsed.weekly_objectives.source_url,
+            "https://sharepad.in/n/otro-notebook"
+        );
+        assert_eq!(
+            parsed.weekly_objectives.last_synced_at.as_deref(),
+            Some("2026-08-30T10:00:00+00:00")
+        );
+        assert_eq!(
+            parsed.weekly_objectives.cached_title.as_deref(),
+            Some("Objetivos semanales")
+        );
+        assert_eq!(parsed.weekly_objectives.cached_objectives.len(), 1);
+        assert_eq!(
+            parsed.weekly_objectives.cached_objectives[0].tasks[0].description,
+            "Tarea 1 xd"
+        );
+    }
+
+    #[test]
+    fn weekly_objectives_source_url_falls_back_when_section_present_but_field_missing() {
+        let toml_str = r#"
+            [auth]
+            session_id = "sid"
+
+            [weekly_objectives]
+            last_synced_at = "2026-08-30T10:00:00+00:00"
+        "#;
+
+        let config: Config = toml::from_str(toml_str).expect("parses partial section");
+
+        assert_eq!(
+            config.weekly_objectives.source_url,
+            DEFAULT_WEEKLY_OBJECTIVES_SOURCE_URL
+        );
+        assert_eq!(
+            config.weekly_objectives.last_synced_at.as_deref(),
+            Some("2026-08-30T10:00:00+00:00")
+        );
+    }
+
+    #[test]
+    fn is_cache_fresh_is_false_without_last_synced_at() {
+        let weekly = WeeklyObjectivesConfig::default();
+
+        assert!(!weekly.is_cache_fresh(Utc::now()));
+    }
+
+    #[test]
+    fn is_cache_fresh_is_true_under_24h() {
+        let now = Utc::now();
+        let weekly = WeeklyObjectivesConfig {
+            last_synced_at: Some((now - Duration::hours(23)).to_rfc3339()),
+            ..WeeklyObjectivesConfig::default()
+        };
+
+        assert!(weekly.is_cache_fresh(now));
+    }
+
+    #[test]
+    fn is_cache_fresh_is_false_at_or_after_24h() {
+        let now = Utc::now();
+        let weekly = WeeklyObjectivesConfig {
+            last_synced_at: Some((now - Duration::hours(24)).to_rfc3339()),
+            ..WeeklyObjectivesConfig::default()
+        };
+
+        assert!(!weekly.is_cache_fresh(now));
+    }
+
+    #[test]
+    fn is_cache_fresh_ignores_invalid_timestamps() {
+        let weekly = WeeklyObjectivesConfig {
+            last_synced_at: Some("not-a-timestamp".to_string()),
+            ..WeeklyObjectivesConfig::default()
+        };
+
+        assert!(!weekly.is_cache_fresh(Utc::now()));
+    }
+
+    #[test]
+    fn cached_set_returns_none_without_a_cached_title() {
+        let weekly = WeeklyObjectivesConfig::default();
+
+        assert_eq!(weekly.cached_set(), None);
+    }
+
+    #[test]
+    fn cached_set_rebuilds_the_last_scraped_result() {
+        let weekly = WeeklyObjectivesConfig {
+            cached_title: Some("Objetivos semanales".to_string()),
+            cached_objectives: vec![WeeklyObjective {
+                name: "Demo CCL".to_string(),
+                tasks: vec![],
+            }],
+            ..WeeklyObjectivesConfig::default()
+        };
+
+        let set = weekly.cached_set().expect("cached set");
+
+        assert_eq!(set.title, "Objetivos semanales");
+        assert_eq!(set.objectives[0].name, "Demo CCL");
     }
 }

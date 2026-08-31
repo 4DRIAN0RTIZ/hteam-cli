@@ -10,6 +10,7 @@ pub mod cards;
 pub mod checkin;
 pub mod comments;
 pub mod daily_work;
+pub mod objectives;
 pub mod projects;
 pub mod reminders;
 pub mod session;

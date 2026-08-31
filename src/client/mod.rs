@@ -4,6 +4,8 @@ use reqwest::Client;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+pub mod objectives;
+
 use crate::config::Config;
 use crate::models::{
     BoardEntry, BoardsResponse, Card, CardDetail, CheckInResult, Comment, CommentsResponse,

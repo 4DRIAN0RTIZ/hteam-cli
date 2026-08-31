@@ -478,6 +478,32 @@ pub struct BoardsResponse {
     pub data: Vec<BoardEntry>,
 }
 
+/// Una tarea (checklist item) de un objetivo semanal, parseada de una línea
+/// `- [ ] texto` / `- [x] texto` del markdown de SharePad.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct WeeklyTask {
+    pub description: String,
+    #[serde(default)]
+    pub done: bool,
+}
+
+/// Un objetivo semanal (`## nombre` en el markdown de SharePad) con sus
+/// tareas asociadas.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct WeeklyObjective {
+    pub name: String,
+    #[serde(default)]
+    pub tasks: Vec<WeeklyTask>,
+}
+
+/// El set completo de objetivos semanales de un notebook de SharePad: el
+/// título (`# titulo`) y sus objetivos (`## nombre`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct WeeklyObjectivesSet {
+    pub title: String,
+    pub objectives: Vec<WeeklyObjective>,
+}
+
 impl std::fmt::Display for Label {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name)
@@ -805,5 +831,39 @@ mod tests {
         };
 
         assert_eq!(label.to_string(), "bug");
+    }
+
+    #[test]
+    fn weekly_objectives_set_round_trips_through_json() {
+        let set = WeeklyObjectivesSet {
+            title: "Objetivos semanales".to_string(),
+            objectives: vec![WeeklyObjective {
+                name: "Demo CCL".to_string(),
+                tasks: vec![
+                    WeeklyTask {
+                        description: "Tarea 1 xd".to_string(),
+                        done: false,
+                    },
+                    WeeklyTask {
+                        description: "Tarea 2 lista".to_string(),
+                        done: true,
+                    },
+                ],
+            }],
+        };
+
+        let serialized = serde_json::to_string(&set).unwrap();
+        let parsed: WeeklyObjectivesSet = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(parsed, set);
+        assert!(parsed.objectives[0].tasks[1].done);
+    }
+
+    #[test]
+    fn weekly_objectives_set_default_is_empty() {
+        let set = WeeklyObjectivesSet::default();
+
+        assert!(set.title.is_empty());
+        assert!(set.objectives.is_empty());
     }
 }

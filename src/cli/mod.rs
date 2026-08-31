@@ -5,6 +5,7 @@ pub mod board;
 pub mod cards;
 pub mod interactive;
 pub mod login;
+pub mod objectives;
 pub mod project;
 pub mod working;
 
@@ -57,6 +58,10 @@ pub enum Commands {
     /// Gestionar proyectos
     #[command(subcommand)]
     Project(project::ProjectCommands),
+
+    /// Objetivos semanales (scraping de SharePad, sólo lectura)
+    #[command(subcommand)]
+    Objectives(objectives::ObjectivesCommands),
 
     /// Registrar entrada del día (check in)
     Checkin,
@@ -119,6 +124,7 @@ pub async fn run() -> Result<()> {
         Commands::Closed => cards::closed_cards(cli.board, cli.json).await,
         Commands::Working(cmd) => working::execute(cmd, cli.json).await,
         Commands::Project(cmd) => project::execute(cmd, cli.json).await,
+        Commands::Objectives(cmd) => objectives::execute(cmd, cli.json).await,
         Commands::Checkin => checkin(cli.json).await,
         Commands::Reminders => reminders(cli.json).await,
         Commands::DailyWork(args) => daily_work(args, cli.json).await,
