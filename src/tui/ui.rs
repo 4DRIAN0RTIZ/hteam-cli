@@ -28,6 +28,8 @@ pub fn draw(frame: &mut Frame, app: &App) {
         draw_help_popup(frame, app);
     } else if app.show_reminders {
         draw_reminders_popup(frame, app);
+    } else if app.show_weekly_objectives {
+        draw_weekly_objectives_popup(frame, app);
     } else if app.show_description {
         draw_description_popup(frame, app);
     } else if app.show_comments {
@@ -145,6 +147,7 @@ fn draw_help_popup(frame: &mut Frame, app: &App) {
         "  B               cambiar de board — lista en vivo · j/k + Enter seleccionar",
         "  j/k, ↓/↑        scroll del contenido (reminders, comentarios, esta ayuda)",
         "  R               reminders — 'a' agrega uno para la card seleccionada",
+        "  O               objetivos semanales — 'f' fuerza refetch · j/k scroll",
         "  C               comentarios — 'a' escribe uno nuevo (@ para mencionar, Tab fecha, Ctrl+F seguimiento)",
         "  P               proyectos — 'a' nuevo · Tab foco al detalle · j/k mover/scroll · Enter elegir",
         "",
@@ -215,6 +218,65 @@ fn draw_reminders_popup(frame: &mut Frame, app: &App) {
         .wrap(Wrap { trim: true })
         .scroll((app.reminders_scroll.offset(), 0));
     frame.render_widget(p, inner);
+}
+
+fn draw_weekly_objectives_popup(frame: &mut Frame, app: &App) {
+    let area = centered_rect(70, 70, frame.area());
+    let inner = draw_frame(
+        frame,
+        area,
+        " Objetivos semanales — 'f' refetch · j/k scroll · Esc cerrar ",
+        Color::Green,
+    );
+
+    let text = if let Some(error) = &app.weekly_objectives_error {
+        format!("No se pudieron cargar los objetivos semanales.\n\n{}\n\nPresiona 'f' para reintentar ignorando el cache.", error)
+    } else if let Some(set) = &app.weekly_objectives {
+        let source = if app.weekly_objectives_from_cache {
+            "cache"
+        } else {
+            "red"
+        };
+        let mut lines = vec![format!("🎯 {}", set.title), String::new()];
+
+        for objective in &set.objectives {
+            lines.push(format!("## {}", objective.name));
+            for task in &objective.tasks {
+                let mark = if task.done { "x" } else { " " };
+                lines.push(format!("   [{}] {}", mark, task.description));
+            }
+            lines.push(String::new());
+        }
+
+        if let Some(synced_at) = app.weekly_objectives_synced_at {
+            lines.push(format!("{}, {}", source, relative_time(synced_at)));
+        }
+
+        lines.join("\n")
+    } else {
+        "Cargando objetivos semanales...".to_string()
+    };
+
+    let p = Paragraph::new(text)
+        .wrap(Wrap { trim: true })
+        .scroll((app.weekly_objectives_scroll.offset(), 0));
+    frame.render_widget(p, inner);
+}
+
+fn relative_time(synced_at: chrono::DateTime<chrono::Utc>) -> String {
+    let elapsed = chrono::Utc::now().signed_duration_since(synced_at);
+
+    if elapsed.num_hours() > 0 {
+        format!(
+            "sincronizado hace {}h {}m",
+            elapsed.num_hours(),
+            elapsed.num_minutes() % 60
+        )
+    } else if elapsed.num_minutes() > 0 {
+        format!("sincronizado hace {}m", elapsed.num_minutes())
+    } else {
+        format!("sincronizado hace {}s", elapsed.num_seconds().max(0))
+    }
 }
 
 fn draw_description_popup(frame: &mut Frame, app: &App) {

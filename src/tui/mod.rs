@@ -115,6 +115,17 @@ async fn run_loop(
             continue;
         }
 
+        if app.show_weekly_objectives {
+            match key.code {
+                KeyCode::Esc | KeyCode::Char('q') => events::close_weekly_objectives(app),
+                KeyCode::Char('f') => events::open_weekly_objectives(app, true).await,
+                KeyCode::Char('j') | KeyCode::Down => app.weekly_objectives_scroll.by(1),
+                KeyCode::Char('k') | KeyCode::Up => app.weekly_objectives_scroll.by(-1),
+                _ => {}
+            }
+            continue;
+        }
+
         if app.show_description {
             match key.code {
                 KeyCode::Esc => events::close_description(app),
@@ -254,6 +265,7 @@ async fn run_loop(
             KeyCode::Char('v') => events::toggle_hide_current_list(app),
             KeyCode::Char('V') => events::show_all_lists(app),
             KeyCode::Char('R') => events::open_reminders(client, app).await,
+            KeyCode::Char('O') => events::open_weekly_objectives(app, false).await,
             KeyCode::Char('C') => events::open_comments(client, app).await,
             KeyCode::Char('P') => events::open_projects(client, app).await,
             KeyCode::Char('n') => events::start_composing_card(app),
