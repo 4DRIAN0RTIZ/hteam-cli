@@ -206,6 +206,47 @@ pub fn close_reminders(app: &mut App) {
     app.show_reminders = false;
 }
 
+pub async fn open_weekly_objectives(app: &mut App, force: bool) {
+    app.show_weekly_objectives = true;
+    app.weekly_objectives_scroll.reset();
+    app.weekly_objectives_error = None;
+    app.set_status(if force {
+        "Refrescando objetivos semanales..."
+    } else {
+        "Cargando objetivos semanales..."
+    });
+
+    match load_weekly_objectives(force).await {
+        Ok(view) => {
+            app.weekly_objectives = Some(view.set);
+            app.weekly_objectives_from_cache = view.from_cache;
+            app.weekly_objectives_synced_at = Some(view.synced_at);
+            app.clear_status();
+        }
+        Err(e) => {
+            let msg = format!("Error cargando objetivos semanales: {}", e);
+            app.weekly_objectives_error = Some(msg.clone());
+            app.weekly_objectives = None;
+            app.set_status(msg);
+        }
+    }
+}
+
+async fn load_weekly_objectives(
+    force: bool,
+) -> Result<operations::objectives::WeeklyObjectivesView> {
+    let mut config = crate::config::Config::load()?;
+    let view = operations::objectives::show(&mut config, force).await?;
+    if !view.from_cache {
+        config.save()?;
+    }
+    Ok(view)
+}
+
+pub fn close_weekly_objectives(app: &mut App) {
+    app.show_weekly_objectives = false;
+}
+
 /// Creates a reminder for whichever card was selected on the board when the
 /// popup was opened, then refreshes the popup's list.
 pub async fn add_reminder_for_current_card(client: &HteamClient, app: &mut App) {
