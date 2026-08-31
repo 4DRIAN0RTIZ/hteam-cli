@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Bug Fixes
+- *(tui)* Omit empty task placeholder in weekly objectives
+
+
 ### Features
 - *(objectives)* Add weekly objectives sharepad command
 - *(tui)* Add weekly objectives popup
