@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 pub mod objectives;
+pub mod update;
 
 use crate::config::Config;
 use crate::models::{
