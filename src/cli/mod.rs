@@ -7,6 +7,7 @@ pub mod interactive;
 pub mod login;
 pub mod objectives;
 pub mod project;
+pub mod theme;
 pub mod working;
 
 use clap::{CommandFactory, Parser, Subcommand};
@@ -81,6 +82,10 @@ pub enum Commands {
     /// Board visual tipo kanban (TUI)
     Tui,
 
+    /// Gestionar el tema de color del TUI
+    #[command(subcommand)]
+    Theme(theme::ThemeCommands),
+
     /// Iniciar servidor MCP (Model Context Protocol) sobre stdio
     Mcp,
 
@@ -131,6 +136,7 @@ pub async fn run() -> Result<()> {
         Commands::Users(args) => search_users(args, cli.json).await,
         Commands::Interactive => interactive::run().await,
         Commands::Tui => crate::tui::run(cli.board).await,
+        Commands::Theme(cmd) => theme::execute(cmd, cli.json).await,
         Commands::Mcp => crate::mcp::run().await,
         Commands::Completions { shell } => {
             let mut cmd = Cli::command();

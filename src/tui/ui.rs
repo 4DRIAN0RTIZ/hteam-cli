@@ -1,6 +1,6 @@
 use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Text},
     widgets::{Block, Borders, Paragraph, Wrap},
     Frame,
@@ -91,7 +91,7 @@ fn draw_title_bar(frame: &mut Frame, app: &App, area: Rect) {
         let working_hours = Paragraph::new(remaining)
             .style(
                 Style::default()
-                    .fg(Color::Green)
+                    .fg(app.theme.success)
                     .add_modifier(Modifier::BOLD),
             )
             .alignment(Alignment::Right);
@@ -116,7 +116,7 @@ fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
     frame.render_widget(Paragraph::new(status), cols[0]);
     frame.render_widget(
         Paragraph::new(version)
-            .style(Style::default().fg(Color::DarkGray))
+            .style(Style::default().fg(app.theme.muted))
             .alignment(Alignment::Right),
         cols[1],
     );
@@ -128,7 +128,7 @@ fn draw_help_popup(frame: &mut Frame, app: &App) {
         frame,
         area,
         " Ayuda — j/k scroll · Esc/q/? cerrar ",
-        Color::White,
+        app.theme.border_help,
     );
 
     let text = [
@@ -182,7 +182,7 @@ fn draw_new_card_popup(frame: &mut Frame, app: &App) {
         .unwrap_or("?");
 
     let title = format!(" Nueva card en {} — Enter crear · Esc cancelar ", list_name);
-    let inner = draw_frame(frame, area, title, Color::Cyan);
+    let inner = draw_frame(frame, area, title, app.theme.border_new_card);
 
     let p = Paragraph::new(app.new_card_input.as_str()).wrap(Wrap { trim: true });
     frame.render_widget(p, inner);
@@ -194,7 +194,7 @@ fn draw_reminders_popup(frame: &mut Frame, app: &App) {
         frame,
         area,
         " Reminders — 'a' agregar · j/k scroll · Esc cerrar ",
-        Color::Magenta,
+        app.theme.border_reminders,
     );
 
     let lines: Vec<String> = if app.reminders.is_empty() {
@@ -226,7 +226,7 @@ fn draw_weekly_objectives_popup(frame: &mut Frame, app: &App) {
         frame,
         area,
         " Objetivos semanales — 'f' refetch · j/k scroll · Esc cerrar ",
-        Color::Green,
+        app.theme.border_objectives,
     );
 
     let text = if let Some(error) = &app.weekly_objectives_error {
@@ -287,7 +287,7 @@ fn draw_description_popup(frame: &mut Frame, app: &App) {
         " Descripción de \"{}\" — Enter salto de línea · Ctrl+S guardar · Esc cancelar ",
         card_name
     );
-    let inner = draw_frame(frame, area, title, Color::Blue);
+    let inner = draw_frame(frame, area, title, app.theme.border_description);
 
     let text_width = inner.width.saturating_sub(2).max(1);
     let content_rows = wrapped_line_count(app.description_input.as_str(), text_width);
@@ -306,7 +306,7 @@ fn draw_comments_popup(frame: &mut Frame, app: &App) {
     } else {
         " Comentarios — 'a' agregar · j/k scroll · Esc cerrar "
     };
-    let inner = draw_frame(frame, area, title, Color::Blue);
+    let inner = draw_frame(frame, area, title, app.theme.border_comments);
 
     if app.composing_comment {
         // Text width inside the input block, minus its own left/right borders.
@@ -359,9 +359,9 @@ fn draw_comment_input(frame: &mut Frame, app: &App, area: Rect, text_width: u16)
 
 fn draw_comment_date_field(frame: &mut Frame, app: &App, area: Rect) {
     let border_color = if app.comment_date_focused {
-        Color::Yellow
+        app.theme.highlight
     } else {
-        Color::DarkGray
+        app.theme.muted
     };
     let block = Block::default()
         .title(" Fecha (YYYY-MM-DD HH:MM) — Tab enfoca ")
@@ -376,7 +376,7 @@ fn draw_comment_date_field(frame: &mut Frame, app: &App, area: Rect) {
         app.comment_date_input.as_str().to_string()
     };
     let style = if app.comment_date_input.as_str().is_empty() {
-        Style::default().fg(Color::DarkGray)
+        Style::default().fg(app.theme.muted)
     } else {
         Style::default()
     };
@@ -385,9 +385,9 @@ fn draw_comment_date_field(frame: &mut Frame, app: &App, area: Rect) {
 
 fn draw_comment_text_field(frame: &mut Frame, app: &App, area: Rect, text_width: u16) {
     let border_color = if app.comment_date_focused {
-        Color::DarkGray
+        app.theme.muted
     } else {
-        Color::Yellow
+        app.theme.highlight
     };
     let title = if app.comment_follow {
         " Comentario (@ para mencionar) · 🔔 seguimiento ON "
@@ -467,7 +467,7 @@ fn draw_projects_popup(frame: &mut Frame, app: &App) {
     } else {
         " Proyectos — Tab foco · j/k mover/scroll · 'a' agregar · Esc cerrar "
     };
-    let inner = draw_frame(frame, area, title, Color::Green);
+    let inner = draw_frame(frame, area, title, app.theme.border_projects);
 
     let rows = if app.composing_project {
         Layout::vertical([Constraint::Min(0), Constraint::Length(3)]).split(inner)
@@ -489,7 +489,7 @@ fn draw_known_projects_list(frame: &mut Frame, app: &App, area: Rect) {
         .title(" Guardados ")
         .borders(Borders::ALL)
         .border_style(if !app.projects_detail_focused {
-            Style::default().fg(Color::Cyan)
+            Style::default().fg(app.theme.border_active)
         } else {
             Style::default()
         });
@@ -527,7 +527,7 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
         .title(" Milestones / Tasks ")
         .borders(Borders::ALL)
         .border_style(if app.projects_detail_focused {
-            Style::default().fg(Color::Cyan)
+            Style::default().fg(app.theme.border_active)
         } else {
             Style::default()
         });
@@ -594,7 +594,7 @@ fn draw_board_switch_popup(frame: &mut Frame, app: &App) {
         frame,
         area,
         " Cambiar board — j/k · Enter seleccionar · r recargar · Esc cerrar ",
-        Color::Yellow,
+        app.theme.border_board_switch,
     );
 
     if app.available_boards.is_empty() {
@@ -649,9 +649,11 @@ fn draw_board_switch_popup(frame: &mut Frame, app: &App) {
             );
 
             let style = if i == app.selected_board_idx {
-                Style::default().fg(Color::Black).bg(Color::Cyan)
+                Style::default()
+                    .fg(app.theme.selection_fg)
+                    .bg(app.theme.selection_bg)
             } else if b.id == app.board_number {
-                Style::default().fg(Color::Yellow)
+                Style::default().fg(app.theme.highlight)
             } else {
                 Style::default()
             };
@@ -692,7 +694,7 @@ fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
             .title(format!(" {} ", list.name))
             .borders(Borders::ALL)
             .border_style(if is_active_list {
-                Style::default().fg(Color::Cyan)
+                Style::default().fg(app.theme.border_active)
             } else {
                 Style::default()
             });
@@ -731,12 +733,14 @@ fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
 
             let is_selected = selected_idx == Some(ci);
             let body_style = if is_selected {
-                Style::default().fg(Color::Black).bg(Color::Cyan)
+                Style::default()
+                    .fg(app.theme.selection_fg)
+                    .bg(app.theme.selection_bg)
             } else {
                 Style::default()
             };
             let border_style = if is_working {
-                Style::default().fg(Color::Yellow)
+                Style::default().fg(app.theme.highlight)
             } else {
                 Style::default()
             };
