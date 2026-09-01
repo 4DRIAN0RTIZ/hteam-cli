@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 - *(objectives)* Add weekly objectives sharepad command
 - *(tui)* Add weekly objectives popup
+- *(theme)* Add configurable TUI color presets
 - *(update)* Add self-update command and version notices
 
 ## [0.6.2] - 2026-08-29
