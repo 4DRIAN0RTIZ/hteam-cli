@@ -136,6 +136,27 @@ impl WeeklyObjectivesConfig {
     }
 }
 
+fn default_theme_name() -> String {
+    "default".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ThemeConfig {
+    /// Nombre del preset activo del TUI: "default", "solarized" o
+    /// "high-contrast". Si no matchea ninguno conocido, `Theme::from_name`
+    /// hace fallback silencioso a "default" sin panic.
+    #[serde(default = "default_theme_name")]
+    pub active: String,
+}
+
+impl Default for ThemeConfig {
+    fn default() -> Self {
+        Self {
+            active: default_theme_name(),
+        }
+    }
+}
+
 /// Cuánto tiempo se considera "fresco" el chequeo de nueva versión antes de
 /// que `hteam` vuelva a pegarle a la API de GitHub.
 const UPDATE_CHECK_TTL_HOURS: i64 = 6;
@@ -184,6 +205,8 @@ pub struct Config {
     pub working_hours: WorkingHoursConfig,
     #[serde(default)]
     pub weekly_objectives: WeeklyObjectivesConfig,
+    #[serde(default)]
+    pub theme: ThemeConfig,
     #[serde(default)]
     pub update: UpdateConfig,
 }
@@ -606,6 +629,36 @@ mod tests {
 
         assert_eq!(set.title, "Objetivos semanales");
         assert_eq!(set.objectives[0].name, "Demo CCL");
+    }
+
+    #[test]
+    fn theme_defaults_to_default_preset_name() {
+        let config = Config::default();
+
+        assert_eq!(config.theme.active, "default");
+    }
+
+    #[test]
+    fn theme_deserializes_from_config_missing_the_section() {
+        let toml_str = r#"
+            [auth]
+            session_id = "sid"
+        "#;
+
+        let config: Config = toml::from_str(toml_str).expect("parses config without section");
+
+        assert_eq!(config.theme.active, "default");
+    }
+
+    #[test]
+    fn theme_round_trips_active_preset_through_toml() {
+        let mut original = Config::default();
+        original.theme.active = "solarized".to_string();
+
+        let serialized = toml::to_string_pretty(&original).expect("serializes to TOML");
+        let parsed: Config = toml::from_str(&serialized).expect("parses back from TOML");
+
+        assert_eq!(parsed.theme.active, "solarized");
     }
 
     #[test]

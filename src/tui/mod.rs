@@ -1,5 +1,6 @@
 mod app;
 mod events;
+pub mod theme;
 mod ui;
 mod widgets;
 
@@ -20,6 +21,7 @@ use crate::client::HteamClient;
 use crate::operations::{self, Session};
 
 use app::App;
+use theme::Theme;
 
 struct TerminalGuard;
 
@@ -53,10 +55,17 @@ pub async fn run(board: Option<u64>) -> Result<()> {
         .collect();
     let known_projects = session.config.tui.known_projects.clone();
     let working_hours = session.config.working_hours.clone();
+    let theme = Theme::from_name(&session.config.theme.active);
 
     let client = Arc::new(session.client);
 
-    let mut app = App::new(board_number, hidden_lists, known_projects, working_hours);
+    let mut app = App::new(
+        board_number,
+        hidden_lists,
+        known_projects,
+        working_hours,
+        theme,
+    );
     if let Some(status) = update_notice().await {
         app.set_status(status);
     }

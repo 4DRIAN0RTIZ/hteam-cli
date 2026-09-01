@@ -9,6 +9,7 @@ use crate::models::{
     WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
 };
 
+use super::theme::Theme;
 use super::widgets::{Scroll, TextInput};
 
 pub struct App {
@@ -96,6 +97,10 @@ pub struct App {
     pub projects_scroll: Scroll,
     /// Horario laboral configurado en `config.toml`'s `[working_hours]`.
     pub working_hours: WorkingHoursConfig,
+    /// Tema de color activo, resuelto desde `config.toml`'s `[theme] active`
+    /// al iniciar el TUI. Todo el renderizado en `ui.rs` resuelve sus colores
+    /// desde acá en vez de literales `Color::` sueltos.
+    pub theme: Theme,
 }
 
 impl App {
@@ -104,6 +109,7 @@ impl App {
         hidden_lists: HashSet<String>,
         known_projects: Vec<u64>,
         working_hours: WorkingHoursConfig,
+        theme: Theme,
     ) -> Self {
         Self {
             board_number,
@@ -156,6 +162,7 @@ impl App {
             projects_detail_focused: false,
             projects_scroll: Scroll::default(),
             working_hours,
+            theme,
         }
     }
 
