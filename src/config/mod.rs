@@ -157,6 +157,41 @@ impl Default for ThemeConfig {
     }
 }
 
+/// Cuánto tiempo se considera "fresco" el chequeo de nueva versión antes de
+/// que `hteam` vuelva a pegarle a la API de GitHub.
+const UPDATE_CHECK_TTL_HOURS: i64 = 6;
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UpdateConfig {
+    /// Timestamp RFC3339 del último chequeo exitoso contra GitHub releases
+    /// (mismo formato que `WeeklyObjectivesConfig::last_synced_at`). `None`
+    /// si nunca se chequeó.
+    #[serde(default)]
+    pub last_checked_at: Option<String>,
+    /// Última versión conocida publicada en GitHub (sin prefijo `v`),
+    /// cacheada para no pegarle a la API en cada invocación del CLI.
+    #[serde(default)]
+    pub latest_known_version: Option<String>,
+    /// Versión del binario la última vez que se mostró el changelog
+    /// post-actualización. `None` antes de la primera corrida.
+    #[serde(default)]
+    pub last_seen_version: Option<String>,
+}
+
+impl UpdateConfig {
+    /// `true` cuando `last_checked_at` existe y tiene menos de
+    /// `UPDATE_CHECK_TTL_HOURS` respecto a `now`.
+    pub fn is_check_fresh(&self, now: DateTime<Utc>) -> bool {
+        self.last_checked_at
+            .as_deref()
+            .and_then(|ts| DateTime::parse_from_rfc3339(ts).ok())
+            .map(|checked_at| {
+                now.signed_duration_since(checked_at) < Duration::hours(UPDATE_CHECK_TTL_HOURS)
+            })
+            .unwrap_or(false)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
     pub auth: AuthConfig,
@@ -172,6 +207,8 @@ pub struct Config {
     pub weekly_objectives: WeeklyObjectivesConfig,
     #[serde(default)]
     pub theme: ThemeConfig,
+    #[serde(default)]
+    pub update: UpdateConfig,
 }
 
 impl Config {
@@ -622,5 +659,83 @@ mod tests {
         let parsed: Config = toml::from_str(&serialized).expect("parses back from TOML");
 
         assert_eq!(parsed.theme.active, "solarized");
+    }
+
+    #[test]
+    fn update_default_has_no_cached_state() {
+        let config = Config::default();
+
+        assert_eq!(config.update.last_checked_at, None);
+        assert_eq!(config.update.latest_known_version, None);
+        assert_eq!(config.update.last_seen_version, None);
+    }
+
+    #[test]
+    fn update_deserializes_from_config_missing_the_section() {
+        let toml_str = r#"
+            [auth]
+            session_id = "sid"
+        "#;
+
+        let config: Config = toml::from_str(toml_str).expect("parses config without section");
+
+        assert_eq!(config.update.latest_known_version, None);
+    }
+
+    #[test]
+    fn update_round_trips_through_toml() {
+        let mut original = Config::default();
+        original.update.last_checked_at = Some("2026-08-31T10:00:00+00:00".to_string());
+        original.update.latest_known_version = Some("0.7.0".to_string());
+        original.update.last_seen_version = Some("0.6.2".to_string());
+
+        let serialized = toml::to_string_pretty(&original).expect("serializes to TOML");
+        let parsed: Config = toml::from_str(&serialized).expect("parses back from TOML");
+
+        assert_eq!(
+            parsed.update.last_checked_at.as_deref(),
+            Some("2026-08-31T10:00:00+00:00")
+        );
+        assert_eq!(parsed.update.latest_known_version.as_deref(), Some("0.7.0"));
+        assert_eq!(parsed.update.last_seen_version.as_deref(), Some("0.6.2"));
+    }
+
+    #[test]
+    fn is_check_fresh_is_false_without_last_checked_at() {
+        let update = UpdateConfig::default();
+
+        assert!(!update.is_check_fresh(Utc::now()));
+    }
+
+    #[test]
+    fn is_check_fresh_is_true_under_ttl() {
+        let now = Utc::now();
+        let update = UpdateConfig {
+            last_checked_at: Some((now - Duration::hours(5)).to_rfc3339()),
+            ..UpdateConfig::default()
+        };
+
+        assert!(update.is_check_fresh(now));
+    }
+
+    #[test]
+    fn is_check_fresh_is_false_at_or_after_ttl() {
+        let now = Utc::now();
+        let update = UpdateConfig {
+            last_checked_at: Some((now - Duration::hours(6)).to_rfc3339()),
+            ..UpdateConfig::default()
+        };
+
+        assert!(!update.is_check_fresh(now));
+    }
+
+    #[test]
+    fn is_check_fresh_ignores_invalid_timestamps() {
+        let update = UpdateConfig {
+            last_checked_at: Some("not-a-timestamp".to_string()),
+            ..UpdateConfig::default()
+        };
+
+        assert!(!update.is_check_fresh(Utc::now()));
     }
 }

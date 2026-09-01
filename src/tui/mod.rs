@@ -66,6 +66,9 @@ pub async fn run(board: Option<u64>) -> Result<()> {
         working_hours,
         theme,
     );
+    if let Some(status) = update_notice().await {
+        app.set_status(status);
+    }
     events::refresh_all(&client, &mut app).await;
 
     let guard = TerminalGuard::enter()?;
@@ -77,6 +80,56 @@ pub async fn run(board: Option<u64>) -> Result<()> {
 
     drop(guard);
     result
+}
+
+/// Chequea (con el mismo cache TTL que `hteam` usa en CLI) si hay una
+/// versión nueva publicada en GitHub y si corresponde mostrar el changelog
+/// post-actualización, devolviendo un mensaje corto para el footer del TUI
+/// (`app.set_status`) en vez del changelog completo — no hay espacio para
+/// volcarlo entero en una línea de estado. Usa su propio `Config::load()`/
+/// `save()`, independiente de `session.config`, mismo patrón que el popup
+/// de objetivos semanales. Cualquier error (config corrupta, sin red) se
+/// ignora en silencio: nunca debe impedir que el TUI arranque.
+async fn update_notice() -> Option<String> {
+    use crate::config::Config;
+
+    let mut config = Config::load().ok()?;
+    let mut dirty = false;
+    let mut parts: Vec<String> = Vec::new();
+
+    if operations::update::resolve_startup_changelog(
+        &mut config,
+        operations::update::EMBEDDED_CHANGELOG,
+    )
+    .is_some()
+    {
+        parts.push("hteam se actualizó, ver CHANGELOG.md".to_string());
+        dirty = true;
+    }
+
+    if let Ok(result) =
+        operations::update::check_for_update(&mut config, crate::client::update::GITHUB_API_BASE)
+            .await
+    {
+        dirty = dirty || !result.from_cache;
+
+        if result.update_available {
+            parts.push(format!(
+                "nueva versión {} disponible, corré `hteam update`",
+                result.latest_version
+            ));
+        }
+    }
+
+    if dirty {
+        let _ = config.save();
+    }
+
+    if parts.is_empty() {
+        None
+    } else {
+        Some(parts.join(" · "))
+    }
 }
 
 /// How long a footer confirmation/error message (e.g. "Descripción
