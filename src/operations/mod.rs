@@ -14,6 +14,7 @@ pub mod objectives;
 pub mod projects;
 pub mod reminders;
 pub mod session;
+pub mod update;
 pub mod users;
 pub mod working;
 

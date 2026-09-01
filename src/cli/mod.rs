@@ -1,5 +1,8 @@
 use anyhow::Result;
+use colored::Colorize;
 use std::io;
+
+use crate::{client, operations};
 
 pub mod board;
 pub mod cards;
@@ -7,6 +10,7 @@ pub mod interactive;
 pub mod login;
 pub mod objectives;
 pub mod project;
+pub mod update;
 pub mod working;
 
 use clap::{CommandFactory, Parser, Subcommand};
@@ -84,6 +88,9 @@ pub enum Commands {
     /// Iniciar servidor MCP (Model Context Protocol) sobre stdio
     Mcp,
 
+    /// Descargar e instalar la última versión publicada de hteam-cli
+    Update,
+
     /// Generar script de autocompletado para la shell indicada
     Completions {
         /// Shell destino: bash, zsh, fish, elvish, powershell
@@ -115,7 +122,25 @@ pub struct DailyWorkArgs {
 pub async fn run() -> Result<()> {
     let cli = Cli::parse();
 
-    match cli.command {
+    // Mcp habla JSON-RPC por stdout y Completions/Tui no se benefician de un
+    // aviso que se imprime después de que el comando ya terminó (Mcp/
+    // Interactive no terminan nunca en un uso normal, Tui reemplaza la
+    // pantalla; Tui tiene su propio aviso vía `app.set_status`, ver
+    // `tui::run`). Update también se saltea: el proceso en ejecución sigue
+    // siendo el binario viejo (reemplazar el archivo en disco no afecta el
+    // proceso ya cargado en memoria), así que mostrar "hay una versión
+    // nueva, corré hteam update" justo después de haber corrido `hteam
+    // update` con éxito sería confuso.
+    let skip_update_notice = matches!(
+        &cli.command,
+        Commands::Mcp
+            | Commands::Completions { .. }
+            | Commands::Tui
+            | Commands::Interactive
+            | Commands::Update
+    );
+
+    let result = match cli.command {
         Commands::Login(args) => login::execute(args).await,
         Commands::Board(cmd) => board::execute(cmd, cli.json).await,
         Commands::Lists => cards::lists(cli.board, cli.json).await,
@@ -132,12 +157,70 @@ pub async fn run() -> Result<()> {
         Commands::Interactive => interactive::run().await,
         Commands::Tui => crate::tui::run(cli.board).await,
         Commands::Mcp => crate::mcp::run().await,
+        Commands::Update => update::execute(cli.json).await,
         Commands::Completions { shell } => {
             let mut cmd = Cli::command();
             let name = cmd.get_name().to_string();
             generate(shell, &mut cmd, name, &mut io::stdout());
             Ok(())
         }
+    };
+
+    if !skip_update_notice && result.is_ok() {
+        maybe_notify_update().await;
+    }
+
+    result
+}
+
+/// Aviso post-comando, no bloqueante para la salida del comando en sí (se
+/// imprime a stderr después de que el resultado ya se calculó): (1) si el
+/// binario cambió de versión desde la última corrida, muestra una única vez
+/// el changelog de las versiones nuevas; (2) chequea (con cache TTL, ver
+/// `UpdateConfig::is_check_fresh`) si hay una versión más nueva publicada en
+/// GitHub y sugiere `hteam update`. Nunca escribe a stdout — así no rompe
+/// `--json` — y cualquier error (config corrupta, sin red, rate limit) se
+/// ignora en silencio para no romper el comando que el usuario sí pidió.
+async fn maybe_notify_update() {
+    use crate::config::Config;
+
+    let Ok(mut config) = Config::load() else {
+        return;
+    };
+
+    let mut dirty = false;
+
+    if let Some(changelog) = operations::update::resolve_startup_changelog(
+        &mut config,
+        operations::update::EMBEDDED_CHANGELOG,
+    ) {
+        eprintln!(
+            "\n{}\n{}",
+            "📦 hteam se actualizó — novedades:".bold(),
+            changelog.trim_end()
+        );
+        dirty = true;
+    }
+
+    if let Ok(result) =
+        operations::update::check_for_update(&mut config, client::update::GITHUB_API_BASE).await
+    {
+        dirty = dirty || !result.from_cache;
+
+        if result.update_available {
+            eprintln!(
+                "{}",
+                format!(
+                    "⬆️  Nueva versión disponible: {} (actual: {}). Corré `hteam update`.",
+                    result.latest_version, result.current_version
+                )
+                .yellow()
+            );
+        }
+    }
+
+    if dirty {
+        let _ = config.save();
     }
 }
 
