@@ -5,10 +5,11 @@ use std::time::{Duration, Instant};
 
 use crate::config::WorkingHoursConfig;
 use crate::models::{
-    BoardEntry, Card, Comment, List, ProjectMilestone, ProjectTask, Reminder, UserSuggestion,
-    WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
+    BoardEntry, Card, Comment, FollowUp, List, ProjectMilestone, ProjectTask, Reminder,
+    UserSuggestion, WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
 };
 
+use super::theme::Theme;
 use super::widgets::{Scroll, TextInput};
 
 pub struct App {
@@ -42,6 +43,11 @@ pub struct App {
     /// Comments of the card that was selected when 'C' was pressed.
     pub comments: Vec<Comment>,
     pub show_comments: bool,
+    /// Seguimiento agendado de la card que está detrás del popup de
+    /// comentarios (`None` si no tiene uno agendado). Se scrapea aparte
+    /// porque no viene en la API JSON de comentarios — ver
+    /// `HteamClient::get_card_follow_up`.
+    pub current_follow_up: Option<FollowUp>,
     /// True while actively typing a new comment inside the comments popup.
     pub composing_comment: bool,
     pub comment_input: TextInput,
@@ -96,6 +102,10 @@ pub struct App {
     pub projects_scroll: Scroll,
     /// Horario laboral configurado en `config.toml`'s `[working_hours]`.
     pub working_hours: WorkingHoursConfig,
+    /// Tema de color activo, resuelto desde `config.toml`'s `[theme] active`
+    /// al iniciar el TUI. Todo el renderizado en `ui.rs` resuelve sus colores
+    /// desde acá en vez de literales `Color::` sueltos.
+    pub theme: Theme,
 }
 
 impl App {
@@ -104,6 +114,7 @@ impl App {
         hidden_lists: HashSet<String>,
         known_projects: Vec<u64>,
         working_hours: WorkingHoursConfig,
+        theme: Theme,
     ) -> Self {
         Self {
             board_number,
@@ -122,6 +133,7 @@ impl App {
             description_input: TextInput::default(),
             comments: Vec::new(),
             show_comments: false,
+            current_follow_up: None,
             composing_comment: false,
             comment_input: TextInput::default(),
             comment_follow: false,
@@ -156,6 +168,7 @@ impl App {
             projects_detail_focused: false,
             projects_scroll: Scroll::default(),
             working_hours,
+            theme,
         }
     }
 

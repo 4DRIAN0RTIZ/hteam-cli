@@ -277,16 +277,64 @@ pub async fn open_comments(client: &HteamClient, app: &mut App) {
     app.comment_input.clear();
     app.mention_suggestions.clear();
     app.comments_scroll.reset();
+    app.current_follow_up = None;
 
     match operations::comments::list_comments(client, card.id).await {
         Ok(list) => app.comments = list,
         Err(e) => app.set_status(format!("Error cargando comentarios: {}", e)),
     }
+
+    // Solo se busca si la card tiene la etiqueta Follow-up — de otra forma
+    // es un scrape de HTML (la página de detalle completa) de más, sabiendo
+    // de antemano que no va a encontrar nada.
+    if card.has_follow_up() {
+        match operations::comments::get_follow_up(client, card.id, Some(app.board_number)).await {
+            Ok(follow_up) => app.current_follow_up = follow_up,
+            Err(e) => app.set_status(format!("Error cargando seguimiento: {}", e)),
+        }
+    }
 }
 
 pub fn close_comments(app: &mut App) {
     app.show_comments = false;
+    app.current_follow_up = None;
     cancel_composing_comment(app);
+}
+
+/// Completa el seguimiento mostrado en el popup de comentarios y refresca la
+/// lista actual para que la card pierda el indicador de urgencia en el board.
+pub async fn complete_current_follow_up(client: &HteamClient, app: &mut App) {
+    resolve_current_follow_up(client, app, true).await;
+}
+
+/// Cancela (elimina) el seguimiento mostrado en el popup de comentarios y
+/// refresca la lista actual para que la card pierda el indicador de urgencia
+/// en el board.
+pub async fn cancel_current_follow_up(client: &HteamClient, app: &mut App) {
+    resolve_current_follow_up(client, app, false).await;
+}
+
+async fn resolve_current_follow_up(client: &HteamClient, app: &mut App, complete: bool) {
+    let Some(follow_up) = app.current_follow_up.clone() else {
+        return;
+    };
+    let result = if complete {
+        operations::comments::complete_follow_up(client, follow_up.id).await
+    } else {
+        operations::comments::cancel_follow_up(client, follow_up.id).await
+    };
+    match result {
+        Ok(()) => {
+            app.current_follow_up = None;
+            let verb = if complete { "completado" } else { "cancelado" };
+            app.set_status(format!("Seguimiento {}.", verb));
+            refresh_current_list(client, app).await;
+        }
+        Err(e) => {
+            let verb = if complete { "completando" } else { "cancelando" };
+            app.set_status(format!("Error {} seguimiento: {}", verb, e));
+        }
+    }
 }
 
 pub fn start_composing_comment(app: &mut App) {

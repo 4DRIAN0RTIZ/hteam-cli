@@ -5,12 +5,13 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 pub mod objectives;
+pub mod update;
 
 use crate::config::Config;
 use crate::models::{
     BoardEntry, BoardsResponse, Card, CardDetail, CheckInResult, Comment, CommentsResponse,
-    DailyWorkEntry, Label, List, ProjectMilestone, ProjectTasksResponse, Reminder, UserSuggestion,
-    WorkShiftResume, WorkingOnStatus,
+    DailyWorkEntry, FollowUp, Label, List, ProjectMilestone, ProjectTasksResponse, Reminder,
+    UserSuggestion, WorkShiftResume, WorkingOnStatus,
 };
 
 const BASE_URL: &str = "https://hteam.mx/api";
@@ -213,7 +214,13 @@ impl HteamClient {
         let cards: Vec<Card> = card_response
             .cardlist_list
             .into_iter()
-            .map(|entry| entry.card)
+            .map(|entry| {
+                let mut card = entry.card;
+                if card.has_follow_up() {
+                    card.time_status = Some(entry.get_time_status);
+                }
+                card
+            })
             .collect();
 
         Ok((cards, board_id))
@@ -283,6 +290,147 @@ impl HteamClient {
 
         let resp: CommentsResponse = response.json().await?;
         Ok(resp.results)
+    }
+
+    /// El seguimiento agendado de una card no viene en la API JSON de
+    /// comentarios — solo en el HTML server-rendered de la página de detalle
+    /// (`/operations/{board}/tasks/{id}/`), dentro del bloque del comentario
+    /// al que está atado (`div.media`), como dos `<form>` con action
+    /// `/followup/{id}/cancel` y `/followup/{id}/complete`.
+    pub async fn get_card_follow_up(
+        &self,
+        card_id: u64,
+        board_number: Option<u64>,
+    ) -> Result<Option<FollowUp>> {
+        let board = match board_number {
+            Some(b) => b,
+            None => self.get_board_number().await?,
+        };
+
+        let config = self.config.lock().await;
+        let url = format!(
+            "{}/operations/{}/tasks/{}/",
+            self.site_base_url, board, card_id
+        );
+        let headers = self.build_headers(&config)?;
+
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers)
+            .send()
+            .await
+            .context("Error al obtener la página de la card")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+
+        let html = response.text().await?;
+        Self::parse_follow_up(&html)
+    }
+
+    fn parse_follow_up(html: &str) -> Result<Option<FollowUp>> {
+        use scraper::{ElementRef, Html, Selector};
+
+        let document = Html::parse_document(html);
+        let media_sel = Selector::parse("div.media").map_err(|e| anyhow::anyhow!("{:?}", e))?;
+        let name_sel = Selector::parse("a[name]").map_err(|e| anyhow::anyhow!("{:?}", e))?;
+        let cancel_form_sel = Selector::parse("form[action^='/followup/'][action$='/cancel']")
+            .map_err(|e| anyhow::anyhow!("{:?}", e))?;
+        // El sitio marca la fecha con un ícono de Font Awesome ("far
+        // fa-calendar") dentro de un contenedor cuyo nombre de tag hemos visto
+        // mal escrito ("<spam>" en vez de "<span>") — matchear por el ícono en
+        // vez de esa clase/tag evita depender de ese detalle frágil. También
+        // se evita parsear el formato de fecha en sí (varía por locale: AP
+        // style en inglés en daily-work, "7 de Septiembre..." en español acá)
+        // tomando el texto crudo del contenedor tal cual.
+        let calendar_icon_sel =
+            Selector::parse("i.fa-calendar").map_err(|e| anyhow::anyhow!("{:?}", e))?;
+
+        for media in document.select(&media_sel) {
+            let Some(cancel_form) = media.select(&cancel_form_sel).next() else {
+                continue;
+            };
+            let action = cancel_form.value().attr("action").unwrap_or("");
+            let Some(id) = action
+                .trim_start_matches("/followup/")
+                .trim_end_matches("/cancel")
+                .parse::<u64>()
+                .ok()
+            else {
+                continue;
+            };
+
+            let comment_id = media
+                .select(&name_sel)
+                .next()
+                .and_then(|a| a.value().attr("name"))
+                .and_then(|n| n.trim_start_matches('c').parse::<u64>().ok())
+                .unwrap_or(0);
+
+            let date = media
+                .select(&calendar_icon_sel)
+                .next()
+                .and_then(|icon| icon.parent())
+                .and_then(ElementRef::wrap)
+                .map(|el| el.text().collect::<Vec<_>>().join(" "))
+                .map(|s| s.split_whitespace().collect::<Vec<_>>().join(" "))
+                .unwrap_or_default();
+
+            return Ok(Some(FollowUp {
+                id,
+                comment_id,
+                date,
+            }));
+        }
+
+        Ok(None)
+    }
+
+    pub async fn complete_follow_up(&self, follow_up_id: u64) -> Result<()> {
+        self.post_follow_up_action(follow_up_id, "complete").await
+    }
+
+    pub async fn cancel_follow_up(&self, follow_up_id: u64) -> Result<()> {
+        self.post_follow_up_action(follow_up_id, "cancel").await
+    }
+
+    /// Espeja el `<form method="post">` que la página de detalle de la card
+    /// renderiza junto al comentario de seguimiento — solo lleva
+    /// `csrfmiddlewaretoken`, sin más campos.
+    async fn post_follow_up_action(&self, follow_up_id: u64, action: &str) -> Result<()> {
+        let config = self.config.lock().await;
+        let url = format!("{}/followup/{}/{}", self.site_base_url, follow_up_id, action);
+        let headers = self.build_headers(&config)?;
+        let csrf = config.auth.csrf_token.as_deref().unwrap_or("");
+        let body = format!("csrfmiddlewaretoken={}", urlencoding::encode(csrf));
+
+        let response = self
+            .client
+            .post(&url)
+            .headers(headers)
+            .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header("Origin", self.site_base_url.as_str())
+            .header(REFERER, url.as_str())
+            .body(body)
+            .send()
+            .await
+            .with_context(|| format!("Error al {} el seguimiento", action))?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+
+        Ok(())
     }
 
     /// Actualiza el board activo del cliente en memoria (no toca disco —
@@ -444,6 +592,7 @@ impl HteamClient {
                 subtitle_url: None,
                 responsible: None,
                 worker: None,
+                time_status: None,
             });
         }
 
@@ -1055,9 +1204,10 @@ impl HteamClient {
     fn parse_daily_work_history(html: &str) -> Result<Vec<DailyWorkEntry>> {
         use scraper::{Html, Selector};
 
-        let timestamp_re =
-            regex::Regex::new(r"[A-Z][a-z]{2}\.\s\d{1,2},\s\d{4},\s\d{1,2}:\d{2}\s[ap]\.m\.")
-                .context("Regex de timestamp inválida")?;
+        let timestamp_re = regex::Regex::new(
+            r"[A-Z][a-z]{2,3}\.\s\d{1,2},\s\d{4},\s(?:\d{1,2}:\d{2}\s[ap]\.m\.|noon|midnight)",
+        )
+        .context("Regex de timestamp inválida")?;
 
         let document = Html::parse_document(html);
         let entry_sel = Selector::parse("#history p").map_err(|e| anyhow::anyhow!("{:?}", e))?;
@@ -1407,6 +1557,192 @@ mod tests {
         let err_text = format!("{err:#}");
 
         assert!(err_text.contains("missing field"), "{err_text}");
+    }
+
+    #[tokio::test]
+    async fn test_get_cards_copies_time_status_only_for_follow_up_cards() {
+        let mut server = mockito::Server::new_async().await;
+        let body = r##"{
+            "id": 315,
+            "name": "DOING",
+            "cardlist_list": [
+                {
+                    "id": 1,
+                    "board_id": 447,
+                    "is_closed": false,
+                    "card_type": 0,
+                    "time_status": 5,
+                    "get_time_status": "Expired",
+                    "position": 0,
+                    "card": {
+                        "id": 10716,
+                        "title": "ITAM - Revision Intencion y politicas",
+                        "labels_list": [
+                            {"id": 315, "name": "DOING", "color": "#53FF1F"},
+                            {"id": 387, "name": "Follow-up", "color": "#AEED39"}
+                        ]
+                    }
+                },
+                {
+                    "id": 2,
+                    "board_id": 447,
+                    "is_closed": false,
+                    "card_type": 0,
+                    "time_status": 3,
+                    "get_time_status": "On time",
+                    "position": 1,
+                    "card": {
+                        "id": 10717,
+                        "title": "Card sin seguimiento",
+                        "labels_list": []
+                    }
+                }
+            ]
+        }"##;
+        let _m = server
+            .mock("GET", "/operation/care/operations/483/lists/315/cards/")
+            .match_query(Matcher::UrlEncoded(
+                "format".to_string(),
+                "json".to_string(),
+            ))
+            .with_status(200)
+            .with_body(body)
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        let (cards, _) = client.get_cards(315, None).await.expect("cards");
+
+        assert_eq!(cards[0].time_status.as_deref(), Some("Expired"));
+        assert_eq!(cards[1].time_status, None);
+    }
+
+    #[tokio::test]
+    async fn test_get_card_follow_up_parses_id_comment_and_date_from_html() {
+        let mut server = mockito::Server::new_async().await;
+        let html = r##"
+            <div class="media">
+              <a name="c7709"></a>
+              <div class="media-body">
+                <div class="comment pb-2">
+                  <div class="content">Se pospone</div>
+                </div>
+                <div class="row d-flex align-items-center pb-3 ml-0">
+                  <form action="/followup/13310/cancel" method="post" class="d-inline-block">
+                    <button type="submit"><i class="fa fa-trash"></i></button>
+                  </form>
+                  <form action="/followup/13310/complete" method="post" class="d-inline-block ml-1">
+                    <button type="submit"><i class="fa fa-check"></i></button>
+                  </form>
+                  <spam class="text-5">
+                    <i class="far fa-calendar"></i>&nbsp;Aug. 25, 2026, 1 p.m.
+                  </spam>
+                </div>
+              </div>
+            </div>
+        "##;
+        let _m = server
+            .mock("GET", "/operations/447/tasks/10716/")
+            .with_status(200)
+            .with_body(html)
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        let follow_up = client
+            .get_card_follow_up(10716, Some(447))
+            .await
+            .expect("follow up")
+            .expect("some follow up");
+
+        assert_eq!(follow_up.id, 13310);
+        assert_eq!(follow_up.comment_id, 7709);
+        assert_eq!(follow_up.date, "Aug. 25, 2026, 1 p.m.");
+    }
+
+    #[tokio::test]
+    async fn test_get_card_follow_up_ignores_date_locale_and_wrapper_typo() {
+        // El sitio localiza esta fecha en español ("7 de Septiembre de 2026 a
+        // las 08:00", visto en la card real) a diferencia del AP style en
+        // inglés de daily-work, y a veces envuelve el ícono en un tag mal
+        // escrito ("<spam>"). El parseo no debe asumir ni el formato de fecha
+        // ni el nombre del tag — solo el ícono `i.fa-calendar`.
+        let mut server = mockito::Server::new_async().await;
+        let html = r##"
+            <div class="media">
+              <a name="c9001"></a>
+              <div class="row d-flex align-items-center pb-3 ml-0">
+                <form action="/followup/20/cancel" method="post"></form>
+                <form action="/followup/20/complete" method="post"></form>
+                <span class="text-5"><i class="far fa-calendar"></i>&nbsp;7 de Septiembre de 2026 a las 08:00</span>
+              </div>
+            </div>
+        "##;
+        let _m = server
+            .mock("GET", "/operations/447/tasks/10716/")
+            .with_status(200)
+            .with_body(html)
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        let follow_up = client
+            .get_card_follow_up(10716, Some(447))
+            .await
+            .expect("follow up")
+            .expect("some follow up");
+
+        assert_eq!(follow_up.date, "7 de Septiembre de 2026 a las 08:00");
+    }
+
+    #[tokio::test]
+    async fn test_get_card_follow_up_returns_none_without_followup_form() {
+        let mut server = mockito::Server::new_async().await;
+        let html = r#"<div class="media"><a name="c1"></a><div class="comment pb-2"><div class="content">hola</div></div></div>"#;
+        let _m = server
+            .mock("GET", "/operations/447/tasks/10716/")
+            .with_status(200)
+            .with_body(html)
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        let follow_up = client
+            .get_card_follow_up(10716, Some(447))
+            .await
+            .expect("follow up");
+
+        assert!(follow_up.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_complete_follow_up_sends_csrf_form_post() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("POST", "/followup/13310/complete")
+            .match_body(Matcher::Regex("csrfmiddlewaretoken=csrf".to_string()))
+            .with_status(200)
+            .with_body("ok")
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        client.complete_follow_up(13310).await.expect("complete");
+    }
+
+    #[tokio::test]
+    async fn test_cancel_follow_up_sends_csrf_form_post() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("POST", "/followup/13310/cancel")
+            .match_body(Matcher::Regex("csrfmiddlewaretoken=csrf".to_string()))
+            .with_status(200)
+            .with_body("ok")
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        client.cancel_follow_up(13310).await.expect("cancel");
     }
 
     #[tokio::test]

@@ -55,4 +55,30 @@ mod tests {
         assert_eq!(entries[0].timestamp, "Aug. 27, 2026, 9:30 a.m.");
         assert_eq!(entries[0].relative, "hace 1 hora");
     }
+
+    #[tokio::test]
+    async fn test_history_parses_september_and_noon_timestamps() {
+        let mut server = mockito::Server::new_async().await;
+        let html = r#"
+            <div id="history">
+                <p><a href="/history/daily-work?user=adrian.ortiz">adrian.ortiz</a> closed the task
+                <a href="/operations/447/tasks/10720/">#240 - Revision PR #231</a>
+                Sept. 4, 2026, noon, hace 8 minutos</p>
+            </div>
+        "#;
+        let _m = server
+            .mock("GET", "/history/daily-work")
+            .with_status(200)
+            .with_body(html)
+            .create_async()
+            .await;
+
+        let entries = history(&client(&server.url()), None, None, None)
+            .await
+            .expect("history");
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].timestamp, "Sept. 4, 2026, noon");
+        assert_eq!(entries[0].relative, "hace 8 minutos");
+    }
 }

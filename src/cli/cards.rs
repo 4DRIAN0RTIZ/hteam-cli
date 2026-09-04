@@ -29,6 +29,12 @@ pub enum CardsCommands {
     Update(UpdateArgs),
     /// Crear un recordatorio para un card
     Remind(RemindArgs),
+    /// Ver el seguimiento agendado de un card, si tiene uno
+    FollowUp(FollowUpArgs),
+    /// Completar un seguimiento agendado
+    FollowUpComplete(FollowUpIdArgs),
+    /// Cancelar (eliminar) un seguimiento agendado
+    FollowUpCancel(FollowUpIdArgs),
 }
 
 #[derive(Args, Debug)]
@@ -140,6 +146,18 @@ pub struct RemindArgs {
     pub card_id: u64,
 }
 
+#[derive(Args, Debug)]
+pub struct FollowUpArgs {
+    /// ID del card
+    pub card_id: u64,
+}
+
+#[derive(Args, Debug)]
+pub struct FollowUpIdArgs {
+    /// ID del seguimiento (no el id del card ni el número visible — se obtiene con `hteam cards follow-up <card_id>`)
+    pub follow_up_id: u64,
+}
+
 pub async fn execute(cmd: CardsCommands, board: Option<u64>, json: bool) -> Result<()> {
     match cmd {
         CardsCommands::Lists => lists(board, json).await,
@@ -153,6 +171,9 @@ pub async fn execute(cmd: CardsCommands, board: Option<u64>, json: bool) -> Resu
         CardsCommands::Labels(args) => card_labels(args, board, json).await,
         CardsCommands::Update(args) => update_card(args, board, json).await,
         CardsCommands::Remind(args) => card_remind(args, json).await,
+        CardsCommands::FollowUp(args) => follow_up(args, board, json).await,
+        CardsCommands::FollowUpComplete(args) => follow_up_complete(args, json).await,
+        CardsCommands::FollowUpCancel(args) => follow_up_cancel(args, json).await,
     }
 }
 
@@ -463,6 +484,72 @@ async fn card_remind(args: RemindArgs, json: bool) -> Result<()> {
     }
 
     println!("\n🔔 Recordatorio creado para el card {}.", args.card_id);
+    println!();
+
+    Ok(())
+}
+
+async fn follow_up(args: FollowUpArgs, board: Option<u64>, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+
+    let follow_up =
+        operations::comments::get_follow_up(&session.client, args.card_id, board).await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&follow_up)?);
+        return Ok(());
+    }
+
+    match follow_up {
+        Some(f) => {
+            println!(
+                "\n🔔 Seguimiento #{} del card {}: {}",
+                f.id, args.card_id, f.date
+            );
+            println!();
+        }
+        None => println!(
+            "⚠️  El card {} no tiene un seguimiento agendado.",
+            args.card_id
+        ),
+    }
+
+    Ok(())
+}
+
+async fn follow_up_complete(args: FollowUpIdArgs, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+
+    operations::comments::complete_follow_up(&session.client, args.follow_up_id).await?;
+
+    if json {
+        println!(
+            "{{\"success\": true, \"follow_up_id\": {}}}",
+            args.follow_up_id
+        );
+        return Ok(());
+    }
+
+    println!("\n✅ Seguimiento {} completado.", args.follow_up_id);
+    println!();
+
+    Ok(())
+}
+
+async fn follow_up_cancel(args: FollowUpIdArgs, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+
+    operations::comments::cancel_follow_up(&session.client, args.follow_up_id).await?;
+
+    if json {
+        println!(
+            "{{\"success\": true, \"follow_up_id\": {}}}",
+            args.follow_up_id
+        );
+        return Ok(());
+    }
+
+    println!("\n🗑️  Seguimiento {} cancelado.", args.follow_up_id);
     println!();
 
     Ok(())

@@ -103,6 +103,24 @@ pub struct Card {
     #[serde(skip)]
     #[tabled(skip)]
     pub worker: Option<serde_json::Value>,
+    /// El texto de `CardListEntry::get_time_status` (ej. "On time", "Expired"),
+    /// copiado acá por `HteamClient::get_cards` — no viene en el JSON anidado
+    /// bajo "card", sino como hermano de éste en `cardlist_list[]`. Solo se
+    /// puebla para cards con la etiqueta "Follow-up" (ver `has_follow_up`);
+    /// para el resto queda en `None` para no meter ruido de un dato que la UI
+    /// web tampoco muestra si no hay seguimiento agendado.
+    #[serde(default)]
+    #[tabled(display_with = "display_option", rename = "Seguimiento")]
+    pub time_status: Option<String>,
+}
+
+impl Card {
+    /// Hteam marca el seguimiento agendado de una card con una etiqueta
+    /// llamada "Follow-up" (el id de la etiqueta varía por board, así que se
+    /// matchea por nombre vía `Label::is_follow_up`).
+    pub fn has_follow_up(&self) -> bool {
+        self.labels.iter().any(Label::is_follow_up)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -110,6 +128,15 @@ pub struct Label {
     pub id: u64,
     pub name: String,
     pub color: String,
+}
+
+impl Label {
+    /// Nombre con el que Hteam marca el seguimiento agendado de una card —
+    /// único lugar del código que conoce este string literal (ver
+    /// `Card::has_follow_up` y `draw_board` en el TUI).
+    pub fn is_follow_up(&self) -> bool {
+        self.name.eq_ignore_ascii_case("follow-up")
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -453,6 +480,22 @@ pub struct DailyWorkEntry {
     pub relative: String,
 }
 
+/// El seguimiento (follow-up) agendado sobre un comentario de una card.
+/// Hteam no lo expone por la API JSON de comentarios (`get_card_comments`) —
+/// solo aparece en el HTML de la página de detalle de la card
+/// (`/operations/{board}/tasks/{id}/`), scrapeado por
+/// `HteamClient::get_card_follow_up`. `id` es el id del propio seguimiento,
+/// distinto del id del comentario al que está atado — es el que usan
+/// `/followup/{id}/complete` y `/followup/{id}/cancel`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct FollowUp {
+    pub id: u64,
+    pub comment_id: u64,
+    /// Texto crudo tal cual lo formatea Django (ej. "Aug. 25, 2026, 1 p.m."),
+    /// sin parsear — mismo formato que `DailyWorkEntry::timestamp`.
+    pub date: String,
+}
+
 /// Un board listado por el endpoint datatables de operaciones.
 #[derive(Debug, Clone, Deserialize)]
 pub struct BoardEntry {
@@ -543,6 +586,42 @@ mod tests {
         assert_eq!(card.description.as_deref(), Some("Details here"));
         assert_eq!(card.labels.len(), 1);
         assert_eq!(card.labels[0].name, "bug");
+    }
+
+    #[test]
+    fn has_follow_up_matches_label_name_case_insensitively() {
+        let with_follow_up: Card = serde_json::from_value(json!({
+            "id": 1,
+            "title": "Card",
+            "labels_list": [{"id": 387, "name": "Follow-up", "color": "#AEED39"}]
+        }))
+        .unwrap();
+        let without_follow_up: Card = serde_json::from_value(json!({
+            "id": 2,
+            "title": "Card",
+            "labels_list": [{"id": 315, "name": "DOING", "color": "#53FF1F"}]
+        }))
+        .unwrap();
+
+        assert!(with_follow_up.has_follow_up());
+        assert!(!without_follow_up.has_follow_up());
+    }
+
+    #[test]
+    fn label_is_follow_up_matches_name_case_insensitively() {
+        let follow_up = Label {
+            id: 1,
+            name: "FOLLOW-UP".to_string(),
+            color: "#AEED39".to_string(),
+        };
+        let other = Label {
+            id: 2,
+            name: "DOING".to_string(),
+            color: "#53FF1F".to_string(),
+        };
+
+        assert!(follow_up.is_follow_up());
+        assert!(!other.is_follow_up());
     }
 
     #[test]
