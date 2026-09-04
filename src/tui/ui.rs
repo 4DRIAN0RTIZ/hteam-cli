@@ -1,7 +1,7 @@
 use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
     style::{Modifier, Style},
-    text::{Line, Text},
+    text::{Line, Span, Text},
     widgets::{Block, Borders, Paragraph, Wrap},
     Frame,
 };
@@ -149,6 +149,7 @@ fn draw_help_popup(frame: &mut Frame, app: &App) {
         "  R               reminders — 'a' agrega uno para la card seleccionada",
         "  O               objetivos semanales — 'f' fuerza refetch · j/k scroll",
         "  C               comentarios — 'a' escribe uno nuevo (@ para mencionar, Tab fecha, Ctrl+F seguimiento)",
+        "                  si la card tiene seguimiento agendado: 'v' completarlo · 'x' cancelarlo",
         "  P               proyectos — 'a' nuevo · Tab foco al detalle · j/k mover/scroll · Enter elegir",
         "",
         "Dentro de un popup de texto (nueva card / project id)",
@@ -303,46 +304,65 @@ fn draw_comments_popup(frame: &mut Frame, app: &App) {
 
     let title = if app.composing_comment {
         " Nuevo comentario — Enter salto de línea · Tab fecha/texto · Ctrl+F seguimiento · Ctrl+S enviar · Esc cancelar "
+    } else if app.current_follow_up.is_some() {
+        " Comentarios — 'a' agregar · 'v' completar seguimiento · 'x' cancelar seguimiento · j/k scroll · Esc cerrar "
     } else {
         " Comentarios — 'a' agregar · j/k scroll · Esc cerrar "
     };
     let inner = draw_frame(frame, area, title, app.theme.border_comments);
 
-    if app.composing_comment {
-        // Text width inside the input block, minus its own left/right borders.
-        let text_width = inner.width.saturating_sub(2).max(1);
-        let content_rows = wrapped_line_count(app.comment_input.as_str(), text_width);
-        let suggestion_rows = app.mention_suggestions.len().min(5) as u16;
-
-        // Grow with content (+1 spare row for the cursor line, +2 for the
-        // input block's own top/bottom borders, +3 for the fixed-height date
-        // field above it), but never shrink the comment list above below 3
-        // rows — that's what keeps this from breaking the popup layout on a
-        // long comment.
-        let wanted = content_rows + suggestion_rows + 1 + 2 + DATE_FIELD_HEIGHT;
-        let max_input_h = inner.height.saturating_sub(3).max(4 + DATE_FIELD_HEIGHT);
-        let input_h = wanted.clamp(4 + DATE_FIELD_HEIGHT, max_input_h);
-
-        let chunks =
-            Layout::vertical([Constraint::Min(0), Constraint::Length(input_h)]).split(inner);
-        draw_comment_list(frame, app, chunks[0]);
-        draw_comment_input(frame, app, chunks[1], text_width);
-    } else {
+    if !app.composing_comment {
         draw_comment_list(frame, app, inner);
+        return;
     }
+
+    // De acá en adelante app.composing_comment es siempre true — las otras
+    // dos ramas ya retornaron arriba.
+    let text_width = inner.width.saturating_sub(2).max(1);
+    let content_rows = wrapped_line_count(app.comment_input.as_str(), text_width);
+    let suggestion_rows = app.mention_suggestions.len().min(5) as u16;
+
+    // Grow with content (+1 spare row for the cursor line, +2 for the
+    // input block's own top/bottom borders, +3 for the fixed-height date
+    // field above it), but never shrink the comment list above below 3
+    // rows — that's what keeps this from breaking the popup layout on a
+    // long comment.
+    let wanted = content_rows + suggestion_rows + 1 + 2 + DATE_FIELD_HEIGHT;
+    let max_input_h = inner.height.saturating_sub(3).max(4 + DATE_FIELD_HEIGHT);
+    let input_h = wanted.clamp(4 + DATE_FIELD_HEIGHT, max_input_h);
+
+    let chunks = Layout::vertical([Constraint::Min(0), Constraint::Length(input_h)]).split(inner);
+    draw_comment_list(frame, app, chunks[0]);
+    draw_comment_input(frame, app, chunks[1], text_width);
 }
 
 const DATE_FIELD_HEIGHT: u16 = 3;
 
 fn draw_comment_list(frame: &mut Frame, app: &App, area: Rect) {
     let text = if app.comments.is_empty() {
-        "Sin comentarios todavía.".to_string()
+        Text::from("Sin comentarios todavía.")
     } else {
-        app.comments
-            .iter()
-            .map(|c| format!("{} ({}):\n{}\n", c.user_name, c.submit_date, c.comment))
-            .collect::<Vec<_>>()
-            .join("\n")
+        let mut lines: Vec<Line> = Vec::new();
+        for c in &app.comments {
+            lines.push(Line::from(format!("{} ({}):", c.user_name, c.submit_date)));
+            lines.push(Line::from(c.comment.as_str()));
+            // El seguimiento se cuelga del comentario específico al que está
+            // atado (mismo id) — como en la web, no como un aviso genérico
+            // arriba de toda la lista.
+            if let Some(follow_up) = &app.current_follow_up {
+                if follow_up.comment_id == c.id {
+                    lines.push(Line::from(Span::styled(
+                        format!(
+                            "  Seguimiento: {} — 'v' completar · 'x' cancelar",
+                            follow_up.date
+                        ),
+                        Style::default().fg(app.theme.warning),
+                    )));
+                }
+            }
+            lines.push(Line::from(""));
+        }
+        Text::from(lines)
     };
     let p = Paragraph::new(text)
         .wrap(Wrap { trim: true })
@@ -672,6 +692,13 @@ fn trunc_str(s: &str, max: usize) -> String {
     format!("{:<width$}", chars, width = max)
 }
 
+/// Reloj de Nerd Font (nf-fa-clock_o, U+F017) usado como indicador de
+/// urgencia de seguimiento en cada card. A diferencia de un emoji (🕐), es un
+/// glifo monocromo que sí respeta el fg de `Style` — la mayoría de terminales
+/// pintan los emoji con su propia fuente a todo color, ignorándolo. Requiere
+/// una Nerd Font en la terminal; sin una, se ve como un glifo faltante.
+const FOLLOW_UP_ICON: char = '\u{f017}';
+
 fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
     let visible = app.visible_lists();
     if visible.is_empty() {
@@ -708,7 +735,12 @@ fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
             None
         };
 
-        let card_h: u16 = 3;
+        // 4 filas = 2 de borde + 2 de contenido (nombre, labels/reloj de
+        // seguimiento) — con 3 la segunda línea de texto nunca se pintaba
+        // (Borders::ALL ya consume 2 de las 3 filas), así que las labels y el
+        // reloj de seguimiento quedaban invisibles incluso antes de esta
+        // feature.
+        let card_h: u16 = 4;
         for (ci, card) in cards.into_iter().flatten().enumerate() {
             let y = inner.y + (ci as u16) * card_h;
             if y + card_h > inner.y + inner.height {
@@ -721,15 +753,29 @@ fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
                 height: card_h,
             };
 
+            // La lista actual (ej. "DOING") ya se ve en el título de la columna,
+            // y "Follow-up" ya se comunica con el ícono de reloj — repetirlas
+            // como texto sería ruido.
             let labels = card
                 .labels
                 .iter()
+                .filter(|l| !l.name.eq_ignore_ascii_case(&list.name) && !l.is_follow_up())
                 .map(|l| format!("#{}", l.name))
                 .collect::<Vec<_>>()
                 .join(" ");
 
             let is_working = app.is_working_on(card.id);
-            let text = format!("{}\n{}", card.name, labels);
+
+            let mut second_line = vec![Span::raw(labels)];
+            if let Some(status) = &card.time_status {
+                let color = app.theme.time_status_color(status);
+                second_line.push(Span::raw(" "));
+                second_line.push(Span::styled(
+                    FOLLOW_UP_ICON.to_string(),
+                    Style::default().fg(color),
+                ));
+            }
+            let text = Text::from(vec![Line::from(card.name.as_str()), Line::from(second_line)]);
 
             let is_selected = selected_idx == Some(ci);
             let body_style = if is_selected {

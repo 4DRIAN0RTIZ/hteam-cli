@@ -10,8 +10,12 @@ pub const THEME_NAMES: [&str; 3] = ["default", "solarized", "high-contrast"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Theme {
-    /// Texto positivo — hoy solo el tiempo restante de jornada laboral.
+    /// Texto positivo — tiempo restante de jornada laboral, seguimiento "On time".
     pub success: Color,
+    /// Seguimiento por expirar pronto o desviado (pospuesto).
+    pub warning: Color,
+    /// Seguimiento expirado.
+    pub danger: Color,
     /// Texto/borde de baja prioridad — versión en el footer, borde de campo
     /// sin foco, placeholder de fecha vacía.
     pub muted: Color,
@@ -42,6 +46,8 @@ impl Theme {
     pub fn default_preset() -> Self {
         Self {
             success: Color::Green,
+            warning: Color::Yellow,
+            danger: Color::Red,
             muted: Color::DarkGray,
             highlight: Color::Yellow,
             selection_bg: Color::Cyan,
@@ -61,6 +67,8 @@ impl Theme {
     pub fn solarized() -> Self {
         Self {
             success: Color::Rgb(133, 153, 0),
+            warning: Color::Rgb(181, 137, 0),
+            danger: Color::Rgb(220, 50, 47),
             muted: Color::Rgb(88, 110, 117),
             highlight: Color::Rgb(181, 137, 0),
             selection_bg: Color::Rgb(42, 161, 152),
@@ -84,6 +92,8 @@ impl Theme {
     pub fn high_contrast() -> Self {
         Self {
             success: Color::LightGreen,
+            warning: Color::LightYellow,
+            danger: Color::LightRed,
             muted: Color::White,
             highlight: Color::LightYellow,
             selection_bg: Color::White,
@@ -110,6 +120,25 @@ impl Theme {
             _ => Self::default_preset(),
         }
     }
+
+    /// Resuelve el color de urgencia de un seguimiento a partir del texto que
+    /// Hteam ya trae calculado en `Card::time_status` (`get_time_status` de la
+    /// API, ej. "On time", "Expired"). Matchea por substring case-insensitive
+    /// (cubre tanto el inglés de la API como un eventual "Expirada"/"Desviada"
+    /// en español) y cae a `muted` ante cualquier valor desconocido, en vez de
+    /// asumir un enum cerrado que se rompería si Hteam cambia el texto.
+    pub fn time_status_color(&self, status: &str) -> Color {
+        let s = status.to_lowercase();
+        if s.contains("expired") || s.contains("expirad") {
+            self.danger
+        } else if s.contains("soon") || s.contains("expirar") || s.contains("deviat") || s.contains("desviad") {
+            self.warning
+        } else if s.contains("on time") || s.contains("en tiempo") {
+            self.success
+        } else {
+            self.muted
+        }
+    }
 }
 
 impl Default for Theme {
@@ -133,5 +162,22 @@ mod tests {
     fn from_name_falls_back_to_default_for_unknown_name() {
         assert_eq!(Theme::from_name("no-existe"), Theme::default_preset());
         assert_eq!(Theme::from_name(""), Theme::default_preset());
+    }
+
+    #[test]
+    fn time_status_color_maps_known_statuses() {
+        let theme = Theme::default_preset();
+        assert_eq!(theme.time_status_color("Expired"), theme.danger);
+        assert_eq!(theme.time_status_color("Expirada"), theme.danger);
+        assert_eq!(theme.time_status_color("Due soon"), theme.warning);
+        assert_eq!(theme.time_status_color("Desviada"), theme.warning);
+        assert_eq!(theme.time_status_color("On time"), theme.success);
+    }
+
+    #[test]
+    fn time_status_color_falls_back_to_muted_for_unknown_status() {
+        let theme = Theme::default_preset();
+        assert_eq!(theme.time_status_color("who knows"), theme.muted);
+        assert_eq!(theme.time_status_color(""), theme.muted);
     }
 }

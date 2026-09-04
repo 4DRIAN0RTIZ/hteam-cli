@@ -119,6 +119,14 @@ struct CommentParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+struct FollowUpIdParams {
+    #[schemars(
+        description = "ID del seguimiento (no el id del card ni el número visible — se obtiene con card_follow_up)"
+    )]
+    follow_up_id: u64,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 struct WorkingStopParams {
     #[schemars(description = "ID del registro working-on-it")]
     working_id: u64,
@@ -344,6 +352,43 @@ impl HteamMcpServer {
             .await
             .map_err(err)?;
         ok(serde_json::json!({"success": true, "card_id": card_id}))
+    }
+
+    #[tool(
+        description = "Obtener el seguimiento (follow-up) agendado de un card, si tiene uno (null si no)"
+    )]
+    async fn card_follow_up(
+        &self,
+        Parameters(CardLabelsParams { card_id, board }): Parameters<CardLabelsParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let follow_up = operations::comments::get_follow_up(&self.client, card_id, board)
+            .await
+            .map_err(err)?;
+        ok(follow_up)
+    }
+
+    #[tool(description = "Completar un seguimiento agendado (obtén su id con card_follow_up)")]
+    async fn card_follow_up_complete(
+        &self,
+        Parameters(FollowUpIdParams { follow_up_id }): Parameters<FollowUpIdParams>,
+    ) -> Result<CallToolResult, McpError> {
+        operations::comments::complete_follow_up(&self.client, follow_up_id)
+            .await
+            .map_err(err)?;
+        ok(serde_json::json!({"success": true, "follow_up_id": follow_up_id}))
+    }
+
+    #[tool(
+        description = "Cancelar (eliminar) un seguimiento agendado (obtén su id con card_follow_up)"
+    )]
+    async fn card_follow_up_cancel(
+        &self,
+        Parameters(FollowUpIdParams { follow_up_id }): Parameters<FollowUpIdParams>,
+    ) -> Result<CallToolResult, McpError> {
+        operations::comments::cancel_follow_up(&self.client, follow_up_id)
+            .await
+            .map_err(err)?;
+        ok(serde_json::json!({"success": true, "follow_up_id": follow_up_id}))
     }
 
     // ── working on it ────────────────────────────────────────────────────
