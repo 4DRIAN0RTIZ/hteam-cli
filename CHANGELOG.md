@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug Fixes
 - *(tui)* Omit empty task placeholder in weekly objectives
+- *(client)* Parse Sept. and noon/midnight timestamps in daily-work
 
 
 ### Features
@@ -16,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(tui)* Add weekly objectives popup
 - *(theme)* Add configurable TUI color presets
 - *(update)* Add self-update command and version notices
+- *(cards)* Add follow-up tracking with complete/cancel actions
 
 ## [0.6.2] - 2026-08-29
 
