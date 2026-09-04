@@ -1056,9 +1056,10 @@ impl HteamClient {
     fn parse_daily_work_history(html: &str) -> Result<Vec<DailyWorkEntry>> {
         use scraper::{Html, Selector};
 
-        let timestamp_re =
-            regex::Regex::new(r"[A-Z][a-z]{2}\.\s\d{1,2},\s\d{4},\s\d{1,2}:\d{2}\s[ap]\.m\.")
-                .context("Regex de timestamp inválida")?;
+        let timestamp_re = regex::Regex::new(
+            r"[A-Z][a-z]{2,3}\.\s\d{1,2},\s\d{4},\s(?:\d{1,2}:\d{2}\s[ap]\.m\.|noon|midnight)",
+        )
+        .context("Regex de timestamp inválida")?;
 
         let document = Html::parse_document(html);
         let entry_sel = Selector::parse("#history p").map_err(|e| anyhow::anyhow!("{:?}", e))?;
