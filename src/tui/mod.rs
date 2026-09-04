@@ -250,6 +250,12 @@ async fn run_loop(
                     KeyCode::Char('a') => events::start_composing_comment(app),
                     KeyCode::Char('j') | KeyCode::Down => app.comments_scroll.by(1),
                     KeyCode::Char('k') | KeyCode::Up => app.comments_scroll.by(-1),
+                    KeyCode::Char('v') if app.current_follow_up.is_some() => {
+                        events::complete_current_follow_up(client, app).await;
+                    }
+                    KeyCode::Char('x') if app.current_follow_up.is_some() => {
+                        events::cancel_current_follow_up(client, app).await;
+                    }
                     _ => {}
                 }
             }

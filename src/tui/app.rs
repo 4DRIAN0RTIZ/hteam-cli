@@ -5,8 +5,8 @@ use std::time::{Duration, Instant};
 
 use crate::config::WorkingHoursConfig;
 use crate::models::{
-    BoardEntry, Card, Comment, List, ProjectMilestone, ProjectTask, Reminder, UserSuggestion,
-    WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
+    BoardEntry, Card, Comment, FollowUp, List, ProjectMilestone, ProjectTask, Reminder,
+    UserSuggestion, WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
 };
 
 use super::theme::Theme;
@@ -43,6 +43,11 @@ pub struct App {
     /// Comments of the card that was selected when 'C' was pressed.
     pub comments: Vec<Comment>,
     pub show_comments: bool,
+    /// Seguimiento agendado de la card que está detrás del popup de
+    /// comentarios (`None` si no tiene uno agendado). Se scrapea aparte
+    /// porque no viene en la API JSON de comentarios — ver
+    /// `HteamClient::get_card_follow_up`.
+    pub current_follow_up: Option<FollowUp>,
     /// True while actively typing a new comment inside the comments popup.
     pub composing_comment: bool,
     pub comment_input: TextInput,
@@ -128,6 +133,7 @@ impl App {
             description_input: TextInput::default(),
             comments: Vec::new(),
             show_comments: false,
+            current_follow_up: None,
             composing_comment: false,
             comment_input: TextInput::default(),
             comment_follow: false,

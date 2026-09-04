@@ -2,10 +2,26 @@ use anyhow::{Context, Result};
 use chrono::{Local, NaiveDateTime};
 
 use crate::client::{HteamClient, COMMENT_DATE_FORMAT};
-use crate::models::{Comment, UserSuggestion};
+use crate::models::{Comment, FollowUp, UserSuggestion};
 
 pub async fn list_comments(client: &HteamClient, card_id: u64) -> Result<Vec<Comment>> {
     client.get_card_comments(card_id).await
+}
+
+pub async fn get_follow_up(
+    client: &HteamClient,
+    card_id: u64,
+    board: Option<u64>,
+) -> Result<Option<FollowUp>> {
+    client.get_card_follow_up(card_id, board).await
+}
+
+pub async fn complete_follow_up(client: &HteamClient, follow_up_id: u64) -> Result<()> {
+    client.complete_follow_up(follow_up_id).await
+}
+
+pub async fn cancel_follow_up(client: &HteamClient, follow_up_id: u64) -> Result<()> {
+    client.cancel_follow_up(follow_up_id).await
 }
 
 /// Resolves the follow-up date a caller typed against `COMMENT_DATE_FORMAT`,
@@ -89,6 +105,23 @@ mod tests {
         assert_eq!(comments.len(), 1);
         assert_eq!(comments[0].user_name, "ana");
         assert_eq!(comments[0].comment, "hola");
+    }
+
+    #[tokio::test]
+    async fn test_get_follow_up_returns_none_when_no_form_in_html() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/operations/447/tasks/42/")
+            .with_status(200)
+            .with_body(r#"<div class="media"><a name="c1"></a></div>"#)
+            .create_async()
+            .await;
+
+        let follow_up = get_follow_up(&client(&server.url()), 42, Some(447))
+            .await
+            .expect("follow up");
+
+        assert!(follow_up.is_none());
     }
 
     #[tokio::test]
