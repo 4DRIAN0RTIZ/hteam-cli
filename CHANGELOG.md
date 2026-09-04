@@ -8,16 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Bug Fixes
-- *(tui)* Omit empty task placeholder in weekly objectives
 - *(client)* Parse Sept. and noon/midnight timestamps in daily-work
+
+
+### Features
+- *(theme)* Add configurable TUI color presets
+- *(update)* Add self-update command and version notices
+- *(cards)* Add follow-up tracking with complete/cancel actions
+
+## [0.7.0] - 2026-08-31
+
+### Bug Fixes
+- *(tui)* Omit empty task placeholder in weekly objectives
 
 
 ### Features
 - *(objectives)* Add weekly objectives sharepad command
 - *(tui)* Add weekly objectives popup
-- *(theme)* Add configurable TUI color presets
-- *(update)* Add self-update command and version notices
-- *(cards)* Add follow-up tracking with complete/cancel actions
 
 ## [0.6.2] - 2026-08-29
 
@@ -39,18 +46,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 - *(comments)* Add follow-up flag and custom date to comment posting
 
-## [0.5.2] - 2026-08-17
+## [0.5.1] - 2026-08-15
 
 ### Bug Fixes
 - *(client)* Sync board_number when switching boards in the TUI
 
-## [0.5.1] - 2026-08-15
 
 ### Documentation
 - *(readme)* Sync README with current MCP tools, CLI commands and license
 
+## [0.5.0] - 2026-08-14
 
 ### Features
+- *(workshift)* Show current shift status in the TUI header
+- *(tui)* Display remaining working hours in title bar
 - *(tui)* Add live board selector
 - *(tui)* Add scroll support to popups and project detail focus
 - *(tui)* Show version in status bar
@@ -58,12 +67,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactoring
 - *(core)* Extract shared operations and tui widgets modules
-
-## [0.5.0] - 2026-08-14
-
-### Features
-- *(workshift)* Show current shift status in the TUI header
-- *(tui)* Display remaining working hours in title bar
 
 ## [0.4.0] - 2026-08-13
 
