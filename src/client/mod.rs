@@ -10,8 +10,8 @@ pub mod update;
 use crate::config::Config;
 use crate::models::{
     BoardEntry, BoardsResponse, Card, CardDetail, CheckInResult, Comment, CommentsResponse,
-    DailyWorkEntry, FollowUp, Label, List, ProjectMilestone, ProjectTasksResponse, Reminder,
-    UserSuggestion, WorkShiftResume, WorkingOnStatus,
+    DailyWorkEntry, FollowUp, Label, List, ProjectMilestone, ProjectSummary, ProjectTasksResponse,
+    ProjectsResponse, Reminder, UserSuggestion, WorkShiftResume, WorkingOnStatus,
 };
 
 const BASE_URL: &str = "https://hteam.mx/api";
@@ -290,6 +290,19 @@ impl HteamClient {
 
         let resp: CommentsResponse = response.json().await?;
         Ok(resp.results)
+    }
+
+    /// URL pública de la página de detalle de una card, la misma que scrapea
+    /// `get_card_follow_up` — no requiere red, solo resuelve el board.
+    pub async fn card_url(&self, card_id: u64, board_number: Option<u64>) -> Result<String> {
+        let board = match board_number {
+            Some(b) => b,
+            None => self.get_board_number().await?,
+        };
+        Ok(format!(
+            "{}/operations/{}/tasks/{}/",
+            self.site_base_url, board, card_id
+        ))
     }
 
     /// El seguimiento agendado de una card no viene en la API JSON de
@@ -913,6 +926,13 @@ impl HteamClient {
         Ok(labels)
     }
 
+    /// URL pública de la página de detalle de un proyecto (`/projects/{id}/`)
+    /// — a diferencia de `card_url`, no depende del board, así que no
+    /// necesita tocar la red ni el config.
+    pub fn project_url(&self, project_id: u64) -> String {
+        format!("{}/projects/{}/", self.site_base_url, project_id)
+    }
+
     pub async fn get_project_milestones(&self, project_id: u64) -> Result<Vec<ProjectMilestone>> {
         let config = self.config.lock().await;
         let url = format!(
@@ -1422,6 +1442,40 @@ impl HteamClient {
         }
 
         let data: BoardsResponse = response.json().await?;
+        Ok(data.data)
+    }
+
+    /// Obtiene los proyectos en `status` (default "Execution", igual que el
+    /// filtro por defecto de `/projects/` en el sitio) desde el endpoint
+    /// datatables — descubierto en el JS embebido de esa página
+    /// (`ajax_api()` arma `/api/project-new/care/projects/?format=datatables&status=...`).
+    pub async fn get_projects(&self, status: Option<&str>) -> Result<Vec<ProjectSummary>> {
+        let config = self.config.lock().await;
+        let headers = self.build_headers(&config)?;
+        drop(config);
+
+        let url = format!("{}/project-new/care/projects/", self.api_base_url);
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers)
+            .query(&[
+                ("format", "datatables"),
+                ("status", status.unwrap_or("Execution")),
+            ])
+            .send()
+            .await
+            .context("Error al obtener proyectos")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+
+        let data: ProjectsResponse = response.json().await?;
         Ok(data.data)
     }
 

@@ -5,12 +5,28 @@ use std::time::{Duration, Instant};
 
 use crate::config::WorkingHoursConfig;
 use crate::models::{
-    BoardEntry, Card, Comment, FollowUp, List, ProjectMilestone, ProjectTask, Reminder,
-    UserSuggestion, WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
+    BoardEntry, Card, Comment, FollowUp, List, ProjectMilestone, ProjectSummary, ProjectTask,
+    Reminder, UserSuggestion, WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
 };
 
 use super::theme::Theme;
 use super::widgets::{Scroll, TextInput};
+
+/// Qué sección muestra el popup de ayuda ('?') — cada popup con muchos
+/// keybindings propios (que ya no entran en una sola línea de título sin
+/// truncarse) tiene el suyo, en vez de forzar al usuario a buscarlo dentro
+/// del listado completo. `Board` es el listado completo de siempre, mostrado
+/// cuando '?' se presiona sin ningún popup abierto.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum HelpContext {
+    #[default]
+    Board,
+    Reminders,
+    WeeklyObjectives,
+    Comments,
+    Projects,
+    BoardSwitch,
+}
 
 pub struct App {
     pub board_number: u64,
@@ -67,6 +83,18 @@ pub struct App {
     pub project_milestones: Vec<ProjectMilestone>,
     pub project_tasks: Vec<ProjectTask>,
     pub show_projects: bool,
+    /// Proyectos en vivo (`hteam project list`, status "Execution"),
+    /// cargados al presionar 'L' dentro del popup de proyectos — distinto de
+    /// `known_projects`, que son solo IDs recordados localmente.
+    pub live_projects: Vec<ProjectSummary>,
+    /// True mientras el panel izquierdo del popup de proyectos muestra
+    /// `live_projects` en vez de `known_projects`.
+    pub show_live_projects: bool,
+    pub selected_live_project_idx: usize,
+    /// Índice en `operations::projects::PROJECT_STATUSES` del filtro activo
+    /// del listado en vivo — 'h'/'l' lo cicla. Se conserva entre aperturas
+    /// del popup en la misma sesión del TUI.
+    pub live_projects_status_idx: usize,
     /// Weekly objectives loaded from SharePad/cache for the read-only popup.
     pub weekly_objectives: Option<WeeklyObjectivesSet>,
     pub weekly_objectives_from_cache: bool,
@@ -81,6 +109,8 @@ pub struct App {
     pub new_card_input: TextInput,
     pub new_card_list_id: Option<u64>,
     pub show_help: bool,
+    /// Qué sección mostrar en el popup de ayuda — ver `HelpContext`.
+    pub help_context: HelpContext,
     /// True mientras el popup de cambio de board ('B') está abierto.
     pub show_board_switch: bool,
     /// Boards obtenidos de la API al abrir el popup.
@@ -147,6 +177,13 @@ impl App {
             project_milestones: Vec::new(),
             project_tasks: Vec::new(),
             show_projects: false,
+            live_projects: Vec::new(),
+            show_live_projects: false,
+            selected_live_project_idx: 0,
+            live_projects_status_idx: crate::operations::projects::PROJECT_STATUSES
+                .iter()
+                .position(|&s| s == "Execution")
+                .unwrap_or(0),
             weekly_objectives: None,
             weekly_objectives_from_cache: false,
             weekly_objectives_synced_at: None,
@@ -158,6 +195,7 @@ impl App {
             new_card_input: TextInput::default(),
             new_card_list_id: None,
             show_help: false,
+            help_context: HelpContext::default(),
             show_board_switch: false,
             available_boards: Vec::new(),
             selected_board_idx: 0,
