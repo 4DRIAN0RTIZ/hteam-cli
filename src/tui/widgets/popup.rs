@@ -26,16 +26,25 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, area: Rect) -> Rect {
 /// Clears `area`, draws a bordered block titled `title` in `border_color`,
 /// and returns the inner content rect — the `Clear` + `Block` boilerplate
 /// every popup repeated by hand.
+///
+/// `Clear` hard-resets every cell in `area` (no fg/bg at all, see
+/// `ratatui::widgets::Clear`), so a popup would otherwise show the
+/// terminal's native background even when the board behind it is themed —
+/// `background`/`foreground` re-paint the block (border + interior) right
+/// after clearing, same as the root fill in `ui::draw`.
 pub fn draw_frame(
     frame: &mut Frame,
     area: Rect,
     title: impl Into<String>,
     border_color: Color,
+    background: Color,
+    foreground: Color,
 ) -> Rect {
     frame.render_widget(Clear, area);
     let block = Block::default()
         .title(title.into())
         .borders(Borders::ALL)
+        .style(Style::default().bg(background).fg(foreground))
         .border_style(Style::default().fg(border_color));
     let inner = block.inner(area);
     frame.render_widget(block, area);

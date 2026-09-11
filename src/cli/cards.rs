@@ -13,6 +13,8 @@ pub enum CardsCommands {
     List(ListCardsArgs),
     /// Ver detalle de un card
     Detail(DetailArgs),
+    /// Copiar el link de un card al portapapeles
+    Link(LinkArgs),
     /// Crear un nuevo card
     Create(CreateArgs),
     /// Mover un card
@@ -47,6 +49,16 @@ pub struct ListCardsArgs {
 pub struct DetailArgs {
     /// ID del card
     pub card_id: u64,
+}
+
+#[derive(Args, Debug)]
+pub struct LinkArgs {
+    /// ID del card
+    pub card_id: u64,
+
+    /// Solo imprimir el link, sin copiarlo al portapapeles
+    #[arg(long)]
+    pub no_copy: bool,
 }
 
 #[derive(Args, Debug)]
@@ -163,6 +175,7 @@ pub async fn execute(cmd: CardsCommands, board: Option<u64>, json: bool) -> Resu
         CardsCommands::Lists => lists(board, json).await,
         CardsCommands::List(args) => list_cards(args, board, json).await,
         CardsCommands::Detail(args) => card_detail(args, json).await,
+        CardsCommands::Link(args) => card_link(args, board, json).await,
         CardsCommands::Create(args) => create_card(args, json).await,
         CardsCommands::Move(args) => move_card(args, board, json).await,
         CardsCommands::UpdateDesc(args) => update_desc(args, json).await,
@@ -305,6 +318,34 @@ async fn card_detail(args: DetailArgs, json: bool) -> Result<()> {
         println!("\n   Descripción:\n   {}", desc);
     }
 
+    println!();
+
+    Ok(())
+}
+
+async fn card_link(args: LinkArgs, board: Option<u64>, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+
+    let url = operations::cards::card_url(&session.client, args.card_id, board).await?;
+
+    let copied = if args.no_copy {
+        false
+    } else {
+        operations::clipboard::copy(&url).is_ok()
+    };
+
+    if json {
+        println!(
+            "{{\"card_id\": {}, \"url\": \"{}\", \"copied\": {}}}",
+            args.card_id, url, copied
+        );
+        return Ok(());
+    }
+
+    println!("\n{} {}", operations::COPY_ICON, url);
+    if copied {
+        println!("   (copiado al portapapeles)");
+    }
     println!();
 
     Ok(())

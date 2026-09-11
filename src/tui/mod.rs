@@ -20,16 +20,29 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 use crate::client::HteamClient;
 use crate::operations::{self, Session};
 
-use app::App;
+use app::{App, HelpContext};
 use theme::Theme;
 
-struct TerminalGuard;
+struct TerminalGuard {
+    /// Stderr original, respaldado mientras dura la pantalla alterna — ver
+    /// `redirect_stderr_to_log`. `None` en plataformas no-unix o si el
+    /// respaldo falló (en ese caso no hay nada que restaurar).
+    #[cfg(unix)]
+    saved_stderr: Option<std::os::fd::RawFd>,
+}
 
 impl TerminalGuard {
     fn enter() -> Result<Self> {
+        #[cfg(unix)]
+        let saved_stderr = redirect_stderr_to_log().ok();
+
         enable_raw_mode()?;
         execute!(io::stdout(), EnterAlternateScreen)?;
-        Ok(Self)
+
+        #[cfg(unix)]
+        return Ok(Self { saved_stderr });
+        #[cfg(not(unix))]
+        return Ok(Self {});
     }
 }
 
@@ -37,7 +50,51 @@ impl Drop for TerminalGuard {
     fn drop(&mut self) {
         let _ = disable_raw_mode();
         let _ = execute!(io::stdout(), LeaveAlternateScreen);
+
+        #[cfg(unix)]
+        if let Some(saved) = self.saved_stderr.take() {
+            unsafe {
+                libc::dup2(saved, libc::STDERR_FILENO);
+                libc::close(saved);
+            }
+        }
     }
+}
+
+/// Algunas dependencias (p.ej. `arboard` → `wl-clipboard-rs`, que sirve el
+/// portapapeles Wayland desde un hilo en background) escriben directo a
+/// stderr con `eprintln!` o un panic en vez de pasar por `log`. Sobre la
+/// pantalla alterna en raw mode eso se pinta encima del frame de ratatui y
+/// queda ahí hasta que esa zona se redibuje. Redirigimos stderr al mismo
+/// `tui.log` que ya usa `App::set_status` mientras dura la sesión del TUI,
+/// y lo restauramos al salir.
+#[cfg(unix)]
+fn redirect_stderr_to_log() -> Result<std::os::fd::RawFd> {
+    use std::os::fd::AsRawFd;
+
+    let dir = crate::config::Config::config_dir()?;
+    std::fs::create_dir_all(&dir)?;
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(dir.join("tui.log"))
+        .context("No se pudo abrir tui.log para redirigir stderr")?;
+
+    let saved = unsafe { libc::dup(libc::STDERR_FILENO) };
+    if saved < 0 {
+        anyhow::bail!(
+            "No se pudo respaldar stderr: {}",
+            io::Error::last_os_error()
+        );
+    }
+
+    if unsafe { libc::dup2(file.as_raw_fd(), libc::STDERR_FILENO) } < 0 {
+        let err = io::Error::last_os_error();
+        unsafe { libc::close(saved) };
+        anyhow::bail!("No se pudo redirigir stderr: {}", err);
+    }
+
+    Ok(saved)
 }
 
 pub async fn run(board: Option<u64>) -> Result<()> {
@@ -55,7 +112,7 @@ pub async fn run(board: Option<u64>) -> Result<()> {
         .collect();
     let known_projects = session.config.tui.known_projects.clone();
     let working_hours = session.config.working_hours.clone();
-    let theme = Theme::from_name(&session.config.theme.active);
+    let (theme, theme_warning) = Theme::resolve(&session.config.theme.active);
 
     let client = Arc::new(session.client);
 
@@ -70,6 +127,13 @@ pub async fn run(board: Option<u64>) -> Result<()> {
         app.set_status(status);
     }
     events::refresh_all(&client, &mut app).await;
+    // Después de refresh_all a propósito: refresh_all limpia el status al
+    // terminar si todo cargó bien, así que cualquier mensaje puesto antes
+    // (incluido el de update_notice, arriba) se pierde. Un tema personalizado
+    // roto es más importante que eso — que sobreviva.
+    if let Some(warning) = theme_warning {
+        app.set_status(warning);
+    }
 
     let guard = TerminalGuard::enter()?;
     let backend = CrosstermBackend::new(io::stdout());
@@ -172,6 +236,7 @@ async fn run_loop(
                 KeyCode::Char('a') => events::add_reminder_for_current_card(client, app).await,
                 KeyCode::Char('j') | KeyCode::Down => app.reminders_scroll.by(1),
                 KeyCode::Char('k') | KeyCode::Up => app.reminders_scroll.by(-1),
+                KeyCode::Char('?') => events::open_help(app, HelpContext::Reminders),
                 _ => {}
             }
             continue;
@@ -183,6 +248,7 @@ async fn run_loop(
                 KeyCode::Char('f') => events::open_weekly_objectives(app, true).await,
                 KeyCode::Char('j') | KeyCode::Down => app.weekly_objectives_scroll.by(1),
                 KeyCode::Char('k') | KeyCode::Up => app.weekly_objectives_scroll.by(-1),
+                KeyCode::Char('?') => events::open_help(app, HelpContext::WeeklyObjectives),
                 _ => {}
             }
             continue;
@@ -256,6 +322,7 @@ async fn run_loop(
                     KeyCode::Char('x') if app.current_follow_up.is_some() => {
                         events::cancel_current_follow_up(client, app).await;
                     }
+                    KeyCode::Char('?') => events::open_help(app, HelpContext::Comments),
                     _ => {}
                 }
             }
@@ -271,10 +338,34 @@ async fn run_loop(
                     KeyCode::Char(c) => events::project_input_push(app, c),
                     _ => {}
                 }
+            } else if app.show_live_projects {
+                match key.code {
+                    KeyCode::Esc | KeyCode::Char('L') => {
+                        events::toggle_live_projects(client, app).await;
+                    }
+                    KeyCode::Char('q') => events::close_projects(app),
+                    KeyCode::Char('j') | KeyCode::Down => {
+                        events::move_live_project_selection(app, 1);
+                    }
+                    KeyCode::Char('k') | KeyCode::Up => {
+                        events::move_live_project_selection(app, -1);
+                    }
+                    KeyCode::Char('h') | KeyCode::Left => {
+                        events::cycle_live_projects_status(client, app, -1).await;
+                    }
+                    KeyCode::Char('l') | KeyCode::Right => {
+                        events::cycle_live_projects_status(client, app, 1).await;
+                    }
+                    KeyCode::Enter => events::select_live_project(client, app).await,
+                    KeyCode::Char('c') => events::copy_project_link(client, app),
+                    KeyCode::Char('?') => events::open_help(app, HelpContext::Projects),
+                    _ => {}
+                }
             } else {
                 match key.code {
                     KeyCode::Esc | KeyCode::Char('q') => events::close_projects(app),
                     KeyCode::Char('a') => events::start_composing_project(app),
+                    KeyCode::Char('L') => events::toggle_live_projects(client, app).await,
                     KeyCode::Tab => events::toggle_projects_focus(app),
                     KeyCode::Char('j') | KeyCode::Down => {
                         if app.projects_detail_focused {
@@ -293,6 +384,8 @@ async fn run_loop(
                     KeyCode::Enter if !app.projects_detail_focused => {
                         events::select_known_project(client, app).await;
                     }
+                    KeyCode::Char('c') => events::copy_project_link(client, app),
+                    KeyCode::Char('?') => events::open_help(app, HelpContext::Projects),
                     _ => {}
                 }
             }
@@ -306,6 +399,7 @@ async fn run_loop(
                 KeyCode::Char('k') | KeyCode::Up => events::move_board_selection(app, -1),
                 KeyCode::Enter => events::select_current_board(client, app).await,
                 KeyCode::Char('r') => events::open_board_switch(client, app).await,
+                KeyCode::Char('?') => events::open_help(app, HelpContext::BoardSwitch),
                 _ => {}
             }
             continue;
@@ -335,12 +429,13 @@ async fn run_loop(
             KeyCode::Char('R') => events::open_reminders(client, app).await,
             KeyCode::Char('O') => events::open_weekly_objectives(app, false).await,
             KeyCode::Char('C') => events::open_comments(client, app).await,
+            KeyCode::Char('c') => events::copy_card_link(client, app).await,
             KeyCode::Char('P') => events::open_projects(client, app).await,
             KeyCode::Char('n') => events::start_composing_card(app),
             KeyCode::Char('w') => events::toggle_working_on(client, app).await,
             KeyCode::Char('r') => events::refresh_all(client, app).await,
             KeyCode::Char('B') => events::open_board_switch(client, app).await,
-            KeyCode::Char('?') => events::open_help(app),
+            KeyCode::Char('?') => events::open_help(app, HelpContext::Board),
             KeyCode::Enter => events::open_description(app),
             _ => {}
         }
