@@ -23,13 +23,26 @@ use crate::operations::{self, Session};
 use app::App;
 use theme::Theme;
 
-struct TerminalGuard;
+struct TerminalGuard {
+    /// Stderr original, respaldado mientras dura la pantalla alterna — ver
+    /// `redirect_stderr_to_log`. `None` en plataformas no-unix o si el
+    /// respaldo falló (en ese caso no hay nada que restaurar).
+    #[cfg(unix)]
+    saved_stderr: Option<std::os::fd::RawFd>,
+}
 
 impl TerminalGuard {
     fn enter() -> Result<Self> {
+        #[cfg(unix)]
+        let saved_stderr = redirect_stderr_to_log().ok();
+
         enable_raw_mode()?;
         execute!(io::stdout(), EnterAlternateScreen)?;
-        Ok(Self)
+
+        #[cfg(unix)]
+        return Ok(Self { saved_stderr });
+        #[cfg(not(unix))]
+        return Ok(Self {});
     }
 }
 
@@ -37,7 +50,51 @@ impl Drop for TerminalGuard {
     fn drop(&mut self) {
         let _ = disable_raw_mode();
         let _ = execute!(io::stdout(), LeaveAlternateScreen);
+
+        #[cfg(unix)]
+        if let Some(saved) = self.saved_stderr.take() {
+            unsafe {
+                libc::dup2(saved, libc::STDERR_FILENO);
+                libc::close(saved);
+            }
+        }
     }
+}
+
+/// Algunas dependencias (p.ej. `arboard` → `wl-clipboard-rs`, que sirve el
+/// portapapeles Wayland desde un hilo en background) escriben directo a
+/// stderr con `eprintln!` o un panic en vez de pasar por `log`. Sobre la
+/// pantalla alterna en raw mode eso se pinta encima del frame de ratatui y
+/// queda ahí hasta que esa zona se redibuje. Redirigimos stderr al mismo
+/// `tui.log` que ya usa `App::set_status` mientras dura la sesión del TUI,
+/// y lo restauramos al salir.
+#[cfg(unix)]
+fn redirect_stderr_to_log() -> Result<std::os::fd::RawFd> {
+    use std::os::fd::AsRawFd;
+
+    let dir = crate::config::Config::config_dir()?;
+    std::fs::create_dir_all(&dir)?;
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(dir.join("tui.log"))
+        .context("No se pudo abrir tui.log para redirigir stderr")?;
+
+    let saved = unsafe { libc::dup(libc::STDERR_FILENO) };
+    if saved < 0 {
+        anyhow::bail!(
+            "No se pudo respaldar stderr: {}",
+            io::Error::last_os_error()
+        );
+    }
+
+    if unsafe { libc::dup2(file.as_raw_fd(), libc::STDERR_FILENO) } < 0 {
+        let err = io::Error::last_os_error();
+        unsafe { libc::close(saved) };
+        anyhow::bail!("No se pudo redirigir stderr: {}", err);
+    }
+
+    Ok(saved)
 }
 
 pub async fn run(board: Option<u64>) -> Result<()> {
@@ -293,6 +350,7 @@ async fn run_loop(
                     KeyCode::Enter if !app.projects_detail_focused => {
                         events::select_known_project(client, app).await;
                     }
+                    KeyCode::Char('c') => events::copy_project_link(client, app),
                     _ => {}
                 }
             }
@@ -335,6 +393,7 @@ async fn run_loop(
             KeyCode::Char('R') => events::open_reminders(client, app).await,
             KeyCode::Char('O') => events::open_weekly_objectives(app, false).await,
             KeyCode::Char('C') => events::open_comments(client, app).await,
+            KeyCode::Char('c') => events::copy_card_link(client, app).await,
             KeyCode::Char('P') => events::open_projects(client, app).await,
             KeyCode::Char('n') => events::start_composing_card(app),
             KeyCode::Char('w') => events::toggle_working_on(client, app).await,

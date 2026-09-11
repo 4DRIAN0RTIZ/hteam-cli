@@ -606,6 +606,22 @@ pub async fn select_known_project(client: &HteamClient, app: &mut App) {
     load_project(client, app, id).await;
 }
 
+/// Copia el link del proyecto resaltado en el popup al portapapeles ('c') —
+/// reutiliza `operations::projects::project_url`, la misma función que
+/// expone `hteam project link`. No depende de la red: no hace falta que el
+/// proyecto ya esté cargado (`active_project`), solo que esté resaltado.
+pub fn copy_project_link(client: &HteamClient, app: &mut App) {
+    let Some(&id) = app.known_projects.get(app.selected_project_idx) else {
+        return;
+    };
+
+    let url = operations::projects::project_url(client, id);
+    match operations::clipboard::copy(&url) {
+        Ok(()) => app.set_status(format!("{} Link copiado: {}", operations::COPY_ICON, url)),
+        Err(e) => app.set_status(format!("Error copiando el link: {}", e)),
+    }
+}
+
 async fn load_project(client: &HteamClient, app: &mut App, id: u64) {
     app.active_project = Some(id);
     remember_project(app, id);
@@ -710,6 +726,23 @@ async fn refresh_user_shift(client: &HteamClient, app: &mut App) {
     // blanking out the header.
     if let Ok(resume) = operations::checkin::workshift_resume(client).await {
         app.user_shift = resume.last;
+    }
+}
+
+/// Copia el link de la card seleccionada al portapapeles ('c') — reutiliza
+/// `operations::cards::card_url` y `operations::clipboard::copy`, las mismas
+/// funciones que expone `hteam cards link`.
+pub async fn copy_card_link(client: &HteamClient, app: &mut App) {
+    let Some(card) = app.current_card().cloned() else {
+        return;
+    };
+
+    match operations::cards::card_url(client, card.id, Some(app.board_number)).await {
+        Ok(url) => match operations::clipboard::copy(&url) {
+            Ok(()) => app.set_status(format!("{} Link copiado: {}", operations::COPY_ICON, url)),
+            Err(e) => app.set_status(format!("Error copiando el link: {}", e)),
+        },
+        Err(e) => app.set_status(format!("Error obteniendo el link: {}", e)),
     }
 }
 

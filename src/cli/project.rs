@@ -10,6 +10,8 @@ pub enum ProjectCommands {
     Milestones(ProjectArgs),
     /// Ver tasks de un proyecto
     Tasks(ProjectArgs),
+    /// Copiar el link de un proyecto al portapapeles
+    Link(ProjectLinkArgs),
 }
 
 #[derive(Args, Debug)]
@@ -18,10 +20,21 @@ pub struct ProjectArgs {
     pub project_id: u64,
 }
 
+#[derive(Args, Debug)]
+pub struct ProjectLinkArgs {
+    /// ID del proyecto
+    pub project_id: u64,
+
+    /// Solo imprimir el link, sin copiarlo al portapapeles
+    #[arg(long)]
+    pub no_copy: bool,
+}
+
 pub async fn execute(cmd: ProjectCommands, json: bool) -> Result<()> {
     match cmd {
         ProjectCommands::Milestones(args) => project_milestones(args, json).await,
         ProjectCommands::Tasks(args) => project_tasks(args, json).await,
+        ProjectCommands::Link(args) => project_link(args, json).await,
     }
 }
 
@@ -48,6 +61,34 @@ async fn project_milestones(args: ProjectArgs, json: bool) -> Result<()> {
 
     println!("\n🎯 Milestones del proyecto {}:\n", args.project_id);
     println!("{}", table);
+    println!();
+
+    Ok(())
+}
+
+async fn project_link(args: ProjectLinkArgs, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+
+    let url = operations::projects::project_url(&session.client, args.project_id);
+
+    let copied = if args.no_copy {
+        false
+    } else {
+        operations::clipboard::copy(&url).is_ok()
+    };
+
+    if json {
+        println!(
+            "{{\"project_id\": {}, \"url\": \"{}\", \"copied\": {}}}",
+            args.project_id, url, copied
+        );
+        return Ok(());
+    }
+
+    println!("\n{} {}", operations::COPY_ICON, url);
+    if copied {
+        println!("   (copiado al portapapeles)");
+    }
     println!();
 
     Ok(())

@@ -27,6 +27,11 @@ pub async fn card_detail(client: &HteamClient, card_id: u64) -> Result<CardDetai
     client.get_card_detail(card_id).await
 }
 
+/// URL pública de la página de detalle de una card (`/operations/{board}/tasks/{id}/`).
+pub async fn card_url(client: &HteamClient, card_id: u64, board: Option<u64>) -> Result<String> {
+    client.card_url(card_id, board).await
+}
+
 pub async fn create_card(client: &HteamClient, name: &str, list_id: Option<u64>) -> Result<Card> {
     client.create_card(name, list_id, None).await
 }
@@ -128,6 +133,24 @@ mod tests {
         assert_eq!(lists.len(), 1);
         assert_eq!(lists[0].name, "Open");
         assert_eq!(lists[0].card_count, Some(2));
+    }
+
+    #[tokio::test]
+    async fn test_card_url_uses_explicit_board_over_configured_default() {
+        let url = card_url(&client("https://hteam.mx"), 10784, Some(447))
+            .await
+            .expect("card url");
+
+        assert_eq!(url, "https://hteam.mx/operations/447/tasks/10784/");
+    }
+
+    #[tokio::test]
+    async fn test_card_url_falls_back_to_configured_board() {
+        let url = card_url(&client("https://hteam.mx"), 10784, None)
+            .await
+            .expect("card url");
+
+        assert_eq!(url, "https://hteam.mx/operations/483/tasks/10784/");
     }
 
     #[tokio::test]

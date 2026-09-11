@@ -28,6 +28,8 @@ rmcp = { version = "1.7.0", features = ["server", "macros", "transport-io"] }
 schemars = "0.8"
 ratatui = "0.29"
 crossterm = "0.28"
+arboard = { version = "3.6.1", default-features = false, features = ["wayland-data-control"] }
+libc = "0.2"
 
 [dev-dependencies]
 mockito = "1"

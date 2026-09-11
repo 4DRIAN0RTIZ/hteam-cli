@@ -12,6 +12,11 @@ pub async fn tasks(client: &HteamClient, project_id: u64) -> Result<ProjectTasks
     client.get_project_tasks(project_id).await
 }
 
+/// URL pública de la página de detalle de un proyecto (`/projects/{id}/`).
+pub fn project_url(client: &HteamClient, project_id: u64) -> String {
+    client.project_url(project_id)
+}
+
 /// Moves `id` to the front of the known-projects MRU list (deduping) and
 /// persists it to `config.toml`'s `[tui] known_projects`.
 pub fn remember_project(config: &mut Config, id: u64) -> Result<()> {
@@ -50,6 +55,13 @@ mod tests {
 
         assert_eq!(milestones[0].name, "M1");
         assert_eq!(milestones[0].progress, 0.5);
+    }
+
+    #[test]
+    fn test_project_url_builds_link() {
+        let url = project_url(&client("https://hteam.mx"), 472);
+
+        assert_eq!(url, "https://hteam.mx/projects/472/");
     }
 
     #[tokio::test]

@@ -292,6 +292,19 @@ impl HteamClient {
         Ok(resp.results)
     }
 
+    /// URL pública de la página de detalle de una card, la misma que scrapea
+    /// `get_card_follow_up` — no requiere red, solo resuelve el board.
+    pub async fn card_url(&self, card_id: u64, board_number: Option<u64>) -> Result<String> {
+        let board = match board_number {
+            Some(b) => b,
+            None => self.get_board_number().await?,
+        };
+        Ok(format!(
+            "{}/operations/{}/tasks/{}/",
+            self.site_base_url, board, card_id
+        ))
+    }
+
     /// El seguimiento agendado de una card no viene en la API JSON de
     /// comentarios — solo en el HTML server-rendered de la página de detalle
     /// (`/operations/{board}/tasks/{id}/`), dentro del bloque del comentario
@@ -911,6 +924,13 @@ impl HteamClient {
 
         let labels: Vec<Label> = response.json().await?;
         Ok(labels)
+    }
+
+    /// URL pública de la página de detalle de un proyecto (`/projects/{id}/`)
+    /// — a diferencia de `card_url`, no depende del board, así que no
+    /// necesita tocar la red ni el config.
+    pub fn project_url(&self, project_id: u64) -> String {
+        format!("{}/projects/{}/", self.site_base_url, project_id)
     }
 
     pub async fn get_project_milestones(&self, project_id: u64) -> Result<Vec<ProjectMilestone>> {
