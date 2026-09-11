@@ -142,9 +142,11 @@ fn default_theme_name() -> String {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThemeConfig {
-    /// Nombre del preset activo del TUI: "default", "solarized" o
-    /// "high-contrast". Si no matchea ninguno conocido, `Theme::from_name`
-    /// hace fallback silencioso a "default" sin panic.
+    /// Nombre del tema activo del TUI: un preset embebido ("default",
+    /// "solarized", "high-contrast") o un tema personalizado en
+    /// `themes_dir()/{active}.toml`. Resuelto por `Theme::resolve`, que cae
+    /// a "default" (con aviso en el status bar) si no matchea nada o el
+    /// archivo personalizado no parsea.
     #[serde(default = "default_theme_name")]
     pub active: String,
 }
@@ -221,6 +223,41 @@ impl Config {
 
     pub fn config_file() -> Result<PathBuf> {
         Ok(Self::config_dir()?.join("config.toml"))
+    }
+
+    /// Carpeta donde vive un archivo `{nombre}.toml` por cada tema
+    /// personalizado — ver `tui::theme::Theme::load_custom`.
+    pub fn themes_dir() -> Result<PathBuf> {
+        Ok(Self::config_dir()?.join("themes"))
+    }
+
+    pub fn theme_file(name: &str) -> Result<PathBuf> {
+        Ok(Self::themes_dir()?.join(format!("{name}.toml")))
+    }
+
+    /// Nombres de los temas personalizados encontrados en `themes_dir()`
+    /// (el stem de cada `*.toml`), orden alfabético. Vacío si la carpeta
+    /// todavía no existe — no haber creado ningún tema personalizado no es
+    /// un error.
+    pub fn custom_theme_names() -> Result<Vec<String>> {
+        let dir = Self::themes_dir()?;
+        if !dir.exists() {
+            return Ok(Vec::new());
+        }
+
+        let mut names: Vec<String> = fs::read_dir(&dir)
+            .with_context(|| format!("No se pudo leer {}", dir.display()))?
+            .filter_map(|entry| entry.ok())
+            .filter(|entry| entry.path().extension().and_then(|e| e.to_str()) == Some("toml"))
+            .filter_map(|entry| {
+                entry
+                    .path()
+                    .file_stem()
+                    .map(|s| s.to_string_lossy().into_owned())
+            })
+            .collect();
+        names.sort();
+        Ok(names)
     }
 
     pub fn load() -> Result<Self> {
@@ -471,6 +508,15 @@ mod tests {
 
         assert_eq!(config_file, config_dir.join("config.toml"));
         assert!(config_dir.ends_with("hteam"));
+    }
+
+    #[test]
+    fn theme_file_path_is_under_themes_dir() {
+        let themes_dir = Config::themes_dir().expect("resolves themes dir");
+        let theme_file = Config::theme_file("mi-tema").expect("resolves theme file");
+
+        assert_eq!(theme_file, themes_dir.join("mi-tema.toml"));
+        assert!(themes_dir.ends_with("hteam/themes"));
     }
 
     #[test]

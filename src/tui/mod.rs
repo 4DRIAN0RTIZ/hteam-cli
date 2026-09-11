@@ -112,7 +112,7 @@ pub async fn run(board: Option<u64>) -> Result<()> {
         .collect();
     let known_projects = session.config.tui.known_projects.clone();
     let working_hours = session.config.working_hours.clone();
-    let theme = Theme::from_name(&session.config.theme.active);
+    let (theme, theme_warning) = Theme::resolve(&session.config.theme.active);
 
     let client = Arc::new(session.client);
 
@@ -127,6 +127,13 @@ pub async fn run(board: Option<u64>) -> Result<()> {
         app.set_status(status);
     }
     events::refresh_all(&client, &mut app).await;
+    // Después de refresh_all a propósito: refresh_all limpia el status al
+    // terminar si todo cargó bien, así que cualquier mensaje puesto antes
+    // (incluido el de update_notice, arriba) se pierde. Un tema personalizado
+    // roto es más importante que eso — que sobreviva.
+    if let Some(warning) = theme_warning {
+        app.set_status(warning);
+    }
 
     let guard = TerminalGuard::enter()?;
     let backend = CrosstermBackend::new(io::stdout());
