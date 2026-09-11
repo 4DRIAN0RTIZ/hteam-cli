@@ -29,3 +29,8 @@ pub use session::{resolve_board_number, Session};
 /// el TUI; requiere una Nerd Font en la terminal, sin una se ve como un
 /// glifo faltante.
 pub const COPY_ICON: char = '\u{ed7a}';
+
+/// Glifo de Nerd Font para "carpeta/proyecto" (nf-md-folder), mismo criterio
+/// que `COPY_ICON`: un glifo monocromo en vez de un emoji a color, para que
+/// `hteam project list` y el TUI queden a la par.
+pub const PROJECT_ICON: char = '\u{eb30}';

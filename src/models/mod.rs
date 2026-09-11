@@ -521,6 +521,45 @@ pub struct BoardsResponse {
     pub data: Vec<BoardEntry>,
 }
 
+/// Un proyecto listado por el endpoint datatables de `/projects/` — a
+/// diferencia de `BoardEntry` (kanban), esto es la entidad "proyecto" de
+/// Hteam: milestones/tasks propios (ver `ProjectMilestone`/`ProjectTask`),
+/// sin relación directa con ningún board.
+#[derive(Debug, Clone, Serialize, Deserialize, Tabled)]
+pub struct ProjectSummary {
+    #[tabled(rename = "#")]
+    pub id: u64,
+    #[tabled(rename = "Proyecto")]
+    pub name: String,
+    #[serde(default)]
+    #[tabled(rename = "Servicio")]
+    pub service: String,
+    #[tabled(rename = "Estado")]
+    pub status: String,
+    #[serde(rename = "clc_project_progress", default)]
+    #[tabled(display_with = "display_progress", rename = "Progreso")]
+    pub progress: f64,
+    #[serde(default)]
+    #[tabled(display_with = "display_due_date", rename = "Vence")]
+    pub due_date: Option<String>,
+    #[serde(default)]
+    #[tabled(skip)]
+    pub priority: u8,
+    #[serde(default)]
+    #[tabled(skip)]
+    pub members: Vec<u64>,
+}
+
+fn display_due_date(due: &Option<String>) -> String {
+    due.as_deref().unwrap_or("-").to_string()
+}
+
+/// Respuesta de `GET /api/project-new/care/projects/?format=datatables`.
+#[derive(Debug, Deserialize)]
+pub struct ProjectsResponse {
+    pub data: Vec<ProjectSummary>,
+}
+
 /// Una tarea (checklist item) de un objetivo semanal, parseada de una línea
 /// `- [ ] texto` / `- [x] texto` del markdown de SharePad.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]

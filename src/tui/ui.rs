@@ -6,7 +6,9 @@ use ratatui::{
     Frame,
 };
 
-use super::app::App;
+use crate::operations;
+
+use super::app::{App, HelpContext};
 use super::widgets::{centered_rect, draw_frame};
 
 pub fn draw(frame: &mut Frame, app: &App) {
@@ -130,55 +132,130 @@ fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
     );
 }
 
+/// Título y contenido del popup de ayuda para `ctx` — ver `HelpContext`.
+/// `Board` (sin ningún popup abierto) muestra el listado completo; el resto
+/// muestra solo lo suyo, porque ya no entra en la línea de título de cada
+/// popup sin truncarse.
+fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
+    match ctx {
+        HelpContext::Board => (
+            " Ayuda — j/k scroll · Esc/q/? cerrar ",
+            &[
+                "Board",
+                "  j/k, ↓/↑        mover selección",
+                "  h/l, ←/→        cambiar de lista",
+                "  H / L           mover card a la lista anterior/siguiente",
+                "  Enter           editar descripción de la card",
+                "  n               crear card nueva en la lista activa",
+                "  w               marcar/desmarcar la card activa como 'working on'",
+                "  c               copiar el link de la card activa al portapapeles",
+                "  v / V           ocultar lista activa / mostrar todas",
+                "  r               refrescar",
+                "  q, Esc          salir",
+                "",
+                "Popups (cada uno tiene su propia ayuda con '?')",
+                "  B               cambiar de board",
+                "  R               reminders",
+                "  O               objetivos semanales",
+                "  C               comentarios",
+                "  P               proyectos",
+                "",
+                "Dentro de la descripción de una card",
+                "  Enter           salto de línea",
+                "  Ctrl+S          guardar",
+                "  Esc             cancelar",
+            ],
+        ),
+        HelpContext::Reminders => (
+            " Ayuda: Reminders — Esc/q/? cerrar ",
+            &[
+                "Reminders",
+                "  j/k, ↓/↑        scroll",
+                "  a               agregar un reminder para la card seleccionada",
+                "  Esc, q          cerrar",
+            ],
+        ),
+        HelpContext::WeeklyObjectives => (
+            " Ayuda: Objetivos semanales — Esc/q/? cerrar ",
+            &[
+                "Objetivos semanales",
+                "  j/k, ↓/↑        scroll",
+                "  f               forzar refetch (ignora el cache)",
+                "  Esc, q          cerrar",
+            ],
+        ),
+        HelpContext::Comments => (
+            " Ayuda: Comentarios — Esc/q/? cerrar ",
+            &[
+                "Comentarios",
+                "  j/k, ↓/↑        scroll",
+                "  a               escribir uno nuevo",
+                "  v               completar el seguimiento agendado (si la card tiene uno)",
+                "  x               cancelar el seguimiento agendado (si la card tiene uno)",
+                "  Esc, q          cerrar",
+                "",
+                "Componiendo un comentario",
+                "  Enter           salto de línea",
+                "  Tab             alternar foco entre fecha y texto",
+                "  Ctrl+F          marcar/desmarcar para seguimiento",
+                "  Ctrl+S          enviar",
+                "  Esc             cancelar",
+                "",
+                "Mientras escribís @algo",
+                "  ↓/↑             navegar sugerencias de mención",
+                "  Enter           aceptar la sugerencia resaltada",
+            ],
+        ),
+        HelpContext::Projects => (
+            " Ayuda: Proyectos — Esc/q/? cerrar ",
+            &[
+                "Proyectos guardados",
+                "  a               agregar uno nuevo por ID",
+                "  Tab             alternar foco (guardados / detalle)",
+                "  j/k, ↓/↑        mover selección / scroll del detalle",
+                "  Enter           elegir el resaltado",
+                "  c               copiar el link del resaltado",
+                "  L               listar proyectos en vivo",
+                "  Esc, q          cerrar",
+                "",
+                "Escribiendo un project id nuevo",
+                "  Enter           confirmar",
+                "  Esc             cancelar",
+                "",
+                "Listado en vivo ('L')",
+                "  h/l, ←/→        cambiar estado (All/Planning/Execution/Finished/Cancelled)",
+                "  j/k, ↓/↑        mover selección",
+                "  Enter           elegir y cargar",
+                "  c               copiar el link del resaltado",
+                "  Esc, L          volver a guardados",
+            ],
+        ),
+        HelpContext::BoardSwitch => (
+            " Ayuda: Cambiar de board — Esc/q/? cerrar ",
+            &[
+                "Cambiar de board",
+                "  j/k, ↓/↑        mover selección",
+                "  Enter           seleccionar",
+                "  r               recargar la lista",
+                "  Esc, q          cerrar",
+            ],
+        ),
+    }
+}
+
 fn draw_help_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(70, 85, frame.area());
+    let (title, lines) = help_content(app.help_context);
     let inner = draw_frame(
         frame,
         area,
-        " Ayuda — j/k scroll · Esc/q/? cerrar ",
+        title,
         app.theme.border_help,
         app.theme.background,
         app.theme.foreground,
     );
 
-    let text = [
-        "Board",
-        "  j/k, ↓/↑        mover selección",
-        "  h/l, ←/→        cambiar de lista",
-        "  H / L           mover card a la lista anterior/siguiente",
-        "  Enter           editar descripción de la card",
-        "  n               crear card nueva en la lista activa",
-        "  w               marcar/desmarcar la card activa como 'working on'",
-        "  c               copiar el link de la card activa al portapapeles",
-        "  v / V           ocultar lista activa / mostrar todas",
-        "  r               refrescar",
-        "  q, Esc          salir",
-        "",
-        "Popups",
-        "  B               cambiar de board — lista en vivo · j/k + Enter seleccionar",
-        "  j/k, ↓/↑        scroll del contenido (reminders, comentarios, esta ayuda)",
-        "  R               reminders — 'a' agrega uno para la card seleccionada",
-        "  O               objetivos semanales — 'f' fuerza refetch · j/k scroll",
-        "  C               comentarios — 'a' escribe uno nuevo (@ para mencionar, Tab fecha, Ctrl+F seguimiento)",
-        "                  si la card tiene seguimiento agendado: 'v' completarlo · 'x' cancelarlo",
-        "  P               proyectos — 'a' nuevo · Tab foco al detalle · j/k mover/scroll · Enter elegir · c copiar link",
-        "",
-        "Dentro de un popup de texto (nueva card / project id)",
-        "  Enter           confirmar",
-        "  Esc             cancelar",
-        "",
-        "Dentro de la descripción o un comentario",
-        "  Enter           salto de línea",
-        "  Ctrl+S          guardar / enviar",
-        "  Esc             cancelar",
-        "",
-        "Dentro del popup de comentarios, mientras escribís @algo",
-        "  ↓/↑             navegar sugerencias de mención",
-        "  Enter           aceptar la sugerencia resaltada",
-    ]
-    .join("\n");
-
-    let p = Paragraph::new(text)
+    let p = Paragraph::new(lines.join("\n"))
         .wrap(Wrap { trim: true })
         .scroll((app.help_scroll.offset(), 0));
     frame.render_widget(p, inner);
@@ -212,7 +289,7 @@ fn draw_reminders_popup(frame: &mut Frame, app: &App) {
     let inner = draw_frame(
         frame,
         area,
-        " Reminders — 'a' agregar · j/k scroll · Esc cerrar ",
+        " Reminders — 'a' agregar · '?' ayuda · Esc cerrar ",
         app.theme.border_reminders,
         app.theme.background,
         app.theme.foreground,
@@ -246,7 +323,7 @@ fn draw_weekly_objectives_popup(frame: &mut Frame, app: &App) {
     let inner = draw_frame(
         frame,
         area,
-        " Objetivos semanales — 'f' refetch · j/k scroll · Esc cerrar ",
+        " Objetivos semanales — 'f' refetch · '?' ayuda · Esc cerrar ",
         app.theme.border_objectives,
         app.theme.background,
         app.theme.foreground,
@@ -332,11 +409,9 @@ fn draw_comments_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(70, 70, frame.area());
 
     let title = if app.composing_comment {
-        " Nuevo comentario — Enter salto de línea · Tab fecha/texto · Ctrl+F seguimiento · Ctrl+S enviar · Esc cancelar "
-    } else if app.current_follow_up.is_some() {
-        " Comentarios — 'a' agregar · 'v' completar seguimiento · 'x' cancelar seguimiento · j/k scroll · Esc cerrar "
+        " Nuevo comentario — Ctrl+S enviar · Esc cancelar "
     } else {
-        " Comentarios — 'a' agregar · j/k scroll · Esc cerrar "
+        " Comentarios — 'a' agregar · '?' ayuda · Esc cerrar "
     };
     let inner = draw_frame(
         frame,
@@ -519,9 +594,14 @@ fn draw_projects_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(80, 75, frame.area());
 
     let title = if app.composing_project {
-        " Nuevo project id — dígitos + Enter · Esc cancelar "
+        " Nuevo project id — dígitos + Enter · Esc cancelar ".to_string()
+    } else if app.show_live_projects {
+        format!(
+            " Proyectos en vivo ({}) — Enter elegir · '?' ayuda · Esc/L volver ",
+            operations::projects::PROJECT_STATUSES[app.live_projects_status_idx]
+        )
     } else {
-        " Proyectos — Tab foco · j/k mover/scroll · 'a' agregar · Esc cerrar "
+        " Proyectos — 'a' agregar · 'L' en vivo · '?' ayuda · Esc cerrar ".to_string()
     };
     let inner = draw_frame(
         frame,
@@ -538,9 +618,13 @@ fn draw_projects_popup(frame: &mut Frame, app: &App) {
         Layout::vertical([Constraint::Min(0)]).split(inner)
     };
 
-    let cols = Layout::horizontal([Constraint::Length(12), Constraint::Min(0)]).split(rows[0]);
-    draw_known_projects_list(frame, app, cols[0]);
-    draw_project_detail(frame, app, cols[1]);
+    if app.show_live_projects {
+        draw_live_projects_list(frame, app, rows[0]);
+    } else {
+        let cols = Layout::horizontal([Constraint::Length(12), Constraint::Min(0)]).split(rows[0]);
+        draw_known_projects_list(frame, app, cols[0]);
+        draw_project_detail(frame, app, cols[1]);
+    }
 
     if app.composing_project {
         draw_project_input(frame, app, rows[1]);
@@ -577,6 +661,40 @@ fn draw_known_projects_list(frame: &mut Frame, app: &App, area: Rect) {
                     ""
                 };
                 format!("{} #{}{}", marker, id, active)
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+
+    frame.render_widget(Paragraph::new(text).wrap(Wrap { trim: true }), inner);
+}
+
+fn draw_live_projects_list(frame: &mut Frame, app: &App, area: Rect) {
+    let block = Block::default()
+        .title(" Proyectos ")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(app.theme.border_active));
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+
+    let text = if app.live_projects.is_empty() {
+        "(sin proyectos)".to_string()
+    } else {
+        app.live_projects
+            .iter()
+            .enumerate()
+            .map(|(i, project)| {
+                let marker = if i == app.selected_live_project_idx {
+                    "▶"
+                } else {
+                    " "
+                };
+                let active = if Some(project.id) == app.active_project {
+                    " •"
+                } else {
+                    ""
+                };
+                format!("{} #{} {}{}", marker, project.id, project.name, active)
             })
             .collect::<Vec<_>>()
             .join("\n")
@@ -656,7 +774,7 @@ fn draw_board_switch_popup(frame: &mut Frame, app: &App) {
     let inner = draw_frame(
         frame,
         area,
-        " Cambiar board — j/k · Enter seleccionar · r recargar · Esc cerrar ",
+        " Cambiar board — Enter seleccionar · '?' ayuda · Esc cerrar ",
         app.theme.border_board_switch,
         app.theme.background,
         app.theme.foreground,

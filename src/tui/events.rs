@@ -3,10 +3,14 @@ use anyhow::Result;
 use crate::client::HteamClient;
 use crate::operations;
 
-use super::app::App;
+use super::app::{App, HelpContext};
 
-pub fn open_help(app: &mut App) {
+/// Abre el popup de ayuda mostrando solo la sección de `ctx` — ver
+/// `HelpContext`. El popup subyacente (si `ctx` no es `Board`) sigue abierto
+/// detrás: cerrar la ayuda vuelve a él tal cual, no hace falta reabrirlo.
+pub fn open_help(app: &mut App, ctx: HelpContext) {
     app.show_help = true;
+    app.help_context = ctx;
     app.help_scroll.reset();
 }
 
@@ -556,6 +560,7 @@ pub fn close_projects(app: &mut App) {
     app.composing_project = false;
     app.project_input.clear();
     app.projects_detail_focused = false;
+    app.show_live_projects = false;
 }
 
 pub fn start_composing_project(app: &mut App) {
@@ -609,10 +614,19 @@ pub async fn select_known_project(client: &HteamClient, app: &mut App) {
 /// Copia el link del proyecto resaltado en el popup al portapapeles ('c') —
 /// reutiliza `operations::projects::project_url`, la misma función que
 /// expone `hteam project link`. No depende de la red: no hace falta que el
-/// proyecto ya esté cargado (`active_project`), solo que esté resaltado.
+/// proyecto ya esté cargado (`active_project`), solo que esté resaltado, sea
+/// en `known_projects` o en `live_projects` (ver `show_live_projects`).
 pub fn copy_project_link(client: &HteamClient, app: &mut App) {
-    let Some(&id) = app.known_projects.get(app.selected_project_idx) else {
-        return;
+    let id = if app.show_live_projects {
+        let Some(project) = app.live_projects.get(app.selected_live_project_idx) else {
+            return;
+        };
+        project.id
+    } else {
+        let Some(&id) = app.known_projects.get(app.selected_project_idx) else {
+            return;
+        };
+        id
     };
 
     let url = operations::projects::project_url(client, id);
@@ -620,6 +634,66 @@ pub fn copy_project_link(client: &HteamClient, app: &mut App) {
         Ok(()) => app.set_status(format!("{} Link copiado: {}", operations::COPY_ICON, url)),
         Err(e) => app.set_status(format!("Error copiando el link: {}", e)),
     }
+}
+
+/// Trae/oculta el listado en vivo de proyectos ('L') — reutiliza
+/// `operations::projects::list`, la misma función que expone `hteam project
+/// list`, filtrado por lo que haya quedado seleccionado en
+/// `live_projects_status_idx` (por default, "Execution"). Al volver a
+/// presionar 'L' con el listado abierto, lo cierra sin volver a pedirlo.
+pub async fn toggle_live_projects(client: &HteamClient, app: &mut App) {
+    if app.show_live_projects {
+        app.show_live_projects = false;
+        return;
+    }
+    fetch_live_projects(client, app).await;
+    app.show_live_projects = true;
+}
+
+pub fn move_live_project_selection(app: &mut App, delta: i32) {
+    if app.live_projects.is_empty() {
+        return;
+    }
+    let len = app.live_projects.len() as i32;
+    let next = (app.selected_live_project_idx as i32 + delta).clamp(0, len - 1);
+    app.selected_live_project_idx = next as usize;
+}
+
+/// Cicla el filtro de estado del listado en vivo ('h'/'l', mismo orden que
+/// los radios de `/projects/` en el sitio: All → Planning → Execution →
+/// Finished → Cancelled → All) y vuelve a pedir la lista con el nuevo
+/// filtro.
+pub async fn cycle_live_projects_status(client: &HteamClient, app: &mut App, delta: i32) {
+    let len = operations::projects::PROJECT_STATUSES.len() as i32;
+    let next = (app.live_projects_status_idx as i32 + delta).rem_euclid(len);
+    app.live_projects_status_idx = next as usize;
+    fetch_live_projects(client, app).await;
+}
+
+async fn fetch_live_projects(client: &HteamClient, app: &mut App) {
+    let status = operations::projects::PROJECT_STATUSES[app.live_projects_status_idx];
+    match operations::projects::list(client, Some(status)).await {
+        Ok(projects) => {
+            app.live_projects = projects;
+            app.selected_live_project_idx = 0;
+        }
+        Err(e) => app.set_status(format!("Error cargando proyectos: {}", e)),
+    }
+}
+
+/// Carga el proyecto resaltado en el listado en vivo y vuelve a la vista
+/// normal del popup (mismo efecto que elegir uno de `known_projects`: queda
+/// como `active_project` y se agrega al MRU vía `remember_project`).
+pub async fn select_live_project(client: &HteamClient, app: &mut App) {
+    let Some(id) = app
+        .live_projects
+        .get(app.selected_live_project_idx)
+        .map(|p| p.id)
+    else {
+        return;
+    };
+    load_project(client, app, id).await;
+    app.show_live_projects = false;
 }
 
 async fn load_project(client: &HteamClient, app: &mut App, id: u64) {

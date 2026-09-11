@@ -10,8 +10,8 @@ pub mod update;
 use crate::config::Config;
 use crate::models::{
     BoardEntry, BoardsResponse, Card, CardDetail, CheckInResult, Comment, CommentsResponse,
-    DailyWorkEntry, FollowUp, Label, List, ProjectMilestone, ProjectTasksResponse, Reminder,
-    UserSuggestion, WorkShiftResume, WorkingOnStatus,
+    DailyWorkEntry, FollowUp, Label, List, ProjectMilestone, ProjectSummary, ProjectTasksResponse,
+    ProjectsResponse, Reminder, UserSuggestion, WorkShiftResume, WorkingOnStatus,
 };
 
 const BASE_URL: &str = "https://hteam.mx/api";
@@ -1442,6 +1442,40 @@ impl HteamClient {
         }
 
         let data: BoardsResponse = response.json().await?;
+        Ok(data.data)
+    }
+
+    /// Obtiene los proyectos en `status` (default "Execution", igual que el
+    /// filtro por defecto de `/projects/` en el sitio) desde el endpoint
+    /// datatables — descubierto en el JS embebido de esa página
+    /// (`ajax_api()` arma `/api/project-new/care/projects/?format=datatables&status=...`).
+    pub async fn get_projects(&self, status: Option<&str>) -> Result<Vec<ProjectSummary>> {
+        let config = self.config.lock().await;
+        let headers = self.build_headers(&config)?;
+        drop(config);
+
+        let url = format!("{}/project-new/care/projects/", self.api_base_url);
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers)
+            .query(&[
+                ("format", "datatables"),
+                ("status", status.unwrap_or("Execution")),
+            ])
+            .send()
+            .await
+            .context("Error al obtener proyectos")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+
+        let data: ProjectsResponse = response.json().await?;
         Ok(data.data)
     }
 
