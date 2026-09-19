@@ -1,0 +1,38 @@
+name: Item de roadmap
+description: Una entrada del roadmap publico (se muestra en la web).
+title: "[roadmap] <Nombre>"
+labels: ["roadmap"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        - El primer parrafo del **Resumen** se muestra como texto plano en la web.
+        - Cada checkbox de **Tareas** se lista con su estado.
+        - Estado: agrega una etiqueta `roadmap:working`, `roadmap:planned` o `roadmap:idea`
+          (sin etiqueta = "planeado"). Cierra el issue cuando este hecho.
+        - Version: asigna un **milestone** (`v2.0.0`, etc.) para agruparlo por version en la web.
+        - Item activo ("ahora"): etiqueta `roadmap:now` o autoasignate el issue.
+        - Todo lo que escribas después de una línea `===` queda solo en el issue: nunca se manda a la página de roadmap.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Resumen
+      description: Que es y por que. La primera linea se muestra en la web.
+    validations:
+      required: true
+  - type: textarea
+    id: tasks
+    attributes:
+      label: Tareas
+      value: |
+        - [ ] Primera tarea
+        - [ ] Segunda tarea
+  - type: textarea
+    id: details
+    attributes:
+      label: Detalle interno (opcional)
+      description: Notas o contexto interno. No se muestra en /roadmap.
+      value: |
+        ===
+    validations:
+      required: false
