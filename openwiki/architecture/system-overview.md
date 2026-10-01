@@ -1,7 +1,8 @@
 ---
-type: "Reference"
-title: "System overview"
-openwiki_generated: true
+type: Reference
+title: System overview
+description: Architecture overview for the Hteam Rust binary. Defines the ownership boundaries between CLI, REPL, TUI, MCP, operations, client, config, and models, and explains the request path and session lifecycle.
+tags: [architecture, delivery, client, operations, config, models]
 verified:
   - by: openwiki/0.4.3
     at: 2026-08-29T04:08:29.740Z
@@ -38,9 +39,10 @@ sources:
     resource: repo://src/tui/events.rs
   - id: openwiki-source-344d0ae26e653accaaef1142
     resource: repo://src/tui/mod.rs
-generated: { by: "openwiki/0.4.3", at: "2026-08-29T04:08:29.740Z" }
+generated: { by: openwiki/0.4.3, at: 2026-08-29T04:08:29.740Z }
 ---
 
+# System overview
 
 The `hteam` Tokio binary has one application core shared by several terminal-facing delivery mechanisms. `main` starts the CLI dispatcher; its `interactive`, `tui`, and `mcp` commands select the REPL, visual terminal UI, and stdio MCP server respectively. These are alternative **presentation adapters**, not separate implementations of Hteam behavior. [Quickstart](/openwiki/quickstart.md) describes the user-facing commands; [terminal experiences](/openwiki/operations/terminal-experiences.md) describes the individual surfaces.
 

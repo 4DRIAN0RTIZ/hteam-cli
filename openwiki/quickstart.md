@@ -1,7 +1,8 @@
 ---
-type: "Reference"
-title: "Hteam CLI: guía de orientación"
-openwiki_generated: true
+type: Reference
+title: Hteam CLI orientation
+description: Entry page for the Hteam Rust command-line application. Explains the executable surfaces, the ownership boundaries between adapters, operations, client, config, and models, and the required workflow before and after making changes.
+tags: [cli, architecture, workflow, verification, hteam]
 verified:
   - by: openwiki/0.4.3
     at: 2026-08-29T04:08:29.740Z
@@ -36,11 +37,10 @@ sources:
     resource: repo://src/operations/session.rs
   - id: openwiki-source-344d0ae26e653accaaef1142
     resource: repo://src/tui/mod.rs
-generated: { by: "openwiki/0.4.3", at: "2026-08-29T04:08:29.740Z" }
+generated: { by: openwiki/0.4.3, at: 2026-08-29T04:08:29.740Z }
 ---
 
-
-# Hteam CLI: guía de orientación
+# Hteam CLI orientation
 
 `hteam` is a Rust command-line application for Hteam boards. The executable is the `hteam` package binary: `src/main.rs` starts Tokio and calls `cli::run()`. Clap then selects the conventional command surface or one of three long-lived adapters: `hteam interactive` (REPL), `hteam tui` (Kanban terminal UI), or `hteam mcp` (an MCP server on standard I/O). These are alternate ways to use one application core, not separate products.
 
