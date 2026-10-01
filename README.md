@@ -316,4 +316,4 @@ src/
 
 ## Licencia
 
-MIT
+GNU General Public License v3.0 (GPL-3.0-only). Consulta [`LICENSE`](LICENSE) para el texto completo.

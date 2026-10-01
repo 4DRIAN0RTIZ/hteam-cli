@@ -1,0 +1,38 @@
+name: Item de roadmap
+description: Una entrada del roadmap público de hteam-cli.
+title: "[roadmap] <Nombre>"
+labels: ["roadmap"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        - El primer párrafo del **Resumen** se muestra como texto plano en la web.
+        - Cada checkbox de **Tareas** se lista con su estado.
+        - Estado: agrega una etiqueta `roadmap:working`, `roadmap:planned` o `roadmap:idea`
+          (sin etiqueta = "planeado"). Cierra el issue cuando esté hecho.
+        - Item activo ("ahora"): etiqueta `roadmap:now` o autoasígnate el issue.
+        - Milestone: úsalo como campo nativo de GitHub, no lo metas en el título.
+        - Todo lo que escribas después de una línea `===` queda solo en el issue.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Resumen
+      description: Qué es y por qué. La primera línea se muestra en la web.
+    validations:
+      required: true
+  - type: textarea
+    id: tasks
+    attributes:
+      label: Tareas
+      value: |
+        - [ ] Primera tarea
+        - [ ] Segunda tarea
+  - type: textarea
+    id: details
+    attributes:
+      label: Detalle interno (opcional)
+      description: Notas o contexto interno. No se muestra en el roadmap.
+      value: |
+        ===
+    validations:
+      required: false
