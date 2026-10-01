@@ -418,7 +418,10 @@ impl HteamClient {
     /// `csrfmiddlewaretoken`, sin más campos.
     async fn post_follow_up_action(&self, follow_up_id: u64, action: &str) -> Result<()> {
         let config = self.config.lock().await;
-        let url = format!("{}/followup/{}/{}", self.site_base_url, follow_up_id, action);
+        let url = format!(
+            "{}/followup/{}/{}",
+            self.site_base_url, follow_up_id, action
+        );
         let headers = self.build_headers(&config)?;
         let csrf = config.auth.csrf_token.as_deref().unwrap_or("");
         let body = format!("csrfmiddlewaretoken={}", urlencoding::encode(csrf));

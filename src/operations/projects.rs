@@ -73,7 +73,10 @@ mod tests {
         assert_eq!(projects[0].id, 378);
         assert_eq!(projects[0].name, "Proyecto X");
         assert_eq!(projects[0].progress, 97.46);
-        assert_eq!(projects[0].due_date.as_deref(), Some("2025-06-06T00:00:00-06:00"));
+        assert_eq!(
+            projects[0].due_date.as_deref(),
+            Some("2025-06-06T00:00:00-06:00")
+        );
         assert_eq!(projects[0].members, vec![114, 118]);
     }
 
@@ -82,7 +85,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _m = server
             .mock("GET", "/project-new/care/projects/")
-            .match_query(Matcher::UrlEncoded("status".to_string(), "Planning".to_string()))
+            .match_query(Matcher::UrlEncoded(
+                "status".to_string(),
+                "Planning".to_string(),
+            ))
             .with_status(200)
             .with_body(r#"{"data":[]}"#)
             .create_async()

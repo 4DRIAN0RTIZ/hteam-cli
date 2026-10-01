@@ -335,7 +335,11 @@ async fn resolve_current_follow_up(client: &HteamClient, app: &mut App, complete
             refresh_current_list(client, app).await;
         }
         Err(e) => {
-            let verb = if complete { "completando" } else { "cancelando" };
+            let verb = if complete {
+                "completando"
+            } else {
+                "cancelando"
+            };
             app.set_status(format!("Error {} seguimiento: {}", verb, e));
         }
     }
