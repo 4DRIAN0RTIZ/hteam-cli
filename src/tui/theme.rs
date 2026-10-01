@@ -313,7 +313,11 @@ impl Theme {
         let s = status.to_lowercase();
         if s.contains("expired") || s.contains("expirad") {
             self.danger
-        } else if s.contains("soon") || s.contains("expirar") || s.contains("deviat") || s.contains("desviad") {
+        } else if s.contains("soon")
+            || s.contains("expirar")
+            || s.contains("deviat")
+            || s.contains("desviad")
+        {
             self.warning
         } else if s.contains("on time") || s.contains("en tiempo") {
             self.success

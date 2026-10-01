@@ -18,7 +18,11 @@ pub fn draw(frame: &mut Frame, app: &App) {
     // terminal en vez del tema activo (ver `Style::patch`: un widget sin
     // `.bg()`/`.fg()` propios no toca lo que ya haya en esa celda).
     frame.render_widget(
-        Block::default().style(Style::default().bg(app.theme.background).fg(app.theme.foreground)),
+        Block::default().style(
+            Style::default()
+                .bg(app.theme.background)
+                .fg(app.theme.foreground),
+        ),
         area,
     );
     let rows = Layout::vertical([
@@ -898,14 +902,19 @@ fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
             None
         };
 
-        // 4 filas = 2 de borde + 2 de contenido (nombre, labels/reloj de
+        // Altura mínima: 2 de borde + 2 de contenido (nombre, labels/reloj de
         // seguimiento) — con 3 la segunda línea de texto nunca se pintaba
         // (Borders::ALL ya consume 2 de las 3 filas), así que las labels y el
         // reloj de seguimiento quedaban invisibles incluso antes de esta
-        // feature.
-        let card_h: u16 = 4;
+        // feature. Cuando el nombre envuelve a más de 1 línea (título largo),
+        // esas líneas extra se restan del espacio de la línea de labels/reloj
+        // si la altura se queda fija en 4 — por eso se calcula por card según
+        // cuántas líneas ocupa el nombre al envolver.
+        let title_width = inner.width.saturating_sub(2);
+        let mut y = inner.y;
         for (ci, card) in cards.into_iter().flatten().enumerate() {
-            let y = inner.y + (ci as u16) * card_h;
+            let title_rows = wrapped_line_count(&card.name, title_width);
+            let card_h: u16 = title_rows + 1 + 2;
             if y + card_h > inner.y + inner.height {
                 break;
             }
@@ -938,7 +947,10 @@ fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
                     Style::default().fg(color),
                 ));
             }
-            let text = Text::from(vec![Line::from(card.name.as_str()), Line::from(second_line)]);
+            let text = Text::from(vec![
+                Line::from(card.name.as_str()),
+                Line::from(second_line),
+            ]);
 
             let is_selected = selected_idx == Some(ci);
             let body_style = if is_selected {
@@ -963,6 +975,7 @@ fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
                         .border_style(border_style),
                 );
             frame.render_widget(p, rect);
+            y += card_h;
         }
     }
 }
