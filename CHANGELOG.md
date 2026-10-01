@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Bug Fixes
+- *(tui)* Size board cards by wrapped title lines
+
+
 ### Features
 - *(cards)* Add copy-link command for cards and projects
 - *(theme)* Add custom theme files with full background/foreground control
