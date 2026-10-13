@@ -83,7 +83,7 @@ impl DetailField {
             DetailField::Name => "texto",
             DetailField::Description => "texto (Ctrl+S guarda)",
             DetailField::Responsible => "username",
-            DetailField::Priority => "1 alta · 2 media · 3 baja",
+            DetailField::Priority => "1 muy baja … 5 muy alta",
             DetailField::Dependence => "j/k elegir · Enter confirmar · / filtrar · Esc",
 
             DetailField::StartDate | DetailField::DueDate => "YYYY-MM-DD",

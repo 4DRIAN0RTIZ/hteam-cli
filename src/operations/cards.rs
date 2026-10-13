@@ -79,15 +79,59 @@ pub async fn card_detail(client: &HteamClient, card_id: u64) -> Result<CardDetai
 /// `estimated_time` / `time_spent` / `labels_list` / object responsible.
 pub async fn card_detail_enriched(client: &HteamClient, card_id: u64) -> Result<CardDetail> {
     let mut detail = client.get_card_detail(card_id).await?;
-    let board_id = match client.get_board_id().await {
-        Ok(id) => id,
-        Err(_) => return Ok(detail),
-    };
-    let Ok(raw) = client.get_board_card(board_id, card_id).await else {
-        return Ok(detail);
-    };
-    merge_board_card_into_detail(&mut detail, &raw);
+    if let Ok(board_id) = client.get_board_id().await {
+        if let Ok(raw) = client.get_board_card(board_id, card_id).await {
+            merge_board_card_into_detail(&mut detail, &raw);
+        }
+    }
+    // Priority (and the bare dependence id) live on the HTML edit form, not JSON.
+    if let Ok(board_number) = client.operation_board_number().await {
+        if let Ok(form) = client.get_task_edit_form(board_number, card_id).await {
+            merge_edit_form_into_detail(&mut detail, &form);
+        }
+    }
     Ok(detail)
+}
+
+/// Merge fields that only the HTML edit form exposes reliably.
+pub fn merge_edit_form_into_detail(
+    detail: &mut CardDetail,
+    form: &crate::client::TaskEditFormBaseline,
+) {
+    if !form.priority.is_empty() {
+        if let Ok(n) = form.priority.parse::<u64>() {
+            detail.priority = Some(serde_json::json!(n));
+        } else {
+            detail.priority = Some(serde_json::json!(form.priority.clone()));
+        }
+    }
+    if detail
+        .time_estimated
+        .as_ref()
+        .map(|s| s.trim().is_empty())
+        .unwrap_or(true)
+        && !form.time_estimated.trim().is_empty()
+    {
+        detail.time_estimated = Some(form.time_estimated.clone());
+    }
+}
+
+/// Human labels for Hteam priority select (1=very low … 5=very high).
+pub fn priority_label(value: &serde_json::Value) -> String {
+    let n = match value {
+        serde_json::Value::Number(n) => n.as_u64(),
+        serde_json::Value::String(s) => s.trim().parse().ok(),
+        _ => None,
+    };
+    match n {
+        Some(1) => "1 · Muy baja".into(),
+        Some(2) => "2 · Baja".into(),
+        Some(3) => "3 · Normal".into(),
+        Some(4) => "4 · Alta".into(),
+        Some(5) => "5 · Muy alta".into(),
+        Some(other) => other.to_string(),
+        None => value.as_str().unwrap_or("-").to_string(),
+    }
 }
 
 fn merge_board_card_into_detail(detail: &mut CardDetail, raw: &serde_json::Value) {
@@ -1259,6 +1303,41 @@ mod tests {
         assert_eq!(
             responsible_display(detail.responsible.as_ref().unwrap()).as_deref(),
             Some("adrian.ortiz")
+        );
+    }
+
+    #[test]
+    fn merge_edit_form_sets_priority_from_form() {
+        let mut detail = CardDetail {
+            id: 1,
+            name: "t".into(),
+            description: None,
+            status: None,
+            labels: vec![],
+            list: None,
+            number: None,
+            created_at: None,
+            updated_at: None,
+            time_estimated: None,
+            time_spend: None,
+            start_date: None,
+            due_date: None,
+            dependence: None,
+            responsible: None,
+            priority: None,
+            closed: None,
+        };
+        let form = crate::client::TaskEditFormBaseline {
+            priority: "5".into(),
+            time_estimated: "1h 30m".into(),
+            ..Default::default()
+        };
+        merge_edit_form_into_detail(&mut detail, &form);
+        assert_eq!(detail.priority, Some(serde_json::json!(5)));
+        assert_eq!(detail.time_estimated.as_deref(), Some("1h 30m"));
+        assert_eq!(
+            priority_label(detail.priority.as_ref().unwrap()),
+            "5 · Muy alta"
         );
     }
 
