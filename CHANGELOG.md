@@ -39,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(cards)* Add close and reopen via task API families
 - *(cards)* Edit start and due dates
 - *(cards)* Edit start and due dates
+- *(cards)* Record estimates and spent time
+- *(cards)* Record estimates and spent time
 
 ## [0.9.0] - 2026-09-11
 
