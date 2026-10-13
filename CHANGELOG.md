@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(tui)* Load board lists in parallel without dropping failed data
 - *(tui)* Show changelog and update-available popups on startup
 - *(operations)* Add shared card search and filter layer
+- *(cards)* Expose shared search on CLI and MCP
 
 ## [0.9.0] - 2026-09-11
 
