@@ -70,11 +70,8 @@ pub struct Card {
     #[serde(rename = "labels_list")]
     #[tabled(display_with = "display_labels")]
     pub labels: Vec<Label>,
-    #[expect(
-        dead_code,
-        reason = "kept for API compatibility with Hteam card payloads"
-    )]
-    #[serde(skip)]
+    /// Visible task number on the board (e.g. 5 in "#5 - Title").
+    #[serde(default)]
     #[tabled(skip)]
     pub number: Option<u64>,
     #[expect(

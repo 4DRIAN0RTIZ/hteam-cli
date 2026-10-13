@@ -317,6 +317,14 @@ async fn run_loop(
                     KeyCode::Char('j') | KeyCode::Down => events::detail_move_field(app, 1),
                     KeyCode::Char('k') | KeyCode::Up => events::detail_move_field(app, -1),
                     KeyCode::Char('e') => events::start_edit_detail_field(app),
+                    KeyCode::Enter => {
+                        use app::DetailField;
+                        let field = DetailField::ALL
+                            [app.task_detail_field_idx.min(DetailField::ALL.len() - 1)];
+                        if field == DetailField::Dependence {
+                            events::jump_to_dependence(client.clone(), app, &jobs);
+                        }
+                    }
                     KeyCode::Char('?') => events::open_help(app, HelpContext::TaskDetail),
                     _ => {}
                 }

@@ -275,9 +275,12 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
                 "Detalle de task",
                 "  j/k             cambiar campo",
                 "  e               editar el campo resaltado",
+                "  Enter           en Depende de: abrir esa task",
                 "  Enter / Ctrl+S  guardar (en modo edición)",
                 "  Esc             cancelar edición o cerrar",
                 "  q               cerrar",
+                "",
+                "Depende de (editar): id, #número visible o nombre único del board",
             ],
         ),
         HelpContext::BoardSwitch => (
@@ -633,7 +636,7 @@ fn task_detail_lines<'a>(app: &'a App, detail: &'a crate::models::CardDetail) ->
     if !app.editing_detail_field {
         lines.push(Line::from(""));
         lines.push(Line::from(Span::styled(
-            "e editar campo · j/k mover · Esc cerrar",
+            "e editar · Enter en Depende de = saltar · j/k · Esc",
             Style::default().fg(app.theme.muted),
         )));
     }

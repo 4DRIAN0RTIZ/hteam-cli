@@ -132,6 +132,8 @@ pub struct App {
     pub task_detail_error: Option<String>,
     /// Human label for depends-on (`#n name`) when resolved.
     pub task_detail_dependence_label: Option<String>,
+    /// Internal task id for depends-on (jump / edit), when resolved from board.
+    pub task_detail_dependence_id: Option<u64>,
     pub task_detail_field_idx: usize,
     pub task_detail_scroll: Scroll,
     /// Editing one field inside the detail popup.
@@ -349,6 +351,7 @@ impl App {
             task_detail_list_id: None,
             task_detail_error: None,
             task_detail_dependence_label: None,
+            task_detail_dependence_id: None,
             task_detail_field_idx: 0,
             task_detail_scroll: Scroll::default(),
             editing_detail_field: false,
