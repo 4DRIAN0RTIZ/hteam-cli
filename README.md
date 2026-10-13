@@ -68,7 +68,7 @@ hteam cards update-desc 12345 --description "Nueva descripción"
 
 # Actualizar campos completos (uno o más)
 hteam cards update 12345 --name "Nuevo nombre"
-hteam cards update 12345 --priority 1          # 1=alta 2=media 3=baja
+hteam cards update 12345 --priority 4          # 1=muy baja … 5=muy alta (form Hteam)
 hteam cards update 12345 --responsible usuario
 hteam cards update 12345 --name "X" --description "Y" --priority 2
 
