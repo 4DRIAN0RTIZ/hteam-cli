@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(cards)* Expose shared search on CLI and MCP
 - *(tui)* Filter board cards with / search
 - *(tui)* Task detail popup with field edit
+- *(tui)* Show and edit task dependence in detail
 
 ## [0.9.0] - 2026-09-11
 
