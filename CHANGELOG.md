@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 - *(openwiki)* Refresh architecture and quickstart pages
 - *(client)* Translate cards pagination comment to English
+- *(openwiki)* Document HTML task edit form contract
 
 
 ### Features
