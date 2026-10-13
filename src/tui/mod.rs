@@ -124,14 +124,18 @@ pub async fn run(board: Option<u64>) -> Result<()> {
         working_hours,
         theme,
     );
-    if let Some(status) = update_notice().await {
-        app.set_status(status);
-    }
+    let notice = update_notice().await;
     net::refresh_all_blocking(&client, &mut app).await;
     // Después del refresh a propósito: limpia el status al terminar si todo
-    // cargó bien, así que cualquier mensaje puesto antes (incluido el de
-    // update_notice, arriba) se pierde. Un tema personalizado roto es más
-    // importante que eso — que sobreviva.
+    // cargó bien, así que cualquier mensaje puesto antes se pierde. Reaplicar
+    // avisos de arranque acá. Un tema personalizado roto gana sobre el footer
+    // de "nueva versión"; el changelog va en popup, no al footer.
+    if let Some(text) = notice.changelog {
+        events::open_startup_changelog(&mut app, text);
+    }
+    if let Some(info) = notice.update {
+        events::open_update_available(&mut app, info);
+    }
     if let Some(warning) = theme_warning {
         app.set_status(warning);
     }
@@ -147,31 +151,41 @@ pub async fn run(board: Option<u64>) -> Result<()> {
     result
 }
 
+/// Result of the silent startup update check: full changelog and/or a newer
+/// release notice for dedicated TUI popups.
+struct StartupUpdateNotice {
+    changelog: Option<String>,
+    update: Option<app::UpdateAvailableInfo>,
+}
+
 /// Chequea (con el mismo cache TTL que `hteam` usa en CLI) si hay una
 /// versión nueva publicada en GitHub y si corresponde mostrar el changelog
-/// post-actualización, devolviendo un mensaje corto para el footer del TUI
-/// (`app.set_status`) en vez del changelog completo — no hay espacio para
-/// volcarlo entero en una línea de estado. Usa su propio `Config::load()`/
-/// `save()`, independiente de `session.config`, mismo patrón que el popup
-/// de objetivos semanales. Cualquier error (config corrupta, sin red) se
-/// ignora en silencio: nunca debe impedir que el TUI arranque.
-async fn update_notice() -> Option<String> {
+/// post-actualización. Ambos van a popups de la TUI (changelog primero;
+/// Update Available al cerrarlo o solo). Usa su propio `Config::load()`/
+/// `save()`. Cualquier error se ignora en silencio: nunca debe impedir que
+/// el TUI arranque.
+async fn update_notice() -> StartupUpdateNotice {
     use crate::config::Config;
 
-    let mut config = Config::load().ok()?;
+    let empty = StartupUpdateNotice {
+        changelog: None,
+        update: None,
+    };
+    let mut config = match Config::load() {
+        Ok(c) => c,
+        Err(_) => return empty,
+    };
     let mut dirty = false;
-    let mut parts: Vec<String> = Vec::new();
 
-    if operations::update::resolve_startup_changelog(
+    let changelog = operations::update::resolve_startup_changelog(
         &mut config,
         operations::update::EMBEDDED_CHANGELOG,
-    )
-    .is_some()
-    {
-        parts.push("hteam se actualizó, ver CHANGELOG.md".to_string());
+    );
+    if changelog.is_some() {
         dirty = true;
     }
 
+    let mut update = None;
     if let Ok(result) =
         operations::update::check_for_update(&mut config, crate::client::update::GITHUB_API_BASE)
             .await
@@ -179,10 +193,10 @@ async fn update_notice() -> Option<String> {
         dirty = dirty || !result.from_cache;
 
         if result.update_available {
-            parts.push(format!(
-                "nueva versión {} disponible, corré `hteam update`",
-                result.latest_version
-            ));
+            update = Some(app::UpdateAvailableInfo {
+                current_version: result.current_version,
+                latest_version: result.latest_version,
+            });
         }
     }
 
@@ -190,11 +204,7 @@ async fn update_notice() -> Option<String> {
         let _ = config.save();
     }
 
-    if parts.is_empty() {
-        None
-    } else {
-        Some(parts.join(" · "))
-    }
+    StartupUpdateNotice { changelog, update }
 }
 
 /// How long a footer confirmation/error message (e.g. "Descripción
@@ -234,6 +244,30 @@ async fn run_loop(
                 KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('?') => events::close_help(app),
                 KeyCode::Char('j') | KeyCode::Down => app.help_scroll.by(1),
                 KeyCode::Char('k') | KeyCode::Up => app.help_scroll.by(-1),
+                _ => {}
+            }
+            continue;
+        }
+
+        if app.show_changelog {
+            match key.code {
+                KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter => {
+                    events::close_startup_changelog(app)
+                }
+                KeyCode::Char('c') => events::copy_changelog_link(app),
+                KeyCode::Char('j') | KeyCode::Down => app.changelog_scroll.by(1),
+                KeyCode::Char('k') | KeyCode::Up => app.changelog_scroll.by(-1),
+                _ => {}
+            }
+            continue;
+        }
+
+        if app.show_update_available {
+            match key.code {
+                KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter => {
+                    events::close_update_available(app)
+                }
+                KeyCode::Char('c') => events::copy_releases_link(app),
                 _ => {}
             }
             continue;

@@ -21,6 +21,13 @@ use crate::config::Config;
 /// released trae su propio historial hasta esa versión.
 pub const EMBEDDED_CHANGELOG: &str = include_str!("../../CHANGELOG.md");
 
+/// Public HTML changelog (full history). TUI copies this on 'c' from the
+/// post-update popup so the user can open it outside the terminal.
+pub const CHANGELOG_URL: &str = "https://github.com/4DRIAN0RTIZ/hteam-cli/blob/main/CHANGELOG.md";
+
+/// Releases page — useful when a newer version is available.
+pub const RELEASES_URL: &str = "https://github.com/4DRIAN0RTIZ/hteam-cli/releases";
+
 /// Resultado de comparar la versión actual contra la última conocida.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UpdateCheckResult {
