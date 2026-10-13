@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(tui)* Load times and labels from board-card into detail
 - *(tui)* Scroll list columns so the selected card stays visible
 - *(tui)* Show depends-on display string from task detail API
+- *(client)* Truncate start_date on task edit form
 
 
 ### Documentation
