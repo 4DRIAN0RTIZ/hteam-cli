@@ -7,8 +7,8 @@ use tokio::task::JoinSet;
 
 use crate::client::HteamClient;
 use crate::models::{
-    BoardEntry, Card, Comment, FollowUp, List, ProjectMilestone, ProjectSummary, ProjectTask,
-    Reminder, UserSuggestion, WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
+    BoardEntry, Card, CardDetail, Comment, FollowUp, List, ProjectMilestone, ProjectSummary,
+    ProjectTask, Reminder, UserSuggestion, WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
 };
 use crate::operations;
 
@@ -134,6 +134,19 @@ pub enum JobOutcome {
         id: u64,
         result: Result<String, String>,
     },
+    TaskDetailLoaded {
+        id: u64,
+        card_id: u64,
+        result: Result<CardDetail, String>,
+    },
+    TaskDetailSaved {
+        id: u64,
+        card_id: u64,
+        list_id: Option<u64>,
+        board_number: u64,
+        result: Result<CardDetail, String>,
+        cards: Option<Result<Vec<Card>, String>>,
+    },
     BoardsLoaded {
         id: u64,
         current_board: u64,
@@ -234,6 +247,27 @@ async fn fetch_list_cards_parallel(
         }
     }
     cards
+}
+
+fn enrich_detail_responsible(app: &App, card_id: u64, mut detail: CardDetail) -> CardDetail {
+    let bare_id = matches!(
+        detail.responsible.as_ref(),
+        Some(serde_json::Value::Number(_)) | Some(serde_json::Value::String(_))
+    ) || detail.responsible.is_none();
+    if !bare_id {
+        return detail;
+    }
+    for cards in app.cards_by_list.values() {
+        if let Some(card) = cards.iter().find(|c| c.id == card_id) {
+            if let Some(ref resp) = card.responsible {
+                if matches!(resp, serde_json::Value::Object(_)) {
+                    detail.responsible = Some(resp.clone());
+                }
+            }
+            break;
+        }
+    }
+    detail
 }
 
 pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
@@ -605,6 +639,64 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
                     Err(e) => app.set_status(format!("Error copiando el link: {}", e)),
                 },
                 Err(e) => app.set_status(format!("Error obteniendo el link: {}", e)),
+            }
+        }
+        JobOutcome::TaskDetailLoaded {
+            id,
+            card_id,
+            result,
+        } => {
+            if app.requests.task_detail != id || app.task_detail_card_id != Some(card_id) {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            match result {
+                Ok(detail) => {
+                    // Prefer list-card responsible object when detail only has a bare id.
+                    let detail = enrich_detail_responsible(app, card_id, detail);
+                    app.task_detail = Some(detail);
+                    app.task_detail_error = None;
+                    app.clear_status();
+                }
+                Err(e) => {
+                    app.task_detail = None;
+                    app.task_detail_error = Some(e.clone());
+                    app.set_status(format!("Error cargando detalle: {}", e));
+                }
+            }
+        }
+        JobOutcome::TaskDetailSaved {
+            id,
+            card_id,
+            list_id,
+            board_number,
+            result,
+            cards,
+        } => {
+            if app.requests.task_detail != id {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            match result {
+                Ok(detail) => {
+                    let detail = enrich_detail_responsible(app, card_id, detail);
+                    if app.show_task_detail && app.task_detail_card_id == Some(card_id) {
+                        app.task_detail = Some(detail);
+                        app.task_detail_error = None;
+                    }
+                    if board_number == app.board_number {
+                        if let (Some(lid), Some(Ok(list_cards))) = (list_id, cards) {
+                            app.cards_by_list.insert(lid, list_cards);
+                            app.clamp_card_selection();
+                        }
+                    }
+                    app.editing_detail_field = false;
+                    app.detail_edit_input.clear();
+                    app.set_status("Detalle actualizado.");
+                }
+                Err(e) => app.set_status(format!("Error guardando: {}", e)),
             }
         }
         JobOutcome::BoardsLoaded {

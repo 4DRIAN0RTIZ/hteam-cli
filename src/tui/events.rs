@@ -6,7 +6,7 @@ use anyhow::Result;
 use crate::client::HteamClient;
 use crate::operations;
 
-use super::app::{App, HelpContext, UpdateAvailableInfo};
+use super::app::{App, DetailField, HelpContext, UpdateAvailableInfo};
 use super::net::{self, JobOutcome, Jobs, WeeklyObjectivesLoaded};
 
 /// Abre el popup de ayuda mostrando solo la sección de `ctx` — ver
@@ -618,6 +618,254 @@ pub fn submit_comment(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
             id,
             card_id,
             result,
+        }
+    });
+}
+
+/// Open task detail popup (`d`) and load full detail in the background.
+pub fn open_task_detail(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    let Some(card) = app.current_card().cloned() else {
+        return;
+    };
+    let list_id = app.current_list().map(|l| l.id);
+    app.show_task_detail = true;
+    app.task_detail = None;
+    app.task_detail_error = None;
+    app.task_detail_card_id = Some(card.id);
+    app.task_detail_list_id = list_id;
+    app.task_detail_field_idx = 0;
+    app.task_detail_scroll.reset();
+    app.editing_detail_field = false;
+    app.detail_edit_input.clear();
+
+    let id = app.requests.bump_task_detail();
+    let card_id = card.id;
+    app.begin_busy("Cargando detalle...");
+    jobs.spawn(async move {
+        let result = operations::cards::card_detail(&client, card_id)
+            .await
+            .map_err(|e| e.to_string());
+        JobOutcome::TaskDetailLoaded {
+            id,
+            card_id,
+            result,
+        }
+    });
+}
+
+pub fn close_task_detail(app: &mut App) {
+    app.show_task_detail = false;
+    app.task_detail = None;
+    app.task_detail_card_id = None;
+    app.task_detail_list_id = None;
+    app.task_detail_error = None;
+    app.editing_detail_field = false;
+    app.detail_edit_input.clear();
+    let _ = app.requests.bump_task_detail();
+}
+
+pub fn detail_move_field(app: &mut App, delta: i32) {
+    if app.editing_detail_field {
+        return;
+    }
+    let len = DetailField::ALL.len() as i32;
+    let next = (app.task_detail_field_idx as i32 + delta).rem_euclid(len);
+    app.task_detail_field_idx = next as usize;
+}
+
+pub fn start_edit_detail_field(app: &mut App) {
+    let Some(detail) = app.task_detail.as_ref() else {
+        return;
+    };
+    let field = DetailField::ALL[app.task_detail_field_idx.min(DetailField::ALL.len() - 1)];
+    let seed = match field {
+        DetailField::Name => detail.name.clone(),
+        DetailField::Description => detail.description.clone().unwrap_or_default(),
+        DetailField::Responsible => operations::cards::responsible_display(
+            detail
+                .responsible
+                .as_ref()
+                .unwrap_or(&serde_json::Value::Null),
+        )
+        .unwrap_or_default(),
+        DetailField::Priority => detail
+            .priority
+            .as_ref()
+            .map(|v| match v {
+                serde_json::Value::String(s) => s.clone(),
+                other => other.to_string(),
+            })
+            .unwrap_or_default(),
+        DetailField::StartDate => detail
+            .start_date
+            .clone()
+            .unwrap_or_default()
+            .chars()
+            .take(10)
+            .collect(),
+        DetailField::DueDate => detail
+            .due_date
+            .clone()
+            .unwrap_or_default()
+            .chars()
+            .take(10)
+            .collect(),
+        DetailField::TimeEstimated => detail.time_estimated.clone().unwrap_or_default(),
+        DetailField::TimeSpent => detail.time_spend.clone().unwrap_or_default(),
+    };
+    app.detail_edit_input.set(seed);
+    app.editing_detail_field = true;
+}
+
+pub fn cancel_edit_detail_field(app: &mut App) {
+    app.editing_detail_field = false;
+    app.detail_edit_input.clear();
+}
+
+pub fn detail_edit_push(app: &mut App, c: char) {
+    if c.is_control() {
+        return;
+    }
+    app.detail_edit_input.push(c);
+}
+
+pub fn detail_edit_backspace(app: &mut App) {
+    app.detail_edit_input.backspace();
+}
+
+/// Save the field being edited and refresh detail (+ list cards when possible).
+pub fn submit_detail_field(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    let Some(card_id) = app.task_detail_card_id else {
+        cancel_edit_detail_field(app);
+        return;
+    };
+    let field = DetailField::ALL[app.task_detail_field_idx.min(DetailField::ALL.len() - 1)];
+    let value = app.detail_edit_input.as_str().trim().to_string();
+    let list_id = app.task_detail_list_id;
+    let board_number = app.board_number;
+    let id = app.requests.bump_task_detail();
+    app.editing_detail_field = false;
+    app.begin_busy(format!("Guardando {}...", field.label()));
+
+    jobs.spawn(async move {
+        let save = async {
+            match field {
+                DetailField::Name => {
+                    operations::cards::update_card(
+                        &client,
+                        card_id,
+                        board_number,
+                        Some(&value),
+                        None,
+                        None,
+                        None,
+                    )
+                    .await?;
+                }
+                DetailField::Description => {
+                    operations::cards::update_description(&client, card_id, &value).await?;
+                }
+                DetailField::Responsible => {
+                    operations::cards::update_card(
+                        &client,
+                        card_id,
+                        board_number,
+                        None,
+                        None,
+                        None,
+                        Some(&value),
+                    )
+                    .await?;
+                }
+                DetailField::Priority => {
+                    operations::cards::update_card(
+                        &client,
+                        card_id,
+                        board_number,
+                        None,
+                        None,
+                        Some(&value),
+                        None,
+                    )
+                    .await?;
+                }
+                DetailField::StartDate => {
+                    let bid = operations::cards::board_id(&client).await?;
+                    operations::cards::set_date(&client, bid, card_id, "start_date", &value)
+                        .await?;
+                }
+                DetailField::DueDate => {
+                    let bid = operations::cards::board_id(&client).await?;
+                    operations::cards::set_date(&client, bid, card_id, "due_date", &value).await?;
+                }
+                DetailField::TimeEstimated => {
+                    let bid = operations::cards::board_id(&client).await?;
+                    let times =
+                        operations::cards::set_time(&client, bid, card_id, "estimate", &value)
+                            .await?;
+                    let mut detail = operations::cards::card_detail(&client, card_id).await?;
+                    if let Some(est) = times.estimated_time {
+                        detail.time_estimated = Some(est);
+                    }
+                    if let Some(spent) = times.time_spend {
+                        detail.time_spend = Some(spent);
+                    }
+                    if let Some(d) = times.start_date {
+                        detail.start_date = Some(d);
+                    }
+                    if let Some(d) = times.due_date {
+                        detail.due_date = Some(d);
+                    }
+                    return Ok(detail);
+                }
+                DetailField::TimeSpent => {
+                    let bid = operations::cards::board_id(&client).await?;
+                    let times =
+                        operations::cards::set_time(&client, bid, card_id, "time_spend", &value)
+                            .await?;
+                    let mut detail = operations::cards::card_detail(&client, card_id).await?;
+                    if let Some(est) = times.estimated_time {
+                        detail.time_estimated = Some(est);
+                    }
+                    if let Some(spent) = times.time_spend {
+                        detail.time_spend = Some(spent);
+                    }
+                    if let Some(d) = times.start_date {
+                        detail.start_date = Some(d);
+                    }
+                    if let Some(d) = times.due_date {
+                        detail.due_date = Some(d);
+                    }
+                    return Ok(detail);
+                }
+            }
+            operations::cards::card_detail(&client, card_id).await
+        };
+
+        let result = match save.await {
+            Ok(detail) => {
+                let cards = if let Some(lid) = list_id {
+                    Some(
+                        operations::cards::list_cards(&client, lid, Some(board_number))
+                            .await
+                            .map(|(c, _)| c)
+                            .map_err(|e| e.to_string()),
+                    )
+                } else {
+                    None
+                };
+                (Ok(detail), cards)
+            }
+            Err(e) => (Err(e.to_string()), None),
+        };
+
+        JobOutcome::TaskDetailSaved {
+            id,
+            card_id,
+            list_id,
+            board_number,
+            result: result.0,
+            cards: result.1,
         }
     });
 }
@@ -1400,5 +1648,45 @@ mod tests {
             search_input_push(&mut app, c);
         }
         assert!(app.view_cards(10).is_empty());
+    }
+
+    #[test]
+    fn task_detail_field_navigation_and_edit_seed() {
+        use crate::models::CardDetail;
+
+        let mut app = board_with_cards();
+        app.show_task_detail = true;
+        app.task_detail_card_id = Some(1);
+        app.task_detail = Some(CardDetail {
+            id: 1,
+            name: "Alpha GBI".into(),
+            description: Some("body".into()),
+            status: None,
+            labels: vec![],
+            list: None,
+            number: Some(303),
+            created_at: None,
+            updated_at: None,
+            time_estimated: Some("1h".into()),
+            time_spend: Some("45m".into()),
+            start_date: Some("2026-10-13".into()),
+            due_date: Some("2026-10-14".into()),
+            dependence: None,
+            responsible: Some(serde_json::json!({"username": "ana"})),
+            priority: Some(serde_json::json!(2)),
+            closed: Some(false),
+        });
+
+        detail_move_field(&mut app, 1);
+        assert_eq!(app.task_detail_field_idx, 1); // Description
+        start_edit_detail_field(&mut app);
+        assert!(app.editing_detail_field);
+        assert_eq!(app.detail_edit_input.as_str(), "body");
+        cancel_edit_detail_field(&mut app);
+        assert!(!app.editing_detail_field);
+
+        close_task_detail(&mut app);
+        assert!(!app.show_task_detail);
+        assert!(app.task_detail.is_none());
     }
 }
