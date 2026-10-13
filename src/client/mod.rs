@@ -180,9 +180,9 @@ impl HteamClient {
             None => self.get_board_number().await?,
         };
 
-        // Hteam devuelve solo 10 cards por defecto e ignora page/offset/limit.
-        // Si la lista trae más (`total_board_cards`), se repite la petición
-        // pidiéndolas todas con `items_per_page`, igual que el front de Hteam.
+        // Hteam returns only 10 cards by default and ignores page/offset/limit.
+        // If the list holds more (`total_board_cards`), request it again asking
+        // for all of them with `items_per_page`, as the Hteam web client does.
         let mut card_response = self.fetch_card_list(board, list_id, None).await?;
         if let Some(total) = card_response.total_board_cards {
             if total > card_response.cardlist_list.len() {
