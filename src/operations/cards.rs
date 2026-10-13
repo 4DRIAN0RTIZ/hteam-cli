@@ -8,12 +8,10 @@ use crate::client::{HteamClient, UpdateCardPatch};
 use crate::models::{Card, CardDetail, Label, List};
 
 /// Max in-flight list-card fetches while searching a whole board.
-#[allow(dead_code)] // used by `search` (wired in #51/#52)
 const SEARCH_LIST_CONCURRENCY: usize = 4;
 
 /// Where to look for cards. `list_id: None` means every list on the board.
 /// Wired from CLI/MCP (#51) and TUI (#52); kept public for those adapters.
-#[allow(dead_code)]
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CardSearchScope {
     pub board: Option<u64>,
@@ -24,7 +22,6 @@ pub struct CardSearchScope {
 /// label on the card (case-insensitive equality). Text is a case-insensitive
 /// substring over name and description. Responsible/priority match against
 /// the display text extracted from the card payload fields.
-#[allow(dead_code)]
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CardSearchFilters {
     pub text: Option<String>,
@@ -33,7 +30,6 @@ pub struct CardSearchFilters {
     pub labels: Vec<String>,
 }
 
-#[allow(dead_code)]
 impl CardSearchFilters {
     pub fn is_empty(&self) -> bool {
         self.text.as_ref().is_none_or(|s| s.trim().is_empty())
@@ -47,8 +43,7 @@ impl CardSearchFilters {
 }
 
 /// One card that matched a search, with the list it was found in.
-#[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct CardSearchHit {
     pub card: Card,
     pub list_id: u64,
@@ -120,13 +115,13 @@ pub async fn card_labels(
 
 /// Pure in-memory filter shared by CLI, MCP and TUI. `cards` is
 /// `(list_id, list_name, card)` so callers that already hold board state
-/// (TUI) do not need another HTTP round trip.
+/// (TUI, #52) do not need another HTTP round trip.
 ///
 /// `responsible_user_ids` are optional numeric ids (as strings) already
 /// resolved from a name query — pass the result of
 /// [`resolve_responsible_user_ids`] when filtering by responsible name so bare
 /// id payloads (task detail) still match.
-#[allow(dead_code)] // adapters in #51 / #52
+#[allow(dead_code)] // TUI adapter in #52
 pub fn filter_cards<'a, I>(
     cards: I,
     filters: &CardSearchFilters,
@@ -150,7 +145,6 @@ where
 /// Hteam task detail only stores `responsible: 140`; list payloads embed
 /// `{username, email}`. Matching by name therefore needs this id lookup when
 /// the in-memory card only has the bare id.
-#[allow(dead_code)] // adapters in #51 / #52
 pub async fn resolve_responsible_user_ids(
     client: &HteamClient,
     responsible_filter: &str,
@@ -174,7 +168,6 @@ pub async fn resolve_responsible_user_ids(
 /// Human-readable responsible label from whatever shape the API returned.
 /// Objects → username/name/email; bare numbers → `None` (id only — resolve
 /// via [`resolve_responsible_user_ids`] or the board-card endpoint).
-#[allow(dead_code)] // adapters in #51 / #52
 pub fn responsible_display(value: &serde_json::Value) -> Option<String> {
     match value {
         serde_json::Value::Null => None,
@@ -210,7 +203,6 @@ pub fn responsible_display(value: &serde_json::Value) -> Option<String> {
 /// List card fetches run with limited concurrency; empty filters return every
 /// card in scope. Responsible name filters also match bare user ids by
 /// resolving names through username autocomplete first.
-#[allow(dead_code)] // adapters in #51 / #52
 pub async fn search(
     client: &HteamClient,
     scope: CardSearchScope,
@@ -285,7 +277,6 @@ pub async fn search(
     Ok(hits)
 }
 
-#[allow(dead_code)]
 fn card_matches(card: &Card, filters: &CardSearchFilters, responsible_user_ids: &[String]) -> bool {
     if let Some(text) = filters
         .text
@@ -391,7 +382,6 @@ fn responsible_id_string(value: &serde_json::Value) -> Option<String> {
 
 /// Flattens the varied shapes Hteam uses for responsible/priority into text
 /// suitable for substring matching.
-#[allow(dead_code)]
 fn json_value_search_text(value: &serde_json::Value) -> String {
     match value {
         serde_json::Value::Null => String::new(),
