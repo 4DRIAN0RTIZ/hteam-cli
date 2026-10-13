@@ -121,6 +121,9 @@ async fn process_command(line: &str) -> Result<()> {
         "dates" => {
             handle_dates_command(args).await?;
         }
+        "time" => {
+            handle_time_command(args).await?;
+        }
         "detail" | "show" => {
             handle_detail_command(args).await?;
         }
@@ -176,6 +179,7 @@ fn print_help() {
     println!("  close <id>              Cerrar task (API close/)");
     println!("  reopen <id>             Reabrir task (API reopen/)");
     println!("  dates <id> --start|--due  Fechas YYYY-MM-DD");
+    println!("  time <id> --estimate|--spent  Estimado / tiempo gastado");
     println!("  detail, show <id>       Ver detalle de un card");
     println!("  comment, co <id> <txt>  Agregar comentario");
     println!();
@@ -261,6 +265,55 @@ async fn handle_create_command(args: &[&str]) -> Result<()> {
         CardsCommands::Create(CreateArgs {
             name,
             list_id: None,
+        }),
+        None,
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+async fn handle_time_command(args: &[&str]) -> Result<()> {
+    use crate::cli::cards::{CardsCommands, TimeArgs};
+
+    if args.is_empty() {
+        println!("⚠️  Uso: time <card_id> [--estimate DURACIÓN] [--spent DURACIÓN]");
+        return Ok(());
+    }
+
+    let card_id = args[0].parse::<u64>()?;
+    let mut estimate = None;
+    let mut spent = None;
+    let mut i = 1;
+    while i < args.len() {
+        match args[i] {
+            "--estimate" => {
+                if i + 1 < args.len() {
+                    estimate = Some(args[i + 1].to_string());
+                    i += 2;
+                } else {
+                    println!("⚠️  Falta valor para --estimate");
+                    return Ok(());
+                }
+            }
+            "--spent" => {
+                if i + 1 < args.len() {
+                    spent = Some(args[i + 1].to_string());
+                    i += 2;
+                } else {
+                    println!("⚠️  Falta valor para --spent");
+                    return Ok(());
+                }
+            }
+            _ => i += 1,
+        }
+    }
+
+    cli::cards::execute(
+        CardsCommands::Time(TimeArgs {
+            card_id,
+            estimate,
+            spent,
         }),
         None,
         false,

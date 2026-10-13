@@ -246,6 +246,77 @@ pub async fn set_time(
         .await
 }
 
+/// Result of setting an estimate and/or registering spent time.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct CardTimeResult {
+    pub card_id: u64,
+    pub board_id: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub estimate: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spent: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub warnings: Vec<String>,
+}
+
+fn validate_duration(value: &str, name: &str) -> Result<String> {
+    let value = value.trim();
+    if value.is_empty() {
+        anyhow::bail!("{name} no puede estar vacío");
+    }
+    Ok(value.to_string())
+}
+
+/// Set an estimate and/or register spent time using the board-card times API.
+/// `spent` is passed through verbatim: the Hteam API accepts a leading `+`
+/// (for example `+30m`) to add to the accumulated spent time.
+pub async fn set_times(
+    client: &HteamClient,
+    card_id: u64,
+    board: Option<u64>,
+    estimate: Option<&str>,
+    spent: Option<&str>,
+) -> Result<CardTimeResult> {
+    if estimate.is_none() && spent.is_none() {
+        anyhow::bail!("indica al menos --estimate o --spent");
+    }
+
+    let estimate = estimate
+        .map(|v| validate_duration(v, "estimate"))
+        .transpose()?;
+    let spent = spent.map(|v| validate_duration(v, "spent")).transpose()?;
+    let board_id = resolve_board_id(client, board).await?;
+    let mut latest = crate::models::CardTimesResult {
+        detail: None,
+        warnings: vec![],
+        start_date: None,
+        due_date: None,
+        estimated_time: None,
+        time_spend: None,
+    };
+
+    if let Some(ref value) = estimate {
+        latest = client
+            .set_card_time(board_id, card_id, "estimate", value)
+            .await
+            .with_context(|| format!("error al setear estimado de {card_id}"))?;
+    }
+    if let Some(ref value) = spent {
+        latest = client
+            .set_card_time(board_id, card_id, "time_spend", value)
+            .await
+            .with_context(|| format!("error al registrar tiempo de {card_id}"))?;
+    }
+
+    Ok(CardTimeResult {
+        card_id,
+        board_id,
+        estimate: latest.estimated_time.or(estimate),
+        spent: latest.time_spend.or(spent),
+        warnings: latest.warnings,
+    })
+}
+
 /// `field`: `start_date` or `due_date`; `value`: `YYYY-MM-DD`.
 pub async fn set_date(
     client: &HteamClient,
@@ -1271,6 +1342,62 @@ mod tests {
             err.to_string().contains("--start") || err.to_string().contains("--due"),
             "unexpected: {err}"
         );
+    }
+
+    #[tokio::test]
+    async fn test_set_times_posts_estimate_and_spent_to_internal_board_id() {
+        let mut server = mockito::Server::new_async().await;
+        let _lists = server
+            .mock("GET", "/operation/care/operations/483/lists/1/cards/")
+            .match_query(mockito::Matcher::UrlEncoded(
+                "format".to_string(),
+                "json".to_string(),
+            ))
+            .with_status(200)
+            .with_body(
+                r#"{"id":1,"name":"Open","cardlist_list":[{"id":10,"board_id":99,"card":{"id":42,"title":"t","subtitle":"","labels_list":[]},"is_closed":false,"card_type":0,"time_status":0,"get_time_status":"","position":1}]}"#,
+            )
+            .create_async()
+            .await;
+        let _estimate = server
+            .mock("POST", "/boards/care/boards/99/card/42/times/")
+            .match_body(mockito::Matcher::Regex(
+                r"type_time=estimate&time=1h".into(),
+            ))
+            .with_status(200)
+            .with_body(r#"{"estimated_time":"1h","time_spend":"0m"}"#)
+            .create_async()
+            .await;
+        let _spent = server
+            .mock("POST", "/boards/care/boards/99/card/42/times/")
+            .match_body(mockito::Matcher::Regex(
+                r"type_time=time_spend&time=%2B30m".into(),
+            ))
+            .with_status(200)
+            .with_body(r#"{"estimated_time":"1h","time_spend":"30m"}"#)
+            .create_async()
+            .await;
+
+        let result = set_times(&client(&server.url()), 42, None, Some("1h"), Some("+30m"))
+            .await
+            .expect("set times");
+
+        assert_eq!(result.board_id, 99);
+        assert_eq!(result.estimate.as_deref(), Some("1h"));
+        assert_eq!(result.spent.as_deref(), Some("30m"));
+    }
+
+    #[tokio::test]
+    async fn test_set_times_requires_a_nonempty_value() {
+        let no_args = set_times(&client("https://example.test"), 1, None, None, None)
+            .await
+            .expect_err("need a time");
+        assert!(no_args.to_string().contains("--estimate"));
+
+        let blank = set_times(&client("https://example.test"), 1, None, Some(" "), None)
+            .await
+            .expect_err("blank estimate");
+        assert!(blank.to_string().contains("vacío"));
     }
 
     #[tokio::test]
