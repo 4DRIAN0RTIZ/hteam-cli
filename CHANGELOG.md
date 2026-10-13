@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(tui)* Show and edit task dependence in detail
 - *(tui)* Dependence task picker and correct empty clear
 - *(cards)* Add close and reopen via task API families
+- *(cards)* Edit start and due dates
+- *(cards)* Edit start and due dates
 
 ## [0.9.0] - 2026-09-11
 
