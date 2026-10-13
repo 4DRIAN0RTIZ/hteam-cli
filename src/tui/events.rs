@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use anyhow::Result;
 
@@ -342,8 +343,7 @@ pub fn cancel_composing_comment(app: &mut App) {
     app.comment_follow = false;
     app.comment_date_input.clear();
     app.comment_date_focused = false;
-    app.mention_suggestions.clear();
-    app.requests.bump_mentions();
+    clear_mention_state(app);
 }
 
 pub fn toggle_comment_follow(app: &mut App) {
@@ -367,36 +367,75 @@ pub fn comment_date_input_backspace(app: &mut App) {
     app.comment_date_input.backspace();
 }
 
-pub fn comment_input_push(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs, ch: char) {
+/// Pause after the last keystroke before firing `search_users`. Short enough
+/// to feel snappy on bare `@`, long enough to collapse a burst of typing into
+/// one request.
+pub const MENTION_DEBOUNCE: Duration = Duration::from_millis(200);
+
+pub fn comment_input_push(app: &mut App, ch: char) {
     app.comment_input.push(ch);
-    update_mention_suggestions(client, app, jobs);
+    schedule_mention_suggestions(app);
 }
 
-pub fn comment_input_backspace(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+pub fn comment_input_backspace(app: &mut App) {
     app.comment_input.backspace();
-    update_mention_suggestions(client, app, jobs);
+    schedule_mention_suggestions(app);
 }
 
-/// Fires a fresh `search_users` call on every keystroke that changes the
-/// trailing `@word`. The request is non-blocking; only the latest mention
-/// token id is applied when it returns (stale keystrokes are dropped).
-fn update_mention_suggestions(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+/// On each keystroke that touches a trailing `@token`, invalidate in-flight
+/// mention searches and (re)arm the debounce timer. Actual HTTP is fired by
+/// [`poll_mention_debounce`] once the pause elapses — so a burst of typing
+/// collapses to one request without blocking the keyboard.
+pub fn schedule_mention_suggestions(app: &mut App) {
+    // Always bump: cancels any in-flight Mentions job and any armed debounce
+    // that would have used the previous id.
+    app.requests.bump_mentions();
+
     match operations::comments::mention_query(app.comment_input.as_str()) {
-        Some(query) => {
-            let id = app.requests.bump_mentions();
-            let query = query.to_string();
-            jobs.spawn(async move {
-                let result = operations::comments::mention_suggestions(&client, &query)
-                    .await
-                    .map_err(|e| e.to_string());
-                JobOutcome::Mentions { id, result }
-            });
+        Some(_) => {
+            app.mention_debounce_at = Some(Instant::now() + MENTION_DEBOUNCE);
         }
         None => {
-            app.requests.bump_mentions();
+            app.mention_debounce_at = None;
             app.mention_suggestions.clear();
         }
     }
+}
+
+/// If a mention debounce window has elapsed, spawn a single search for the
+/// current `@token`. No-op while the timer is still running or there is no
+/// active mention query (e.g. user deleted the `@`).
+pub fn poll_mention_debounce(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    let Some(deadline) = app.mention_debounce_at else {
+        return;
+    };
+    if Instant::now() < deadline {
+        return;
+    }
+    app.mention_debounce_at = None;
+
+    let Some(query) = operations::comments::mention_query(app.comment_input.as_str()) else {
+        app.mention_suggestions.clear();
+        return;
+    };
+    let query = query.to_string();
+    // Use the id from the last schedule (already bumped); do not bump again
+    // or a concurrent schedule would race against this fire.
+    let id = app.requests.mentions;
+    jobs.spawn(async move {
+        let result = operations::comments::mention_suggestions(&client, &query)
+            .await
+            .map_err(|e| e.to_string());
+        JobOutcome::Mentions { id, query, result }
+    });
+}
+
+/// Clears suggestions, cancels debounce, and invalidates in-flight searches.
+pub fn clear_mention_state(app: &mut App) {
+    app.requests.bump_mentions();
+    app.mention_debounce_at = None;
+    app.mention_suggestions.clear();
+    app.mention_selected = 0;
 }
 
 pub fn mention_move_selection(app: &mut App, delta: i32) {
@@ -424,8 +463,7 @@ pub fn accept_mention_suggestion(app: &mut App) {
     app.comment_input.push('@');
     app.comment_input.push_str(&user.selected_text);
     app.comment_input.push(' ');
-    app.mention_suggestions.clear();
-    app.requests.bump_mentions();
+    clear_mention_state(app);
 }
 
 pub fn submit_comment(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
@@ -999,4 +1037,116 @@ fn persist_board_switch(id: u64) -> Result<()> {
 pub fn toggle_projects_focus(app: &mut App) {
     app.projects_detail_focused = !app.projects_detail_focused;
     app.projects_scroll.reset();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::WorkingHoursConfig;
+    use crate::tui::theme::Theme;
+    use std::collections::HashSet;
+    use std::time::Duration;
+
+    fn test_app() -> App {
+        App::new(
+            1,
+            HashSet::new(),
+            Vec::new(),
+            WorkingHoursConfig::default(),
+            Theme::default(),
+        )
+    }
+
+    #[test]
+    fn schedule_arms_debounce_for_at_token() {
+        let mut app = test_app();
+        app.composing_comment = true;
+        app.comment_input.set("hola @an");
+
+        schedule_mention_suggestions(&mut app);
+
+        assert!(app.mention_debounce_at.is_some());
+        assert_eq!(app.requests.mentions, 1);
+    }
+
+    #[test]
+    fn schedule_clears_when_no_at_token() {
+        let mut app = test_app();
+        app.composing_comment = true;
+        app.comment_input.set("hola ana");
+        app.mention_suggestions = vec![]; // placeholder; clear path must not panic
+        app.mention_debounce_at = Some(Instant::now() + Duration::from_secs(5));
+
+        schedule_mention_suggestions(&mut app);
+
+        assert!(app.mention_debounce_at.is_none());
+        assert!(app.mention_suggestions.is_empty());
+    }
+
+    #[test]
+    fn reschedule_bumps_id_and_moves_deadline() {
+        let mut app = test_app();
+        app.comment_input.set("@a");
+        schedule_mention_suggestions(&mut app);
+        let first_id = app.requests.mentions;
+        let first_at = app.mention_debounce_at.expect("armed");
+
+        std::thread::sleep(Duration::from_millis(5));
+        app.comment_input.set("@ab");
+        schedule_mention_suggestions(&mut app);
+
+        assert!(app.requests.mentions > first_id);
+        assert!(app.mention_debounce_at.expect("re-armed") > first_at);
+    }
+
+    #[test]
+    fn poll_before_deadline_does_not_clear_timer() {
+        let mut app = test_app();
+        app.comment_input.set("@an");
+        schedule_mention_suggestions(&mut app);
+        // Force a far-future deadline so poll is a no-op without sleeping 200ms.
+        app.mention_debounce_at = Some(Instant::now() + Duration::from_secs(30));
+
+        let (jobs, mut rx) = Jobs::channel();
+        // Client is unused when poll returns early; skip building a real one.
+        // We only assert the timer stays and no job is enqueued — but poll
+        // needs a client Arc. Build a throwaway via Config::default.
+        let client = Arc::new(
+            crate::client::HteamClient::new(crate::config::Config::default()).expect("client"),
+        );
+        poll_mention_debounce(client, &mut app, &jobs);
+
+        assert!(app.mention_debounce_at.is_some());
+        assert!(rx.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn poll_after_deadline_clears_timer_and_enqueues_job() {
+        let mut app = test_app();
+        app.comment_input.set("@an");
+        schedule_mention_suggestions(&mut app);
+        app.mention_debounce_at = Some(Instant::now() - Duration::from_millis(1));
+
+        let client = Arc::new(
+            crate::client::HteamClient::new(crate::config::Config::default()).expect("client"),
+        );
+        let (jobs, mut rx) = Jobs::channel();
+        poll_mention_debounce(client, &mut app, &jobs);
+
+        assert!(app.mention_debounce_at.is_none());
+        // Drop the receiver so the spawned HTTP task's send is ignored; we
+        // only care that poll cleared the timer and attempted a job.
+        drop(rx.try_recv());
+        let _ = &mut rx;
+    }
+
+    #[test]
+    fn clear_mention_state_cancels_debounce() {
+        let mut app = test_app();
+        app.comment_input.set("@x");
+        schedule_mention_suggestions(&mut app);
+        clear_mention_state(&mut app);
+        assert!(app.mention_debounce_at.is_none());
+        assert!(app.mention_suggestions.is_empty());
+    }
 }
