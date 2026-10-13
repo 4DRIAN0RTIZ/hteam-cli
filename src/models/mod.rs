@@ -91,18 +91,16 @@ pub struct Card {
     #[serde(skip)]
     #[tabled(skip)]
     pub subtitle_url: Option<String>,
-    #[expect(
-        dead_code,
-        reason = "kept for API compatibility with Hteam card payloads"
-    )]
-    #[serde(skip)]
+    /// Present on some list payloads and always on detail; used by shared card
+    /// search filters. Shape varies (id, username object, plain string).
+    #[serde(default)]
     #[tabled(skip)]
     pub responsible: Option<serde_json::Value>,
-    #[expect(
-        dead_code,
-        reason = "kept for API compatibility with Hteam card payloads"
-    )]
-    #[serde(skip)]
+    /// Optional priority when the list/detail payload includes it (number or string).
+    #[serde(default)]
+    #[tabled(skip)]
+    pub priority: Option<serde_json::Value>,
+    #[serde(default)]
     #[tabled(skip)]
     pub worker: Option<serde_json::Value>,
     /// El texto de `CardListEntry::get_time_status` (ej. "On time", "Expired"),
