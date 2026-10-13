@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(client)* Fetch all cards when list exceeds default page size
 - *(i18n)* Use neutral Spanish in update prompts
 - *(tui)* Load times and labels from board-card into detail
+- *(tui)* Scroll list columns so the selected card stays visible
 
 
 ### Documentation
