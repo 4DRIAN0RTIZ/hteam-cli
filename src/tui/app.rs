@@ -8,6 +8,7 @@ use crate::models::{
     BoardEntry, Card, Comment, FollowUp, List, ProjectMilestone, ProjectSummary, ProjectTask,
     Reminder, UserSuggestion, WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
 };
+use crate::operations::cards::CardSearchFilters;
 
 use super::theme::Theme;
 use super::widgets::{Scroll, TextInput};
@@ -48,6 +49,11 @@ pub struct App {
     /// config.toml's `[tui] hidden_lists`).
     pub hidden_lists: HashSet<String>,
     pub cards_by_list: HashMap<u64, Vec<Card>>,
+    /// Active board card filters (`/` search). Empty = show all cards.
+    pub card_filters: CardSearchFilters,
+    /// True while typing a `/` search query in the footer bar.
+    pub composing_search: bool,
+    pub search_input: TextInput,
     /// The current user's active "working on it" records — keeps the record
     /// id around (not just the card id) since `stop_working` needs it, not
     /// the card id.
@@ -253,6 +259,9 @@ impl App {
             all_lists: Vec::new(),
             hidden_lists,
             cards_by_list: HashMap::new(),
+            card_filters: CardSearchFilters::default(),
+            composing_search: false,
+            search_input: TextInput::default(),
             working_on: Vec::new(),
             selected_list: 0,
             selected_card: HashMap::new(),
@@ -400,11 +409,24 @@ impl App {
         }
     }
 
+    /// Cards of `list_id` after applying [`Self::card_filters`].
+    pub fn view_cards(&self, list_id: u64) -> Vec<&Card> {
+        let Some(cards) = self.cards_by_list.get(&list_id) else {
+            return Vec::new();
+        };
+        if self.card_filters.is_empty() {
+            return cards.iter().collect();
+        }
+        cards
+            .iter()
+            .filter(|c| crate::operations::cards::matches_filters(c, &self.card_filters, &[]))
+            .collect()
+    }
+
     pub fn current_card(&self) -> Option<&Card> {
         let list = self.current_list()?;
-        self.cards_by_list
-            .get(&list.id)?
-            .get(self.current_card_index())
+        let cards = self.view_cards(list.id);
+        cards.get(self.current_card_index()).copied()
     }
 
     pub fn is_working_on(&self, card_id: u64) -> bool {
@@ -422,11 +444,7 @@ impl App {
             return;
         };
         let list_id = list.id;
-        let len = self
-            .cards_by_list
-            .get(&list_id)
-            .map(|c| c.len())
-            .unwrap_or(0);
+        let len = self.view_cards(list_id).len();
         if len == 0 {
             return;
         }
@@ -442,6 +460,71 @@ impl App {
         }
         let next = (self.selected_list as i32 + delta).clamp(0, len as i32 - 1);
         self.selected_list = next as usize;
+        self.clamp_card_selection();
+    }
+
+    /// Keep selected card indices inside the filtered view for every list.
+    pub fn clamp_card_selection(&mut self) {
+        let list_ids: Vec<u64> = self.all_lists.iter().map(|l| l.id).collect();
+        for list_id in list_ids {
+            let len = self.view_cards(list_id).len();
+            if len == 0 {
+                self.selected_card.insert(list_id, 0);
+                continue;
+            }
+            let idx = self.selected_card.get(&list_id).copied().unwrap_or(0);
+            if idx >= len {
+                self.selected_card.insert(list_id, len - 1);
+            }
+        }
+        let visible_len = self.visible_lists().len();
+        if visible_len == 0 {
+            self.selected_list = 0;
+        } else if self.selected_list >= visible_len {
+            self.selected_list = visible_len - 1;
+        }
+    }
+
+    /// Short label for the footer when filters are active.
+    pub fn card_filters_summary(&self) -> Option<String> {
+        if self.card_filters.is_empty() {
+            return None;
+        }
+        let mut parts = Vec::new();
+        if let Some(t) = self
+            .card_filters
+            .text
+            .as_ref()
+            .filter(|s| !s.trim().is_empty())
+        {
+            parts.push(format!("q:{}", t));
+        }
+        if let Some(r) = self
+            .card_filters
+            .responsible
+            .as_ref()
+            .filter(|s| !s.trim().is_empty())
+        {
+            parts.push(format!("@{}", r));
+        }
+        if let Some(p) = self
+            .card_filters
+            .priority
+            .as_ref()
+            .filter(|s| !s.trim().is_empty())
+        {
+            parts.push(format!("p:{}", p));
+        }
+        for lab in &self.card_filters.labels {
+            if !lab.trim().is_empty() {
+                parts.push(format!("#{}", lab));
+            }
+        }
+        if parts.is_empty() {
+            None
+        } else {
+            Some(parts.join(" "))
+        }
     }
 }
 
