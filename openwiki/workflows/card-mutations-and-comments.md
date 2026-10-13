@@ -43,7 +43,7 @@ Discovery is not optional plumbing in several mutations:
 - List and card reads use the board-number API. The cards response is unwrapped from `cardlist_list` and may yield the internal `board_id` from its first entry.
 - `create_card` needs both the board number and internal board ID. `get_board_id` first uses its in-memory cache; otherwise it probes list **1** (Open), and if Open is empty, scans lists with cards until it finds an entry carrying a board ID. It caches the result. Changing the active board invalidates that cache before subsequent mutations.
 - Creating also needs a user ID. It uses a cached value first, otherwise checks the active working-on response (array or object) and falls back to the most recent work-shift record. A resolved user ID is persisted in configuration.
-- Full updates first fetch card detail. The edit endpoint is form-oriented rather than a partial JSON API, so the current detail is the base that preserves fields not being changed.
+- Full updates first fetch card detail, then GET the HTML edit form, then POST the full form body. The edit endpoint is form-oriented rather than a partial JSON API, so the current detail is only one input to a preserve-on-patch workflow.
 
 > **Safe caller rule:** pass the current source list when it is known. The shared `move_card` operation defaults an omitted source to list **1**, Open; this is convenient for CLI/MCP callers but is wrong when the card is known to be in another list. The TUI therefore always supplies its visible source-list ID.
 
@@ -61,34 +61,79 @@ Moves POST JSON to `boards/care/labels/update_card_position/` with a board numbe
 
 ### Full update sequence
 
-A full update can change name, description, priority, and responsible user. The CLI resolves an explicit/configured/last-used board before invoking it; MCP receives its required board parameter. The operation fetches detail first, then constructs a form submission that substitutes only supplied values and retains `time_estimated`, `start_date`, `dependence`, and the other current values. Missing priority is rendered as `3` if detail also lacks one. Description-only updates use the same read-then-full-form path and resolve their board from the client configuration.
+A full update can change name, description, priority, responsible user, dependence, and estimate. The CLI resolves an explicit/configured/last-used board before invoking it; MCP receives its required board parameter. The operation fetches detail first, then GETs the HTML edit form, then constructs a form submission that substitutes only supplied values and retains `time_estimated`, `start_date`, `dependence`, and the other current values. Missing priority defaults to `3` only when neither the detail nor the form supplies one. Description-only updates use the same read-then-full-form path and resolve their board from the client configuration.
 
 ```mermaid
 sequenceDiagram
     participant Surface as CLI TUI or MCP
     participant Ops as card operations
     participant Client as HteamClient
-    participant API as HTeam API
+    participant Site as Hteam site
 
-    Surface->>Ops: update card with requested fields
+    Surface->>Ops: update_card_fields patch
     Ops->>Client: get_card_detail card ID
-    Client->>API: GET task detail JSON
-    API-->>Client: CardDetail
-    Client-->>Ops: current detail
-    Ops->>Client: update_card_full with detail base
-    Client->>API: POST edit form with preserved fields
-    alt response is below 400
-        API-->>Client: success response
+    Client->>Site: GET task detail JSON
+    Site-->>Client: CardDetail
+    Ops->>Client: update_card_full with UpdateCardPatch
+    Client->>Site: GET /operations/{board_number}/tasks/{id}/edit/
+    Site-->>Client: HTML edit form
+    Client->>Client: parse TaskEditFormBaseline and merge patch
+    Client->>Site: POST encoded full edit form
+    alt response still looks like edit page or has errors
+        Site-->>Client: HTML edit form or validation errors
+        Client-->>Ops: failure
+        Ops-->>Surface: report failure
+    else response is a redirect or task page
+        Site-->>Client: success response
         Client-->>Ops: success
         Ops-->>Surface: confirmation
-    else response is 400 or higher
-        API-->>Client: error response
-        Client-->>Ops: error with HTTP body
-        Ops-->>Surface: report failure
     end
 ```
 
-*Full card updates read the current form state before writing, preventing omitted patch fields from being discarded.*
+*Full card updates scrape the HTML form inside `update_card_full` before writing, so omitted patch fields are not discarded. `get_task_edit_form` is the same scrape exposed for read enrichment (`card_detail_enriched`).* 
+
+## Why the HTML form is the source of truth
+
+The Hteam task edit endpoint is not a patch API. The current HTML form carries the editable values that must survive a partial save, while the task detail JSON often leaves them blank, uses display labels, or returns a different shape. `operation_id` in the edit URL is config `board_number`, not the internal board-card `board_id`.
+
+| Field | Task JSON (`GET …/tasks/{id}/?format=json`) | HTML form |
+|-------|-------------------------------------------|-----------|
+| dependence | Often a label string: `#5 - Title…` | Select bare task id, or empty to clear |
+| priority | Almost always null | Select `1`–`5` (1=very low … 5=very high) |
+| time_estimated | Often missing or null | Input such as `1h 30m` |
+| start_date | ISO timestamp such as `2026-10-13T00:00:00-06:00` | `YYYY-MM-DD` only |
+| responsible | Bare id or object | Bare user id |
+
+Priority display uses `operations::cards::priority_label` (`1 · Muy baja` … `5 · Muy alta`). Do not invent a reverse scale.
+
+Board-card AJAX times/dates (`set_card_time` / `set_card_date` under `/api/boards/care/boards/{board_id}/card/{id}/…`) are a separate path: spend and due-date style mutations do not go through this HTML form. Form estimate is `time_estimated`; spend is usually board-card `time_spent` / times POST.
+
+`TaskEditFormBaseline` exists so `update_card_full` can preserve sibling fields that the caller did not intend to change. On the read path, `merge_edit_form_into_detail` merges HTML-form priority and estimate back into `CardDetail` so UI code does not display stale or missing values after a refresh.
+
+### Known anti-patterns
+
+These are the failure modes already confirmed by tests and bug fixes (PRs #85–#87):
+
+1. Posting an ISO `start_date` can return HTTP 200 while leaving the page on “Edit task”. Nothing is saved, including dependence and priority. Always truncate with `form_date_yyyy_mm_dd`.
+2. Posting a priority-only update without scraping the form can submit an empty `dependence` and clear the existing dependency.
+3. Posting a dependence-only update without scraping the form can submit an empty `time_estimated` and clear the estimate.
+4. A priority edit may succeed on the server but still look unchanged in task JSON until `card_detail_enriched` merges the form value back via `merge_edit_form_into_detail`.
+
+### Response validation after POST
+
+After the save request, the client treats the operation as failed if the response still looks like the edit form, even when the HTTP status is 200. The client checks for `<title>Edit task</title>`, `value=Update`, and `errorlist` before returning success.
+
+This is the correct success boundary: the server must move past the edit form, not merely emit a non-error status.
+
+### Change recipe for new editable fields
+
+When Hteam adds a new field to the edit form, the change surface is wider than one function:
+
+1. Add the field to `TaskEditFormBaseline` and `parse_task_edit_form` if the current value must survive a partial update.
+2. Add an optional override to `UpdateCardPatch` and `CardFieldUpdates`.
+3. Prefer form scrape over JSON whenever the JSON value is null, a display label, or a full ISO date that the form cannot accept.
+4. Extend the full-form POST test so patching field A still preserves fields B and C from the form baseline.
+5. If the JSON detail omits the new field after save, merge the form value back into `CardDetail` or keep the local value in the caller.
 
 ## Comment workflow: form discovery, date, follow, and mentions
 
@@ -176,7 +221,7 @@ The focused operation tests use a mock client base URL to verify the wire-level 
 
 - [Cards and board state](/openwiki/concepts/cards-and-board-state.md)
 - [Session configuration](/openwiki/concepts/session-configuration.md)
-- [HTeam API integration](/openwiki/integrations/hteam-api.md)
+- [Hteam HTTP integration](/openwiki/integrations/hteam-api.md)
 - [MCP server integration](/openwiki/integrations/mcp-server.md)
 - [Terminal experiences](/openwiki/operations/terminal-experiences.md)
 - [Verification strategy](/openwiki/testing/verification-strategy.md)

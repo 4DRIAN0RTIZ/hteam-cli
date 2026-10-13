@@ -1,7 +1,7 @@
 ---
 type: integration contract
 title: Hteam HTTP integration contract
-description: HteamClient is the single HTTP boundary to hteam.mx, centralizing authenticated requests, Hteam-specific payloads and parsing, identifier discovery, and transport failures for CLI, TUI, and MCP workflows.
+description: HteamClient is the single HTTP boundary to hteam.mx, centralizing authenticated requests, JSON endpoints, browser-form task edits, HTML extraction, identifier discovery, and transport failures for CLI, TUI, and MCP workflows.
 tags: [hteam, http, integration, authentication, api-client]
 verified:
   - by: openwiki/0.4.3
@@ -84,12 +84,108 @@ The client exposes domain-oriented methods rather than a generic public request 
 | Family | Base and representative routes | Request and response style |
 | --- | --- | --- |
 | Boards, lists, cards, and labels | API: `/operation/care/operations/`, `/operation/care/operations/{board}/lists/`, `/operation/care/operations/{board}/lists/{list}/cards/`, `/operation/care/tasks/{card}/`, and `/boards/care/…` | Reads use `?format=json` except the board picker, which sends a DataTables query and reads its `data` envelope. Create, move, label, and reminder mutations use JSON. |
-| Card edits | Site: `/operations/{board}/tasks/{card}/edit/` | Fetches the current detail first, then posts a URL-encoded browser-form payload that retains all non-patched editable values, adds CSRF, `Origin`, and a route-specific `Referer`. |
+| Card edits | Site: `/operations/{board}/tasks/{card}/edit/` | The client GETs the edit page, scrapes the HTML form baseline, and POSTs a URL-encoded browser form that retains all non-patched editable values. The task-detail JSON is not enough on its own because it often omits or mangles dependence, priority, estimate, and date shapes. |
 | Comments and mentions | Site: `/comments/api/processes-task/{card}/` and `/comments/post/`; API: `/users/username-autocomplete/` | Comment reads are a JSON `results` envelope. Posting requires tokens from the rendered task page and a URL-encoded form. Autocomplete is a GET with `q`. |
 | Working state, reminders, and shift | API: `/tr/workingonit/`, `/tr/reminders/`, and `/tr/checkworkshifs/…` | Working start/stop use URL-encoded AJAX-style bodies; reminders and check-in use JSON; reads parse Hteam-specific status models. |
 | Project and daily work | API project routes under `/project-new/care/`; site `/history/daily-work` | Project routes return JSON. Daily work sends optional URL-encoded query parameters and parses the returned history HTML. |
 
-`operations` primarily forwards these calls and returns plain data. Its meaningful additions are workflow policy: card update first fetches its patch base, movement defaults its source list to Open (ID 1), and comment date input is validated against `COMMENT_DATE_FORMAT` (`%Y-%m-%d %H:%M`) or defaults to local time. This date is intentionally local/server-style time rather than UTC.
+`operations` primarily forwards these calls and returns plain data. Its meaningful additions are workflow policy: card updates GET the HTML edit form before POSTing a full body, movement defaults its source list to Open (ID 1), and comment date input is validated against `COMMENT_DATE_FORMAT` (`%Y-%m-%d %H:%M`) or defaults to local time. This date is intentionally local/server-style time rather than UTC.
+
+## Browser-form card editing
+
+The task edit flow is a browser form, not a partial JSON patch endpoint. Entry points:
+
+- `HteamClient::get_task_edit_form` / `parse_task_edit_form` → `TaskEditFormBaseline` (read path and scrape helper)
+- `HteamClient::update_card_full` with `UpdateCardPatch` (write path; scrapes the form internally before POST)
+- `operations::cards::update_card_fields` with `CardFieldUpdates` (adapter-facing patch)
+- `operations::cards::card_detail_enriched` + `merge_edit_form_into_detail` (merge form priority/estimate into detail for UI)
+
+Routes use the **site** base:
+
+```text
+GET  /operations/{operation_id}/tasks/{task_id}/edit/
+POST /operations/{operation_id}/tasks/{task_id}/edit/
+```
+
+`operation_id` is config `board_number` (for example `447`), **not** the internal `board_id` used by board-card AJAX (for example `483`). Board-card time/date mutations (`set_card_time`, `set_card_date`) stay under `/api/boards/care/boards/{board_id}/card/{id}/…` and are a separate system from this form.
+
+`TaskEditFormBaseline` scrapes:
+
+- `csrfmiddlewaretoken`
+- `name`, `description`
+- `time_estimated` (for example `1h 30m`)
+- `start_date` (`YYYY-MM-DD`)
+- `dependence` (bare task id, or empty)
+- `responsible` (bare user id)
+- `priority` (`1`..=`5`)
+
+`update_card_full` always:
+
+1. GET the edit page and parse the current form baseline.
+2. Apply only the fields explicitly present on `UpdateCardPatch`.
+3. POST the complete URL-encoded form body back to the same edit URL.
+
+Task detail JSON is incomplete for editable fields:
+
+| Field | Task JSON | HTML form |
+| --- | --- | --- |
+| `dependence` | Often a label like `#5 - Title…` | bare task id, or empty to clear |
+| `priority` | Almost always `null` | select `1`..=`5` |
+| `time_estimated` | Often missing / null | input such as `1h 30m` |
+| `start_date` | full ISO timestamp | `YYYY-MM-DD` only (`form_date_yyyy_mm_dd`) |
+| `responsible` | bare id or object | bare user id (`form_user_id`) |
+
+### Priority scale (do not invert)
+
+| Value | Web label | CLI/TUI (`priority_label`) |
+| ---: | --- | --- |
+| 1 | Very low | 1 · Muy baja |
+| 2 | Low | 2 · Baja |
+| 3 | Normal | 3 · Normal |
+| 4 | High | 4 · Alta |
+| 5 | Very high | 5 · Muy alta |
+
+Missing priority defaults to `"3"` only when neither detail nor form supplies one.
+
+```mermaid
+sequenceDiagram
+    participant Surface as CLI TUI or MCP
+    participant Ops as operations::cards
+    participant Client as HteamClient
+    participant Site as Hteam site
+
+    Surface->>Ops: update_card_fields patch
+    Ops->>Client: get_card_detail card ID
+    Client->>Site: GET task detail JSON
+    Site-->>Client: CardDetail
+    Ops->>Client: update_card_full with UpdateCardPatch
+    Client->>Site: GET /operations/{operation_id}/tasks/{id}/edit/
+    Site-->>Client: HTML edit form
+    Client->>Client: parse TaskEditFormBaseline and merge patch
+    Client->>Site: POST encoded full edit form
+    alt response still looks like edit page or has errors
+        Site-->>Client: HTML edit form or validation errors
+        Client-->>Ops: failure
+    else response is a redirect or task page
+        Site-->>Client: success response
+        Client-->>Ops: success
+    end
+```
+
+Building the body from task JSON alone risks wiping sibling fields that only the HTML form knows about. Never re-post a dependence display label; write the bare internal task id or `""` to clear.
+
+## Browser-form card edit failure detection
+
+After the POST, the client treats the save as failed if the response still looks like the edit page, even when the HTTP status is 200. That includes pages containing `<title>Edit task</title>`, `value=Update`, or `errorlist`. This guards against silent validation failures such as an ISO `start_date` that Django accepts syntactically but does not persist.
+
+Known failure patterns that this check protects against:
+
+1. Posting an ISO `start_date` instead of `YYYY-MM-DD` returns 200 and leaves the page on “Edit task”, with nothing saved.
+2. Posting a priority-only change without first scraping the form can send an empty `dependence` and clear the existing dependency.
+3. Posting a dependence-only change without the form baseline can send an empty `time_estimated` and clear the estimate.
+4. Priority changes may succeed on POST but still appear unchanged in task JSON until `card_detail_enriched` merges the form value via `merge_edit_form_into_detail`.
+
+Callers should treat a successful return as “the edit form accepted and moved on”, not merely “the HTTP request did not error”.
 
 ## Browser-form comment posting
 
