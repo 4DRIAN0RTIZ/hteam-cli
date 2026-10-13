@@ -462,6 +462,17 @@ async fn run_loop(
             continue;
         }
 
+        if app.composing_search {
+            match key.code {
+                KeyCode::Esc => events::cancel_card_search(app),
+                KeyCode::Enter => events::confirm_card_search(app),
+                KeyCode::Backspace => events::search_input_backspace(app),
+                KeyCode::Char(c) => events::search_input_push(app, c),
+                _ => {}
+            }
+            continue;
+        }
+
         match key.code {
             KeyCode::Char('q') | KeyCode::Esc => break,
             KeyCode::Char('j') | KeyCode::Down => app.move_selection(1),
@@ -481,6 +492,8 @@ async fn run_loop(
             KeyCode::Char('w') => events::toggle_working_on(client.clone(), app, &jobs),
             KeyCode::Char('r') => events::request_refresh_all(client.clone(), app, &jobs),
             KeyCode::Char('B') => events::open_board_switch(client.clone(), app, &jobs),
+            KeyCode::Char('/') => events::open_card_search(app),
+            KeyCode::Char('X') => events::clear_card_search(app),
             KeyCode::Char('?') => events::open_help(app, HelpContext::Board),
             KeyCode::Enter => events::open_description(app),
             _ => {}

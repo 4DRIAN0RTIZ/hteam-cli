@@ -57,6 +57,67 @@ pub fn toggle_hide_current_list(app: &mut App) {
     }
 }
 
+/// Open the `/` search bar (pre-filled with the current filter summary).
+pub fn open_card_search(app: &mut App) {
+    app.composing_search = true;
+    let seed = app.card_filters_summary().unwrap_or_default();
+    app.search_input.set(&seed);
+    app.clear_status();
+}
+
+pub fn search_input_push(app: &mut App, c: char) {
+    if c.is_control() {
+        return;
+    }
+    app.search_input.push(c);
+    apply_search_draft(app);
+}
+
+pub fn search_input_backspace(app: &mut App) {
+    app.search_input.backspace();
+    apply_search_draft(app);
+}
+
+/// Live-apply the draft query so results update while typing.
+fn apply_search_draft(app: &mut App) {
+    app.card_filters = crate::operations::cards::parse_search_query(app.search_input.as_str());
+    app.clamp_card_selection();
+}
+
+/// Confirm search bar (keeps current filters) and leave compose mode.
+pub fn confirm_card_search(app: &mut App) {
+    apply_search_draft(app);
+    app.composing_search = false;
+    if let Some(summary) = app.card_filters_summary() {
+        app.set_status(format!("Filtro: {} · X limpiar", summary));
+    } else {
+        app.set_status("Filtro vacío (todas las cards).");
+    }
+}
+
+/// Cancel compose without clearing an already-applied filter; Esc while
+/// composing with empty input clears filters.
+pub fn cancel_card_search(app: &mut App) {
+    app.composing_search = false;
+    if app.search_input.as_str().trim().is_empty() {
+        clear_card_search(app);
+    } else {
+        // Re-parse last draft so board stays consistent with the bar content.
+        apply_search_draft(app);
+        if let Some(summary) = app.card_filters_summary() {
+            app.set_status(format!("Filtro: {} · X limpiar", summary));
+        }
+    }
+}
+
+pub fn clear_card_search(app: &mut App) {
+    app.composing_search = false;
+    app.search_input.clear();
+    app.card_filters = crate::operations::cards::CardSearchFilters::default();
+    app.clamp_card_selection();
+    app.set_status("Filtro limpiado.");
+}
+
 /// Clears the hidden-lists filter and persists it.
 pub fn show_all_lists(app: &mut App) {
     app.hidden_lists.clear();
@@ -90,24 +151,28 @@ pub fn move_active_card(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs, de
     }
     let to_list = visible[target_pos as usize].clone();
     drop(visible);
-    let idx = app.current_card_index();
 
-    let Some(card) = app
+    // Use the filtered view's selected card (by id), not a raw list index —
+    // with `/` search active the view index differs from cards_by_list.
+    let Some(card) = app.current_card().cloned() else {
+        return;
+    };
+    let from_idx = app
         .cards_by_list
         .get(&from_list.id)
-        .and_then(|cards| cards.get(idx))
-        .cloned()
-    else {
+        .and_then(|cards| cards.iter().position(|c| c.id == card.id));
+    let Some(from_idx) = from_idx else {
         return;
     };
 
     if let Some(cards) = app.cards_by_list.get_mut(&from_list.id) {
-        cards.remove(idx);
+        cards.remove(from_idx);
     }
     app.cards_by_list
         .entry(to_list.id)
         .or_default()
         .push(card.clone());
+    app.clamp_card_selection();
 
     let id = app.requests.bump_move_card();
     let board_number = app.board_number;
@@ -133,7 +198,7 @@ pub fn move_active_card(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs, de
             card,
             from_list_id,
             to_list_id,
-            from_idx: idx,
+            from_idx,
             target_list_pos,
             to_list_name,
             result,
@@ -1267,5 +1332,73 @@ mod tests {
         close_update_available(&mut app);
         assert!(!app.show_update_available);
         assert!(app.update_available.is_none());
+    }
+
+    fn board_with_cards() -> App {
+        use crate::models::{Card, Label, List};
+        let mut app = test_app();
+        app.all_lists = vec![List {
+            id: 10,
+            name: "DOING".into(),
+            card_count: Some(2),
+            color: None,
+            position: None,
+            show_url: None,
+        }];
+        let card = |id, name: &str| Card {
+            id,
+            name: name.into(),
+            description: None,
+            status: None,
+            labels: vec![Label {
+                id: 1,
+                name: "DOING".into(),
+                color: "#0f0".into(),
+            }],
+            number: None,
+            title_url: None,
+            subtitle_url: None,
+            responsible: Some(serde_json::json!({"username": "ana"})),
+            priority: None,
+            worker: None,
+            time_status: None,
+        };
+        app.cards_by_list
+            .insert(10, vec![card(1, "Alpha GBI"), card(2, "Other task")]);
+        app
+    }
+
+    #[test]
+    fn card_search_filters_view_and_clears() {
+        let mut app = board_with_cards();
+        open_card_search(&mut app);
+        assert!(app.composing_search);
+        for c in "GBI".chars() {
+            search_input_push(&mut app, c);
+        }
+        assert_eq!(app.view_cards(10).len(), 1);
+        assert_eq!(app.view_cards(10)[0].id, 1);
+        confirm_card_search(&mut app);
+        assert!(!app.composing_search);
+        assert!(app.card_filters_summary().unwrap().contains("GBI"));
+
+        clear_card_search(&mut app);
+        assert!(app.card_filters.is_empty());
+        assert_eq!(app.view_cards(10).len(), 2);
+    }
+
+    #[test]
+    fn card_search_at_user_and_hash_label() {
+        let mut app = board_with_cards();
+        open_card_search(&mut app);
+        for c in "@ana #DOING".chars() {
+            search_input_push(&mut app, c);
+        }
+        assert_eq!(app.view_cards(10).len(), 2);
+        app.search_input.clear();
+        for c in "@nobody".chars() {
+            search_input_push(&mut app, c);
+        }
+        assert!(app.view_cards(10).is_empty());
     }
 }

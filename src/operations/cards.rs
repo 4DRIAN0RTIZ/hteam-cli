@@ -121,7 +121,7 @@ pub async fn card_labels(
 /// resolved from a name query — pass the result of
 /// [`resolve_responsible_user_ids`] when filtering by responsible name so bare
 /// id payloads (task detail) still match.
-#[allow(dead_code)] // TUI adapter in #52
+#[allow(dead_code)] // used by unit tests + available to adapters
 pub fn filter_cards<'a, I>(
     cards: I,
     filters: &CardSearchFilters,
@@ -132,13 +132,48 @@ where
 {
     cards
         .into_iter()
-        .filter(|(_, _, card)| card_matches(card, filters, responsible_user_ids))
+        .filter(|(_, _, card)| matches_filters(card, filters, responsible_user_ids))
         .map(|(list_id, list_name, card)| CardSearchHit {
             card: card.clone(),
             list_id,
             list_name: list_name.to_string(),
         })
         .collect()
+}
+
+/// Whether `card` satisfies `filters` (same rules as [`filter_cards`] / [`search`]).
+pub fn matches_filters(
+    card: &Card,
+    filters: &CardSearchFilters,
+    responsible_user_ids: &[String],
+) -> bool {
+    card_matches(card, filters, responsible_user_ids)
+}
+
+/// Parse a single search line into filters. Tokens:
+/// - `@user` → responsible
+/// - `#label` → label (AND if several)
+/// - anything else → free-text (joined with spaces)
+pub fn parse_search_query(raw: &str) -> CardSearchFilters {
+    let mut filters = CardSearchFilters::default();
+    let mut text_parts: Vec<&str> = Vec::new();
+    for token in raw.split_whitespace() {
+        if let Some(rest) = token.strip_prefix('@') {
+            if !rest.is_empty() {
+                filters.responsible = Some(rest.to_string());
+            }
+        } else if let Some(rest) = token.strip_prefix('#') {
+            if !rest.is_empty() {
+                filters.labels.push(rest.to_string());
+            }
+        } else {
+            text_parts.push(token);
+        }
+    }
+    if !text_parts.is_empty() {
+        filters.text = Some(text_parts.join(" "));
+    }
+    filters
 }
 
 /// Resolve a responsible filter string to user ids via username autocomplete.
@@ -257,7 +292,7 @@ pub async fn search(
         let (list, result) = joined.context("search list task failed")?;
         let (cards, _) = result.with_context(|| format!("Error cargando lista '{}'", list.name))?;
         for card in &cards {
-            if card_matches(card, &filters, &responsible_ids) {
+            if matches_filters(card, &filters, &responsible_ids) {
                 hits.push(CardSearchHit {
                     card: card.clone(),
                     list_id: list.id,
@@ -718,6 +753,14 @@ mod tests {
         let hits = filter_cards([(1, "A", &match_all), (1, "A", &wrong_prio)], &filters, &[]);
 
         assert_eq!(hits.iter().map(|h| h.card.id).collect::<Vec<_>>(), vec![1]);
+    }
+
+    #[test]
+    fn parse_search_query_splits_text_at_and_hash() {
+        let f = parse_search_query("GBI @adrian #DOING #urgent");
+        assert_eq!(f.text.as_deref(), Some("GBI"));
+        assert_eq!(f.responsible.as_deref(), Some("adrian"));
+        assert_eq!(f.labels, vec!["DOING".to_string(), "urgent".to_string()]);
     }
 
     #[test]

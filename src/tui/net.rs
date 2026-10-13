@@ -276,15 +276,12 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
                     if let Some(items) = working_on {
                         app.working_on = items;
                     }
-                    let visible_len = app.visible_lists().len();
-                    app.selected_list = if visible_len > 0 {
-                        app.selected_list.min(visible_len - 1)
-                    } else {
-                        0
-                    };
+                    app.clamp_card_selection();
                     if failed.is_empty() {
                         if app.all_lists.is_empty() {
                             app.set_status("Este board no tiene listas.");
+                        } else if let Some(summary) = app.card_filters_summary() {
+                            app.set_status(format!("Filtro: {} · X limpiar", summary));
                         } else {
                             app.clear_status();
                         }

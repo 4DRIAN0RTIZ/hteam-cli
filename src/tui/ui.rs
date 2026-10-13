@@ -25,18 +25,31 @@ pub fn draw(frame: &mut Frame, app: &App) {
         ),
         area,
     );
-    let rows = Layout::vertical([
-        Constraint::Length(1),
-        Constraint::Min(0),
-        Constraint::Length(1),
-    ])
-    .split(area);
+    let rows = if app.composing_search {
+        Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Min(0),
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ])
+        .split(area)
+    } else {
+        Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Min(0),
+            Constraint::Length(1),
+        ])
+        .split(area)
+    };
 
     draw_title_bar(frame, app, rows[0]);
-
     draw_board(frame, app, rows[1]);
-
-    draw_status_bar(frame, app, rows[2]);
+    if app.composing_search {
+        draw_search_bar(frame, app, rows[2]);
+        draw_status_bar(frame, app, rows[3]);
+    } else {
+        draw_status_bar(frame, app, rows[2]);
+    }
 
     if app.show_help {
         draw_help_popup(frame, app);
@@ -119,10 +132,24 @@ fn draw_title_bar(frame: &mut Frame, app: &App, area: Rect) {
 
 /// Barra de estado inferior: mensaje de estado a la izquierda, versión (ej.
 /// "v0.4.0") pegada a la orilla derecha.
+fn draw_search_bar(frame: &mut Frame, app: &App, area: Rect) {
+    let text = format!(" / {}_", app.search_input.as_str());
+    let p = Paragraph::new(text).style(
+        Style::default()
+            .fg(app.theme.highlight)
+            .add_modifier(Modifier::BOLD),
+    );
+    frame.render_widget(p, area);
+}
+
 fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
-    let status = app
-        .footer_message()
-        .unwrap_or_else(|| " '?' ayuda · q salir".to_string());
+    let status = app.footer_message().unwrap_or_else(|| {
+        if let Some(summary) = app.card_filters_summary() {
+            format!(" Filtro: {} · X limpiar · / editar · q salir", summary)
+        } else {
+            " / buscar · '?' ayuda · q salir".to_string()
+        }
+    });
 
     let version = format!("v{} ", env!("CARGO_PKG_VERSION"));
     let version_width = version.chars().count() as u16;
@@ -153,6 +180,8 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
                 "  h/l, ←/→        cambiar de lista",
                 "  H / L           mover card a la lista anterior/siguiente",
                 "  Enter           editar descripción de la card",
+                "  /               buscar / filtrar cards (texto, @user, #label)",
+                "  X               limpiar filtro activo",
                 "  n               crear card nueva en la lista activa",
                 "  w               marcar/desmarcar la card activa como 'working on'",
                 "  c               copiar el link de la card activa al portapapeles",
@@ -944,7 +973,7 @@ fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
         let inner = block.inner(columns[i]);
         frame.render_widget(block, columns[i]);
 
-        let cards = app.cards_by_list.get(&list.id);
+        let cards = app.view_cards(list.id);
         let selected_idx = if is_active_list {
             Some(app.current_card_index())
         } else {
@@ -961,7 +990,7 @@ fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
         // cuántas líneas ocupa el nombre al envolver.
         let title_width = inner.width.saturating_sub(2);
         let mut y = inner.y;
-        for (ci, card) in cards.into_iter().flatten().enumerate() {
+        for (ci, card) in cards.into_iter().enumerate() {
             let title_rows = wrapped_line_count(&card.name, title_width);
             let card_h: u16 = title_rows + 1 + 2;
             if y + card_h > inner.y + inner.height {
