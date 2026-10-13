@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 - *(tui)* Keep board interactive during network waits
 - *(tui)* Debounce mention user search while typing
+- *(tui)* Load board lists in parallel without dropping failed data
 
 ## [0.9.0] - 2026-09-11
 
