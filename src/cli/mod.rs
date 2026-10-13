@@ -134,7 +134,7 @@ pub async fn run() -> Result<()> {
     // `tui::run`). Update también se saltea: el proceso en ejecución sigue
     // siendo el binario viejo (reemplazar el archivo en disco no afecta el
     // proceso ya cargado en memoria), así que mostrar "hay una versión
-    // nueva, corré hteam update" justo después de haber corrido `hteam
+    // nueva, ejecuta hteam update" justo después de haber corrido `hteam
     // update` con éxito sería confuso.
     let skip_update_notice = matches!(
         &cli.command,
@@ -217,7 +217,7 @@ async fn maybe_notify_update() {
             eprintln!(
                 "{}",
                 format!(
-                    "⬆️  Nueva versión disponible: {} (actual: {}). Corré `hteam update`.",
+                    "⬆️  Nueva versión disponible: {} (actual: {}). Ejecuta `hteam update`.",
                     result.latest_version, result.current_version
                 )
                 .yellow()
