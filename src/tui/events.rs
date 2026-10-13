@@ -1991,6 +1991,7 @@ mod tests {
             responsible: Some(serde_json::json!({"username": "ana"})),
             priority: Some(serde_json::json!(2)),
             closed: Some(false),
+            title_url: None,
         });
 
         detail_move_field(&mut app, 1);

@@ -21,6 +21,10 @@ pub enum CardsCommands {
     Create(CreateArgs),
     /// Mover un card
     Move(MoveArgs),
+    /// Cerrar una task (POST close/ de la familia operation o project)
+    Close(LifecycleArgs),
+    /// Reabrir una task (POST reopen/ de la familia operation o project)
+    Reopen(LifecycleArgs),
     /// Actualizar descripción
     UpdateDesc(UpdateDescArgs),
     /// Comentar en un card
@@ -109,6 +113,16 @@ pub struct MoveArgs {
     /// Lista origen (opcional)
     #[arg(short, long)]
     pub from: Option<u64>,
+}
+
+#[derive(Args, Debug)]
+pub struct LifecycleArgs {
+    /// ID de la task / card
+    pub card_id: u64,
+
+    /// Familia API: `operation` o `project`. Si se omite, se infiere del `title_url` de la task.
+    #[arg(long)]
+    pub family: Option<String>,
 }
 
 #[derive(Args, Debug)]
@@ -204,6 +218,8 @@ pub async fn execute(cmd: CardsCommands, board: Option<u64>, json: bool) -> Resu
         CardsCommands::Link(args) => card_link(args, board, json).await,
         CardsCommands::Create(args) => create_card(args, json).await,
         CardsCommands::Move(args) => move_card(args, board, json).await,
+        CardsCommands::Close(args) => close_card(args, json).await,
+        CardsCommands::Reopen(args) => reopen_card(args, json).await,
         CardsCommands::UpdateDesc(args) => update_desc(args, json).await,
         CardsCommands::Comment(args) => post_comment(args, board, json).await,
         CardsCommands::Comments(args) => list_comments(args, json).await,
@@ -498,6 +514,42 @@ async fn move_card(args: MoveArgs, board: Option<u64>, json: bool) -> Result<()>
     );
     println!();
 
+    Ok(())
+}
+
+async fn close_card(args: LifecycleArgs, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+    let result =
+        operations::cards::close_card(&session.client, args.card_id, args.family.as_deref())
+            .await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&result)?);
+        return Ok(());
+    }
+
+    println!(
+        "\n✅ Task {} cerrada (familia {})\n   {}\n",
+        result.card_id, result.family, result.status
+    );
+    Ok(())
+}
+
+async fn reopen_card(args: LifecycleArgs, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+    let result =
+        operations::cards::reopen_card(&session.client, args.card_id, args.family.as_deref())
+            .await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&result)?);
+        return Ok(());
+    }
+
+    println!(
+        "\n✅ Task {} reabierta (familia {})\n   {}\n",
+        result.card_id, result.family, result.status
+    );
     Ok(())
 }
 

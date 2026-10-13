@@ -112,6 +112,12 @@ async fn process_command(line: &str) -> Result<()> {
         "move" | "mv" => {
             handle_move_command(args).await?;
         }
+        "close" => {
+            handle_lifecycle_command("close", args).await?;
+        }
+        "reopen" => {
+            handle_lifecycle_command("reopen", args).await?;
+        }
         "detail" | "show" => {
             handle_detail_command(args).await?;
         }
@@ -164,6 +170,8 @@ fn print_help() {
     println!("  cards <list_id>         Ver cards de una lista");
     println!("  create, mk <nombre>     Crear un nuevo card");
     println!("  move, mv <id> --to <n>  Mover card a otra lista");
+    println!("  close <id>              Cerrar task (API close/)");
+    println!("  reopen <id>             Reabrir task (API reopen/)");
     println!("  detail, show <id>       Ver detalle de un card");
     println!("  comment, co <id> <txt>  Agregar comentario");
     println!();
@@ -254,6 +262,41 @@ async fn handle_create_command(args: &[&str]) -> Result<()> {
         false,
     )
     .await?;
+    Ok(())
+}
+
+async fn handle_lifecycle_command(action: &str, args: &[&str]) -> Result<()> {
+    use crate::cli::cards::{CardsCommands, LifecycleArgs};
+
+    if args.is_empty() {
+        println!("⚠️  Uso: {action} <card_id> [--family operation|project]");
+        return Ok(());
+    }
+
+    let card_id = args[0].parse::<u64>()?;
+    let mut family = None;
+    let mut i = 1;
+    while i < args.len() {
+        match args[i] {
+            "--family" => {
+                if i + 1 < args.len() {
+                    family = Some(args[i + 1].to_string());
+                    i += 2;
+                } else {
+                    println!("⚠️  Falta valor para --family");
+                    return Ok(());
+                }
+            }
+            _ => i += 1,
+        }
+    }
+
+    let cmd = match action {
+        "close" => CardsCommands::Close(LifecycleArgs { card_id, family }),
+        "reopen" => CardsCommands::Reopen(LifecycleArgs { card_id, family }),
+        _ => unreachable!(),
+    };
+    cli::cards::execute(cmd, None, false).await?;
     Ok(())
 }
 

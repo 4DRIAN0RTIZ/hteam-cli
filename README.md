@@ -63,6 +63,13 @@ hteam cards create --name "Fix login bug" --list-id 3
 hteam cards move 12345 --to 2
 hteam cards move 12345 --to 2 --from 1
 
+# Cerrar / reabrir task (POST close|reopen de la familia operation o project;
+# no asume IDs de lista. --family es opcional y se infiere del title_url)
+hteam cards close 12345
+hteam cards close 12345 --family operation
+hteam cards reopen 12345
+hteam cards reopen 6005 --family project
+
 # Actualizar descripción (rápido)
 hteam cards update-desc 12345 --description "Nueva descripción"
 
@@ -134,6 +141,8 @@ Inicia el servidor MCP sobre **stdio**. Se integra con Claude Desktop, Claude Co
 | `cards_list` | Cards de una lista |
 | `cards_open` | Cards abiertos |
 | `cards_closed` | Cards cerrados |
+| `card_close` | Cerrar task (API close/, familia operation/project) |
+| `card_reopen` | Reabrir task (API reopen/) |
 | `card_detail` | Detalle completo de un card |
 | `card_labels` | Labels disponibles de un card |
 | `card_create` | Crear card |

@@ -4,7 +4,7 @@ use std::sync::Arc;
 use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
 
-use crate::client::{HteamClient, UpdateCardPatch};
+use crate::client::{HteamClient, TaskFamily, UpdateCardPatch};
 use crate::models::{Card, CardDetail, Label, List};
 
 /// Max in-flight list-card fetches while searching a whole board.
@@ -251,6 +251,68 @@ pub async fn move_card(
     client
         .move_card(card_id, from_list.unwrap_or(1), to_list, board)
         .await
+}
+
+/// Result of a dedicated close/reopen POST (not a list move).
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct TaskLifecycleResult {
+    pub card_id: u64,
+    pub action: &'static str,
+    pub family: &'static str,
+    pub status: String,
+}
+
+fn parse_family_override(family: Option<&str>) -> Result<Option<TaskFamily>> {
+    match family {
+        None => Ok(None),
+        Some(s) if s.trim().is_empty() => Ok(None),
+        Some(s) => Ok(Some(TaskFamily::parse(s)?)),
+    }
+}
+
+async fn resolve_family(
+    client: &HteamClient,
+    card_id: u64,
+    family: Option<&str>,
+) -> Result<TaskFamily> {
+    if let Some(f) = parse_family_override(family)? {
+        return Ok(f);
+    }
+    client.resolve_task_family(card_id).await
+}
+
+/// Close a task via `/operation|project-new/care/tasks/{id}/close/`.
+/// When `family` is omitted, resolves operation vs project from the task
+/// `title_url` (does not assume closed-list IDs).
+pub async fn close_card(
+    client: &HteamClient,
+    card_id: u64,
+    family: Option<&str>,
+) -> Result<TaskLifecycleResult> {
+    let family = resolve_family(client, card_id, family).await?;
+    let status = client.close_task(card_id, family).await?;
+    Ok(TaskLifecycleResult {
+        card_id,
+        action: "close",
+        family: family.as_str(),
+        status,
+    })
+}
+
+/// Reopen a task via `/operation|project-new/care/tasks/{id}/reopen/`.
+pub async fn reopen_card(
+    client: &HteamClient,
+    card_id: u64,
+    family: Option<&str>,
+) -> Result<TaskLifecycleResult> {
+    let family = resolve_family(client, card_id, family).await?;
+    let status = client.reopen_task(card_id, family).await?;
+    Ok(TaskLifecycleResult {
+        card_id,
+        action: "reopen",
+        family: family.as_str(),
+        status,
+    })
 }
 
 pub async fn update_description(
@@ -999,6 +1061,64 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_close_card_resolves_project_family_from_title_url() {
+        let mut server = mockito::Server::new_async().await;
+        let _detail = server
+            .mock("GET", "/operation/care/tasks/6005/")
+            .match_query(mockito::Matcher::UrlEncoded(
+                "format".to_string(),
+                "json".to_string(),
+            ))
+            .with_status(200)
+            .with_body(
+                r#"{"id":6005,"name":"t","labels":[],"list":null,"title_url":"/projects/335/tasks/6005/"}"#,
+            )
+            .create_async()
+            .await;
+        let _close = server
+            .mock("POST", "/project-new/care/tasks/6005/close/")
+            .with_status(200)
+            .with_body(r#"{"status":"The task has been closed"}"#)
+            .create_async()
+            .await;
+
+        let result = close_card(&client(&server.url()), 6005, None)
+            .await
+            .expect("close");
+        assert_eq!(result.family, "project");
+        assert_eq!(result.action, "close");
+        assert_eq!(result.status, "The task has been closed");
+    }
+
+    #[tokio::test]
+    async fn test_reopen_card_honors_family_override() {
+        let mut server = mockito::Server::new_async().await;
+        let _reopen = server
+            .mock("POST", "/operation/care/tasks/42/reopen/")
+            .with_status(200)
+            .with_body(r#"{"status":"The task has been reopened"}"#)
+            .create_async()
+            .await;
+
+        let result = reopen_card(&client(&server.url()), 42, Some("operation"))
+            .await
+            .expect("reopen");
+        assert_eq!(result.family, "operation");
+        assert_eq!(result.action, "reopen");
+    }
+
+    #[tokio::test]
+    async fn test_close_card_rejects_unknown_family() {
+        let err = close_card(&client("https://example.test"), 1, Some("board"))
+            .await
+            .expect_err("bad family");
+        assert!(
+            err.to_string().contains("familia"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[tokio::test]
     async fn test_update_card_fetches_detail_and_posts_patch() {
         let mut server = mockito::Server::new_async().await;
         let _detail = server
@@ -1326,6 +1446,7 @@ mod tests {
             responsible: None,
             priority: None,
             closed: None,
+            title_url: None,
         };
         let form = crate::client::TaskEditFormBaseline {
             priority: "5".into(),

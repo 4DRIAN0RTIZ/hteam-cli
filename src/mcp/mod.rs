@@ -93,6 +93,16 @@ struct MoveCardParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+struct CardLifecycleParams {
+    #[schemars(description = "ID del card / task")]
+    card_id: u64,
+    #[schemars(
+        description = "Familia API: operation o project. Si se omite, se infiere del title_url de la task"
+    )]
+    family: Option<String>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 struct UpdateDescParams {
     #[schemars(description = "ID del card")]
     card_id: u64,
@@ -309,6 +319,32 @@ impl HteamMcpServer {
             .await
             .map_err(err)?;
         ok(serde_json::json!({"success": true, "card_id": card_id, "to_list": to_list}))
+    }
+
+    #[tool(
+        description = "Cerrar una task con POST close/ de la familia correcta (operation o project). No mueve entre listas."
+    )]
+    async fn card_close(
+        &self,
+        Parameters(CardLifecycleParams { card_id, family }): Parameters<CardLifecycleParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let result = operations::cards::close_card(&self.client, card_id, family.as_deref())
+            .await
+            .map_err(err)?;
+        ok(result)
+    }
+
+    #[tool(
+        description = "Reabrir una task con POST reopen/ de la familia correcta (operation o project). No mueve entre listas."
+    )]
+    async fn card_reopen(
+        &self,
+        Parameters(CardLifecycleParams { card_id, family }): Parameters<CardLifecycleParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let result = operations::cards::reopen_card(&self.client, card_id, family.as_deref())
+            .await
+            .map_err(err)?;
+        ok(result)
     }
 
     #[tool(description = "Actualizar la descripción de un card (PATCH rápido)")]
