@@ -783,16 +783,11 @@ fn detail_field_value(app: &App, detail: &crate::models::CardDetail, field: Deta
                 None => "-".into(),
             }
         }
-        DetailField::Dependence => {
-            // Prefer resolved label from load; fall back to bare id.
-            if let Some(label) = app.task_detail_dependence_label.clone() {
-                label
-            } else if let Some(id) = operations::cards::dependence_task_id(&detail.dependence) {
-                format!("id {id}")
-            } else {
-                "-".into()
-            }
-        }
+        DetailField::Dependence => app
+            .task_detail_dependence_label
+            .clone()
+            .or_else(|| operations::cards::dependence_display(&detail.dependence))
+            .unwrap_or_else(|| "-".into()),
         DetailField::StartDate => detail
             .start_date
             .as_deref()
