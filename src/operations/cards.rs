@@ -628,15 +628,54 @@ pub async fn update_card_fields(
 }
 
 /// Parse a dependence JSON value (number, string id, or object) to a task id.
+/// Note: task detail often returns a *display* string like
+/// `"#5 - Lectura - Mide lo que importa"` (not the internal id); that does
+/// not parse here — use [`dependence_display`] for UI.
 pub fn dependence_task_id(value: &Option<serde_json::Value>) -> Option<u64> {
     let v = value.as_ref()?;
     match v {
         serde_json::Value::Null => None,
         serde_json::Value::Number(n) => n.as_u64(),
-        serde_json::Value::String(s) => s.trim().parse().ok(),
+        serde_json::Value::String(s) => {
+            let t = s.trim();
+            // Pure digits only — reject labels like "#5 - Title".
+            if !t.is_empty() && t.chars().all(|c| c.is_ascii_digit()) {
+                t.parse().ok()
+            } else {
+                None
+            }
+        }
         serde_json::Value::Object(map) => map
             .get("id")
             .and_then(|x| x.as_u64().or_else(|| x.as_str()?.parse().ok())),
+        _ => None,
+    }
+}
+
+/// Human-readable depends-on label from whatever the API returned.
+pub fn dependence_display(value: &Option<serde_json::Value>) -> Option<String> {
+    let v = value.as_ref()?;
+    match v {
+        serde_json::Value::Null => None,
+        serde_json::Value::Number(n) => Some(format!("id {n}")),
+        serde_json::Value::String(s) => {
+            let t = s.trim();
+            if t.is_empty() {
+                None
+            } else {
+                Some(t.to_string())
+            }
+        }
+        serde_json::Value::Object(map) => {
+            for key in ["text", "name", "label", "title", "selected_text"] {
+                if let Some(serde_json::Value::String(s)) = map.get(key) {
+                    if !s.trim().is_empty() {
+                        return Some(s.clone());
+                    }
+                }
+            }
+            dependence_task_id(value).map(|id| format!("id {id}"))
+        }
         _ => None,
     }
 }
@@ -1129,6 +1168,28 @@ mod tests {
         );
         assert_eq!(dependence_task_id(&None), None);
         assert_eq!(dependence_task_id(&Some(serde_json::Value::Null)), None);
+        // Web/API display label is not an id:
+        assert_eq!(
+            dependence_task_id(&Some(serde_json::json!(
+                "#5 - Lectura - Mide lo que importa"
+            ))),
+            None
+        );
+    }
+
+    #[test]
+    fn dependence_display_keeps_api_label_string() {
+        assert_eq!(
+            dependence_display(&Some(serde_json::json!(
+                "#5 - Lectura - Mide lo que importa"
+            )))
+            .as_deref(),
+            Some("#5 - Lectura - Mide lo que importa")
+        );
+        assert_eq!(
+            dependence_display(&Some(serde_json::json!(8965))).as_deref(),
+            Some("id 8965")
+        );
     }
 
     #[tokio::test]

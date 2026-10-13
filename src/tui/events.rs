@@ -667,6 +667,13 @@ async fn resolve_dependence_label(
     client: &HteamClient,
     dependence: &Option<serde_json::Value>,
 ) -> Option<String> {
+    // Task detail JSON often already has the web label string
+    // ("#5 - Lectura - …"), not the internal id.
+    if let Some(label) = operations::cards::dependence_display(dependence) {
+        if operations::cards::dependence_task_id(dependence).is_none() {
+            return Some(label);
+        }
+    }
     let dep_id = operations::cards::dependence_task_id(dependence)?;
     let dep = operations::cards::card_detail(client, dep_id).await.ok()?;
     let num = dep.number.map(|n| format!("#{n} ")).unwrap_or_default();
