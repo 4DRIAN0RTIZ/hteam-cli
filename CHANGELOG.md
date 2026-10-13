@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(openwiki)* Refresh architecture and quickstart pages
 - *(client)* Translate cards pagination comment to English
 
+
+### Features
+- *(tui)* Keep board interactive during network waits
+- *(tui)* Debounce mention user search while typing
+
 ## [0.9.0] - 2026-09-11
 
 ### Features
