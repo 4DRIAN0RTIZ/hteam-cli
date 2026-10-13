@@ -9,10 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug Fixes
 - *(tui)* Size board cards by wrapped title lines
+- *(client)* Fetch all cards when list exceeds default page size
 
 
 ### Documentation
 - *(openwiki)* Refresh architecture and quickstart pages
+- *(client)* Translate cards pagination comment to English
 
 ## [0.9.0] - 2026-09-11
 
