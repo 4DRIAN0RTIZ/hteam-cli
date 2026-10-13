@@ -652,6 +652,91 @@ pub fn dependence_task_id(value: &Option<serde_json::Value>) -> Option<u64> {
     }
 }
 
+/// Parse visible task number from labels like `#5 - Lectura - Mide lo que importa`.
+pub fn dependence_display_number(label: &str) -> Option<u64> {
+    let t = label.trim().trim_start_matches('#');
+    let digits: String = t.chars().take_while(|c| c.is_ascii_digit()).collect();
+    if digits.is_empty() {
+        None
+    } else {
+        digits.parse().ok()
+    }
+}
+
+/// Resolve free text / #n / id against loaded board cards.
+pub fn resolve_dependence_query<'a, I>(query: &str, cards: I) -> Option<u64>
+where
+    I: IntoIterator<Item = &'a Card>,
+{
+    let q = query.trim();
+    if q.is_empty() {
+        return None;
+    }
+    let cards: Vec<&Card> = cards.into_iter().collect();
+
+    if q.chars().all(|c| c.is_ascii_digit()) {
+        let n: u64 = q.parse().ok()?;
+        if let Some(c) = cards.iter().find(|c| c.id == n) {
+            return Some(c.id);
+        }
+        if let Some(c) = cards.iter().find(|c| c.number == Some(n)) {
+            return Some(c.id);
+        }
+        return Some(n);
+    }
+
+    if let Some(num) = dependence_display_number(q) {
+        let name_hint = q
+            .trim()
+            .trim_start_matches('#')
+            .chars()
+            .skip_while(|c| c.is_ascii_digit())
+            .collect::<String>()
+            .trim()
+            .trim_start_matches('-')
+            .trim()
+            .to_lowercase();
+        let by_num: Vec<&Card> = cards
+            .iter()
+            .copied()
+            .filter(|c| c.number == Some(num))
+            .collect();
+        if by_num.len() == 1 {
+            return Some(by_num[0].id);
+        }
+        if !name_hint.is_empty() {
+            if let Some(c) = by_num
+                .into_iter()
+                .find(|c| c.name.to_lowercase().contains(&name_hint))
+            {
+                return Some(c.id);
+            }
+            if let Some(c) = cards
+                .iter()
+                .find(|c| c.name.to_lowercase().contains(&name_hint))
+            {
+                return Some(c.id);
+            }
+        } else if let Some(c) = by_num.first() {
+            return Some(c.id);
+        }
+    }
+
+    let ql = q.to_lowercase();
+    let matches: Vec<&Card> = cards
+        .iter()
+        .copied()
+        .filter(|c| c.name.to_lowercase().contains(&ql))
+        .collect();
+    if matches.len() == 1 {
+        return Some(matches[0].id);
+    }
+    matches
+        .into_iter()
+        .find(|c| c.name.eq_ignore_ascii_case(q))
+        .map(|c| c.id)
+}
+
 /// Human-readable depends-on label from whatever the API returned.
 pub fn dependence_display(value: &Option<serde_json::Value>) -> Option<String> {
     let v = value.as_ref()?;
@@ -1190,6 +1275,41 @@ mod tests {
             dependence_display(&Some(serde_json::json!(8965))).as_deref(),
             Some("id 8965")
         );
+    }
+
+    #[tokio::test]
+    async fn update_card_fields_posts_empty_dependence_to_clear() {
+        let mut server = mockito::Server::new_async().await;
+        let _detail = server
+            .mock("GET", "/operation/care/tasks/11216/")
+            .match_query(mockito::Matcher::UrlEncoded(
+                "format".into(),
+                "json".into(),
+            ))
+            .with_status(200)
+            .with_body(
+                r##"{"id":11216,"name":"GBI","description":"d","labels":[],"dependence":"#5 - Lectura"}"##,
+            )
+            .create_async()
+            .await;
+        let _edit = server
+            .mock("POST", "/operations/483/tasks/11216/edit/")
+            .match_body(mockito::Matcher::Regex("dependence=(&|$)".into()))
+            .with_status(200)
+            .create_async()
+            .await;
+
+        update_card_fields(
+            &client(&server.url()),
+            11216,
+            483,
+            CardFieldUpdates {
+                dependence: Some(""),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("clear dependence");
     }
 
     #[tokio::test]
