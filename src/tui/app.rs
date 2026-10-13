@@ -136,6 +136,90 @@ pub struct App {
     /// al iniciar el TUI. Todo el renderizado en `ui.rs` resuelve sus colores
     /// desde acá en vez de literales `Color::` sueltos.
     pub theme: Theme,
+    /// Monotonic ids so a late HTTP response cannot clobber a newer board or
+    /// popup request (see `tui::net`).
+    pub requests: RequestIds,
+    /// Non-expiring loading label, nested by concurrent background jobs.
+    pub busy_message: Option<String>,
+    pub busy_depth: u32,
+}
+
+/// Per-surface request tokens. Each bump invalidates in-flight responses for
+/// that surface when `net::apply_outcome` checks the id.
+#[derive(Debug, Default, Clone)]
+pub struct RequestIds {
+    pub board_refresh: u64,
+    pub comments: u64,
+    pub mentions: u64,
+    pub reminders: u64,
+    pub objectives: u64,
+    pub projects: u64,
+    pub live_projects: u64,
+    pub boards_popup: u64,
+    pub move_card: u64,
+    pub working: u64,
+    pub description: u64,
+    pub new_card: u64,
+    pub comment_post: u64,
+    pub follow_up: u64,
+    pub card_link: u64,
+}
+
+impl RequestIds {
+    fn bump(slot: &mut u64) -> u64 {
+        *slot = slot.wrapping_add(1);
+        *slot
+    }
+
+    pub fn bump_board_refresh(&mut self) -> u64 {
+        Self::bump(&mut self.board_refresh)
+    }
+    pub fn bump_comments(&mut self) -> u64 {
+        Self::bump(&mut self.comments)
+    }
+    pub fn bump_mentions(&mut self) -> u64 {
+        Self::bump(&mut self.mentions)
+    }
+    pub fn bump_reminders(&mut self) -> u64 {
+        Self::bump(&mut self.reminders)
+    }
+    pub fn bump_objectives(&mut self) -> u64 {
+        Self::bump(&mut self.objectives)
+    }
+    pub fn bump_projects(&mut self) -> u64 {
+        Self::bump(&mut self.projects)
+    }
+    pub fn bump_live_projects(&mut self) -> u64 {
+        Self::bump(&mut self.live_projects)
+    }
+    pub fn bump_boards_popup(&mut self) -> u64 {
+        Self::bump(&mut self.boards_popup)
+    }
+    pub fn bump_move_card(&mut self) -> u64 {
+        Self::bump(&mut self.move_card)
+    }
+    pub fn bump_working(&mut self) -> u64 {
+        Self::bump(&mut self.working)
+    }
+    pub fn bump_description(&mut self) -> u64 {
+        Self::bump(&mut self.description)
+    }
+    pub fn bump_new_card(&mut self) -> u64 {
+        Self::bump(&mut self.new_card)
+    }
+    pub fn bump_comment_post(&mut self) -> u64 {
+        Self::bump(&mut self.comment_post)
+    }
+    pub fn bump_follow_up(&mut self) -> u64 {
+        Self::bump(&mut self.follow_up)
+    }
+    pub fn bump_card_link(&mut self) -> u64 {
+        Self::bump(&mut self.card_link)
+    }
+
+    pub fn is_current_board_refresh(&self, id: u64, job_board: u64, app_board: u64) -> bool {
+        self.board_refresh == id && job_board == app_board
+    }
 }
 
 impl App {
@@ -207,7 +291,40 @@ impl App {
             projects_scroll: Scroll::default(),
             working_hours,
             theme,
+            requests: RequestIds::default(),
+            busy_message: None,
+            busy_depth: 0,
         }
+    }
+
+    pub fn begin_busy(&mut self, msg: impl Into<String>) {
+        self.busy_depth = self.busy_depth.saturating_add(1);
+        self.busy_message = Some(msg.into());
+    }
+
+    pub fn end_busy(&mut self) {
+        self.busy_depth = self.busy_depth.saturating_sub(1);
+        if self.busy_depth == 0 {
+            self.busy_message = None;
+        }
+    }
+
+    /// Footer text: non-expiring busy label wins over transient status.
+    pub fn footer_message(&self) -> Option<String> {
+        self.busy_message.clone().or_else(|| self.status.clone())
+    }
+
+    /// True while a board-list load is in flight (board-switch empty state).
+    pub fn is_loading_boards(&self) -> bool {
+        self.busy_message
+            .as_deref()
+            .map(|s| s.contains("Cargando"))
+            .unwrap_or(false)
+            || self
+                .status
+                .as_deref()
+                .map(|s| s.contains("Cargando"))
+                .unwrap_or(false)
     }
 
     /// Tiempo restante de la jornada, evaluado contra la hora local actual.
