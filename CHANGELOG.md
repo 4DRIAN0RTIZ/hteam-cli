@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(tui)* Filter board cards with / search
 - *(tui)* Task detail popup with field edit
 - *(tui)* Show and edit task dependence in detail
+- *(tui)* Dependence task picker and correct empty clear
 
 ## [0.9.0] - 2026-09-11
 
