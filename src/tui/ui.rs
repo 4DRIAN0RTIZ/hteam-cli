@@ -311,7 +311,7 @@ fn draw_update_available_popup(frame: &mut Frame, app: &App) {
         "Hay una versión nueva de hteam.\n\n\
   actual:  {current}\n\
   última:  {latest}\n\n\
-Corré `hteam update` para instalarla.\n\
+Ejecuta `hteam update` para instalarla.\n\
 'c' copia el link de releases en GitHub."
     );
 
