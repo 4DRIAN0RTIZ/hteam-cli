@@ -25,6 +25,8 @@ pub enum CardsCommands {
     Close(LifecycleArgs),
     /// Reabrir una task (POST reopen/ de la familia operation o project)
     Reopen(LifecycleArgs),
+    /// Editar fechas de inicio y/o vencimiento (board-card dates/, YYYY-MM-DD)
+    Dates(DatesArgs),
     /// Actualizar descripción
     UpdateDesc(UpdateDescArgs),
     /// Comentar en un card
@@ -126,6 +128,20 @@ pub struct LifecycleArgs {
 }
 
 #[derive(Args, Debug)]
+pub struct DatesArgs {
+    /// ID de la task / card
+    pub card_id: u64,
+
+    /// Fecha de inicio (YYYY-MM-DD)
+    #[arg(long)]
+    pub start: Option<String>,
+
+    /// Fecha de vencimiento (YYYY-MM-DD)
+    #[arg(long)]
+    pub due: Option<String>,
+}
+
+#[derive(Args, Debug)]
 pub struct UpdateDescArgs {
     /// ID del card
     pub card_id: u64,
@@ -220,6 +236,7 @@ pub async fn execute(cmd: CardsCommands, board: Option<u64>, json: bool) -> Resu
         CardsCommands::Move(args) => move_card(args, board, json).await,
         CardsCommands::Close(args) => close_card(args, json).await,
         CardsCommands::Reopen(args) => reopen_card(args, json).await,
+        CardsCommands::Dates(args) => set_dates(args, board, json).await,
         CardsCommands::UpdateDesc(args) => update_desc(args, json).await,
         CardsCommands::Comment(args) => post_comment(args, board, json).await,
         CardsCommands::Comments(args) => list_comments(args, json).await,
@@ -550,6 +567,36 @@ async fn reopen_card(args: LifecycleArgs, json: bool) -> Result<()> {
         "\n✅ Task {} reabierta (familia {})\n   {}\n",
         result.card_id, result.family, result.status
     );
+    Ok(())
+}
+
+async fn set_dates(args: DatesArgs, board: Option<u64>, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+    let result = operations::cards::set_dates(
+        &session.client,
+        args.card_id,
+        board,
+        args.start.as_deref(),
+        args.due.as_deref(),
+    )
+    .await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&result)?);
+        return Ok(());
+    }
+
+    println!(
+        "\n✅ Fechas actualizadas para task {} (board_id {})",
+        result.card_id, result.board_id
+    );
+    if let Some(d) = &result.start_date {
+        println!("   start: {d}");
+    }
+    if let Some(d) = &result.due_date {
+        println!("   due:   {d}");
+    }
+    println!();
     Ok(())
 }
 

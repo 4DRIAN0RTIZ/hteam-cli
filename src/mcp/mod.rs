@@ -103,6 +103,20 @@ struct CardLifecycleParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+struct CardDatesParams {
+    #[schemars(description = "ID del card / task")]
+    card_id: u64,
+    #[schemars(description = "Fecha de inicio YYYY-MM-DD (opcional; al menos start o due)")]
+    start: Option<String>,
+    #[schemars(description = "Fecha de vencimiento YYYY-MM-DD (opcional; al menos start o due)")]
+    due: Option<String>,
+    #[schemars(
+        description = "Número de operación/board (opcional). Se resuelve el board_id interno AJAX, no se usa el número de operación como board_id."
+    )]
+    board: Option<u64>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 struct UpdateDescParams {
     #[schemars(description = "ID del card")]
     card_id: u64,
@@ -344,6 +358,30 @@ impl HteamMcpServer {
         let result = operations::cards::reopen_card(&self.client, card_id, family.as_deref())
             .await
             .map_err(err)?;
+        ok(result)
+    }
+
+    #[tool(
+        description = "Editar start_date y/o due_date de una task (YYYY-MM-DD) vía POST boards/…/card/…/dates/. Resuelve board_id interno."
+    )]
+    async fn card_dates(
+        &self,
+        Parameters(CardDatesParams {
+            card_id,
+            start,
+            due,
+            board,
+        }): Parameters<CardDatesParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let result = operations::cards::set_dates(
+            &self.client,
+            card_id,
+            board,
+            start.as_deref(),
+            due.as_deref(),
+        )
+        .await
+        .map_err(err)?;
         ok(result)
     }
 
