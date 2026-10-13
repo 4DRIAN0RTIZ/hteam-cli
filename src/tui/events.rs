@@ -1,9 +1,12 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 
 use crate::client::HteamClient;
 use crate::operations;
 
 use super::app::{App, HelpContext};
+use super::net::{self, JobOutcome, Jobs, WeeklyObjectivesLoaded};
 
 /// Abre el popup de ayuda mostrando solo la sección de `ctx` — ver
 /// `HelpContext`. El popup subyacente (si `ctx` no es `Board`) sigue abierto
@@ -18,47 +21,8 @@ pub fn close_help(app: &mut App) {
     app.show_help = false;
 }
 
-pub async fn refresh_all(client: &HteamClient, app: &mut App) {
-    app.set_status("Cargando...");
-
-    refresh_user_shift(client, app).await;
-
-    match operations::cards::list_lists(client, Some(app.board_number)).await {
-        Ok(lists) => {
-            app.all_lists = lists;
-            app.cards_by_list.clear();
-
-            let mut error_msg = None;
-            for list in app.all_lists.clone() {
-                match operations::cards::list_cards(client, list.id, Some(app.board_number)).await {
-                    Ok((cards, _)) => {
-                        app.cards_by_list.insert(list.id, cards);
-                    }
-                    Err(e) => {
-                        error_msg = Some(format!("Error cargando '{}': {}", list.name, e));
-                    }
-                }
-            }
-
-            refresh_working_on(client, app).await;
-
-            let visible_len = app.visible_lists().len();
-            app.selected_list = if visible_len > 0 {
-                app.selected_list.min(visible_len - 1)
-            } else {
-                0
-            };
-
-            match error_msg {
-                Some(msg) => app.set_status(msg),
-                None if app.all_lists.is_empty() => app.set_status("Este board no tiene listas."),
-                None => app.clear_status(),
-            }
-        }
-        Err(e) => {
-            app.set_status(format!("Error cargando listas: {}", e));
-        }
-    }
+pub fn request_refresh_all(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    net::request_board_refresh(client, app, jobs);
 }
 
 /// Hides the currently selected list (by name, case-insensitive) and persists
@@ -110,23 +74,11 @@ fn persist_hidden_lists(app: &App) -> Result<()> {
     config.save()
 }
 
-pub async fn refresh_current_list(client: &HteamClient, app: &mut App) {
-    let Some(list) = app.current_list().cloned() else {
-        return;
-    };
-    match operations::cards::list_cards(client, list.id, Some(app.board_number)).await {
-        Ok((cards, _)) => {
-            app.cards_by_list.insert(list.id, cards);
-        }
-        Err(e) => {
-            app.set_status(format!("Error recargando '{}': {}", list.name, e));
-        }
-    }
-}
-
 /// Optimistic move + revert-on-failure, mirroring the Neovim plugin's
-/// `move_card_visually` pattern (ui.lua) so the UI feels instant.
-pub async fn move_active_card(client: &HteamClient, app: &mut App, delta: i32) {
+/// `move_card_visually` pattern (ui.lua) so the UI feels instant. The HTTP
+/// call runs in the background; a late failure still reverts if the request
+/// id matches.
+pub fn move_active_card(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs, delta: i32) {
     let Some(from_list) = app.current_list().cloned() else {
         return;
     };
@@ -156,84 +108,78 @@ pub async fn move_active_card(client: &HteamClient, app: &mut App, delta: i32) {
         .or_default()
         .push(card.clone());
 
-    match operations::cards::move_card(
-        client,
-        card.id,
-        Some(from_list.id),
-        to_list.id,
-        Some(app.board_number),
-    )
-    .await
-    {
-        Ok(()) => {
-            let new_len = app
-                .cards_by_list
-                .get(&to_list.id)
-                .map(|c| c.len())
-                .unwrap_or(1);
-            app.selected_card.insert(to_list.id, new_len - 1);
-            app.selected_list = target_pos as usize;
-            app.set_status(format!("Movida: {} → {}", card.name, to_list.name));
+    let id = app.requests.bump_move_card();
+    let board_number = app.board_number;
+    let from_list_id = from_list.id;
+    let to_list_id = to_list.id;
+    let to_list_name = to_list.name.clone();
+    let card_id = card.id;
+    let target_list_pos = target_pos as usize;
+
+    jobs.spawn(async move {
+        let result = operations::cards::move_card(
+            &client,
+            card_id,
+            Some(from_list_id),
+            to_list_id,
+            Some(board_number),
+        )
+        .await
+        .map_err(|e| e.to_string());
+        JobOutcome::MoveCard {
+            id,
+            board_number,
+            card,
+            from_list_id,
+            to_list_id,
+            from_idx: idx,
+            target_list_pos,
+            to_list_name,
+            result,
         }
-        Err(e) => {
-            if let Some(cards) = app.cards_by_list.get_mut(&to_list.id) {
-                if let Some(pos) = cards.iter().position(|c| c.id == card.id) {
-                    cards.remove(pos);
-                }
-            }
-            let insert_at = idx.min(
-                app.cards_by_list
-                    .get(&from_list.id)
-                    .map(|c| c.len())
-                    .unwrap_or(0),
-            );
-            app.cards_by_list
-                .entry(from_list.id)
-                .or_default()
-                .insert(insert_at, card);
-            app.set_status(format!("Error moviendo card: {}", e));
-        }
-    }
+    });
 }
 
 /// Opens the reminders popup and (re)loads pending reminders.
-pub async fn open_reminders(client: &HteamClient, app: &mut App) {
+pub fn open_reminders(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     app.show_reminders = true;
     app.reminders_scroll.reset();
-    match operations::reminders::list(client).await {
-        Ok(list) => app.reminders = list,
-        Err(e) => app.set_status(format!("Error cargando reminders: {}", e)),
-    }
+    let id = app.requests.bump_reminders();
+    app.begin_busy("Cargando reminders...");
+    jobs.spawn(async move {
+        let result = operations::reminders::list(&client)
+            .await
+            .map_err(|e| e.to_string());
+        JobOutcome::Reminders { id, result }
+    });
 }
 
 pub fn close_reminders(app: &mut App) {
     app.show_reminders = false;
 }
 
-pub async fn open_weekly_objectives(app: &mut App, force: bool) {
+pub fn open_weekly_objectives(app: &mut App, jobs: &Jobs, force: bool) {
     app.show_weekly_objectives = true;
     app.weekly_objectives_scroll.reset();
     app.weekly_objectives_error = None;
-    app.set_status(if force {
+    let id = app.requests.bump_objectives();
+    app.begin_busy(if force {
         "Refrescando objetivos semanales..."
     } else {
         "Cargando objetivos semanales..."
     });
 
-    match load_weekly_objectives(force).await {
-        Ok(view) => {
-            app.weekly_objectives = Some(view.set);
-            app.weekly_objectives_from_cache = view.from_cache;
-            app.weekly_objectives_synced_at = Some(view.synced_at);
-            app.clear_status();
-        }
-        Err(e) => {
-            let msg = format!("Error cargando objetivos semanales: {}", e);
-            app.weekly_objectives_error = Some(msg.clone());
-            app.weekly_objectives = None;
-            app.set_status(msg);
-        }
-    }
+    jobs.spawn(async move {
+        let result = load_weekly_objectives(force)
+            .await
+            .map(|view| WeeklyObjectivesLoaded {
+                set: view.set,
+                from_cache: view.from_cache,
+                synced_at: view.synced_at,
+            })
+            .map_err(|e| e.to_string());
+        JobOutcome::WeeklyObjectives { id, result }
+    });
 }
 
 async fn load_weekly_objectives(
@@ -253,26 +199,32 @@ pub fn close_weekly_objectives(app: &mut App) {
 
 /// Creates a reminder for whichever card was selected on the board when the
 /// popup was opened, then refreshes the popup's list.
-pub async fn add_reminder_for_current_card(client: &HteamClient, app: &mut App) {
+pub fn add_reminder_for_current_card(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     let Some(card) = app.current_card().cloned() else {
         return;
     };
-    match operations::reminders::create(client, card.id).await {
-        Ok(()) => {
-            app.set_status(format!("Reminder creado: {}", card.name));
-            if let Ok(list) = operations::reminders::list(client).await {
-                app.reminders = list;
-            }
+    let id = app.requests.bump_reminders();
+    let card_id = card.id;
+    let card_name = card.name.clone();
+    app.begin_busy("Creando reminder...");
+    jobs.spawn(async move {
+        let result = match operations::reminders::create(&client, card_id).await {
+            Ok(()) => operations::reminders::list(&client)
+                .await
+                .map_err(|e| e.to_string()),
+            Err(e) => Err(e.to_string()),
+        };
+        JobOutcome::ReminderCreated {
+            id,
+            card_name,
+            result,
         }
-        Err(e) => {
-            app.set_status(format!("Error creando reminder: {}", e));
-        }
-    }
+    });
 }
 
 /// Opens the comments popup for the currently selected card and loads its
 /// existing comments. No-op if no card is selected.
-pub async fn open_comments(client: &HteamClient, app: &mut App) {
+pub fn open_comments(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     let Some(card) = app.current_card().cloned() else {
         return;
     };
@@ -282,67 +234,97 @@ pub async fn open_comments(client: &HteamClient, app: &mut App) {
     app.mention_suggestions.clear();
     app.comments_scroll.reset();
     app.current_follow_up = None;
+    app.comments.clear();
 
-    match operations::comments::list_comments(client, card.id).await {
-        Ok(list) => app.comments = list,
-        Err(e) => app.set_status(format!("Error cargando comentarios: {}", e)),
-    }
+    let id = app.requests.bump_comments();
+    let card_id = card.id;
+    let board_number = app.board_number;
+    let has_follow_up = card.has_follow_up();
+    app.begin_busy("Cargando comentarios...");
 
-    // Solo se busca si la card tiene la etiqueta Follow-up — de otra forma
-    // es un scrape de HTML (la página de detalle completa) de más, sabiendo
-    // de antemano que no va a encontrar nada.
-    if card.has_follow_up() {
-        match operations::comments::get_follow_up(client, card.id, Some(app.board_number)).await {
-            Ok(follow_up) => app.current_follow_up = follow_up,
-            Err(e) => app.set_status(format!("Error cargando seguimiento: {}", e)),
+    jobs.spawn(async move {
+        let comments = operations::comments::list_comments(&client, card_id)
+            .await
+            .map_err(|e| e.to_string());
+        let follow_up = if has_follow_up {
+            operations::comments::get_follow_up(&client, card_id, Some(board_number))
+                .await
+                .map_err(|e| e.to_string())
+        } else {
+            Ok(None)
+        };
+        JobOutcome::Comments {
+            id,
+            card_id,
+            comments,
+            follow_up,
         }
-    }
+    });
 }
 
 pub fn close_comments(app: &mut App) {
     app.show_comments = false;
     app.current_follow_up = None;
+    // Invalidate in-flight comment loads for this popup.
+    app.requests.bump_comments();
     cancel_composing_comment(app);
 }
 
 /// Completa el seguimiento mostrado en el popup de comentarios y refresca la
 /// lista actual para que la card pierda el indicador de urgencia en el board.
-pub async fn complete_current_follow_up(client: &HteamClient, app: &mut App) {
-    resolve_current_follow_up(client, app, true).await;
+pub fn complete_current_follow_up(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    resolve_current_follow_up(client, app, jobs, true);
 }
 
 /// Cancela (elimina) el seguimiento mostrado en el popup de comentarios y
 /// refresca la lista actual para que la card pierda el indicador de urgencia
 /// en el board.
-pub async fn cancel_current_follow_up(client: &HteamClient, app: &mut App) {
-    resolve_current_follow_up(client, app, false).await;
+pub fn cancel_current_follow_up(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    resolve_current_follow_up(client, app, jobs, false);
 }
 
-async fn resolve_current_follow_up(client: &HteamClient, app: &mut App, complete: bool) {
+fn resolve_current_follow_up(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs, complete: bool) {
     let Some(follow_up) = app.current_follow_up.clone() else {
         return;
     };
-    let result = if complete {
-        operations::comments::complete_follow_up(client, follow_up.id).await
-    } else {
-        operations::comments::cancel_follow_up(client, follow_up.id).await
+    let Some(list) = app.current_list().cloned() else {
+        return;
     };
-    match result {
-        Ok(()) => {
-            app.current_follow_up = None;
-            let verb = if complete { "completado" } else { "cancelado" };
-            app.set_status(format!("Seguimiento {}.", verb));
-            refresh_current_list(client, app).await;
+    let id = app.requests.bump_follow_up();
+    let board_number = app.board_number;
+    let list_id = list.id;
+    let follow_up_id = follow_up.id;
+    app.begin_busy(if complete {
+        "Completando seguimiento..."
+    } else {
+        "Cancelando seguimiento..."
+    });
+
+    jobs.spawn(async move {
+        let result = if complete {
+            operations::comments::complete_follow_up(&client, follow_up_id).await
+        } else {
+            operations::comments::cancel_follow_up(&client, follow_up_id).await
+        };
+        let (result, cards) = match result {
+            Ok(()) => {
+                let cards = operations::cards::list_cards(&client, list_id, Some(board_number))
+                    .await
+                    .map(|(c, _)| c)
+                    .map_err(|e| e.to_string());
+                (Ok(()), Some(cards))
+            }
+            Err(e) => (Err(e.to_string()), None),
+        };
+        JobOutcome::FollowUp {
+            id,
+            board_number,
+            list_id,
+            complete,
+            result,
+            cards,
         }
-        Err(e) => {
-            let verb = if complete {
-                "completando"
-            } else {
-                "cancelando"
-            };
-            app.set_status(format!("Error {} seguimiento: {}", verb, e));
-        }
-    }
+    });
 }
 
 pub fn start_composing_comment(app: &mut App) {
@@ -361,6 +343,7 @@ pub fn cancel_composing_comment(app: &mut App) {
     app.comment_date_input.clear();
     app.comment_date_focused = false;
     app.mention_suggestions.clear();
+    app.requests.bump_mentions();
 }
 
 pub fn toggle_comment_follow(app: &mut App) {
@@ -384,37 +367,35 @@ pub fn comment_date_input_backspace(app: &mut App) {
     app.comment_date_input.backspace();
 }
 
-pub async fn comment_input_push(client: &HteamClient, app: &mut App, ch: char) {
+pub fn comment_input_push(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs, ch: char) {
     app.comment_input.push(ch);
-    update_mention_suggestions(client, app).await;
+    update_mention_suggestions(client, app, jobs);
 }
 
-pub async fn comment_input_backspace(client: &HteamClient, app: &mut App) {
+pub fn comment_input_backspace(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     app.comment_input.backspace();
-    update_mention_suggestions(client, app).await;
+    update_mention_suggestions(client, app, jobs);
 }
 
 /// Fires a fresh `search_users` call on every keystroke that changes the
-/// trailing `@word` — simple and consistent with the rest of the TUI (no
-/// background task/debounce), at the cost of one request per character while
-/// typing a mention.
-async fn update_mention_suggestions(client: &HteamClient, app: &mut App) {
+/// trailing `@word`. The request is non-blocking; only the latest mention
+/// token id is applied when it returns (stale keystrokes are dropped).
+fn update_mention_suggestions(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     match operations::comments::mention_query(app.comment_input.as_str()) {
-        // Search on a bare '@' too (empty query) — matches the Neovim
-        // plugin's behavior of firing on any `@([%w_]*)$` match, capture
-        // included, so suggestions show up immediately instead of only
-        // after the first letter.
-        Some(query) => match operations::comments::mention_suggestions(client, query).await {
-            Ok(list) => {
-                app.mention_suggestions = list;
-                app.mention_selected = 0;
-            }
-            Err(e) => {
-                app.mention_suggestions.clear();
-                app.set_status(format!("Error buscando usuarios: {}", e));
-            }
-        },
-        None => app.mention_suggestions.clear(),
+        Some(query) => {
+            let id = app.requests.bump_mentions();
+            let query = query.to_string();
+            jobs.spawn(async move {
+                let result = operations::comments::mention_suggestions(&client, &query)
+                    .await
+                    .map_err(|e| e.to_string());
+                JobOutcome::Mentions { id, result }
+            });
+        }
+        None => {
+            app.requests.bump_mentions();
+            app.mention_suggestions.clear();
+        }
     }
 }
 
@@ -444,9 +425,10 @@ pub fn accept_mention_suggestion(app: &mut App) {
     app.comment_input.push_str(&user.selected_text);
     app.comment_input.push(' ');
     app.mention_suggestions.clear();
+    app.requests.bump_mentions();
 }
 
-pub async fn submit_comment(client: &HteamClient, app: &mut App) {
+pub fn submit_comment(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     let Some(card) = app.current_card().cloned() else {
         return;
     };
@@ -459,51 +441,36 @@ pub async fn submit_comment(client: &HteamClient, app: &mut App) {
     let date = if date_input.is_empty() {
         None
     } else {
-        Some(date_input.as_str())
+        Some(date_input)
     };
+    let follow = app.comment_follow;
+    let board_number = app.board_number;
+    let card_id = card.id;
+    let id = app.requests.bump_comment_post();
+    app.begin_busy("Publicando comentario...");
 
-    match operations::comments::post_comment(
-        client,
-        card.id,
-        &text,
-        Some(app.board_number),
-        app.comment_follow,
-        date,
-    )
-    .await
-    {
-        Ok(()) => {
-            app.set_status("Comentario publicado.");
-            cancel_composing_comment(app);
-            if let Ok(list) = operations::comments::list_comments(client, card.id).await {
-                app.comments = list;
-            }
+    jobs.spawn(async move {
+        let result = match operations::comments::post_comment(
+            &client,
+            card_id,
+            &text,
+            Some(board_number),
+            follow,
+            date.as_deref(),
+        )
+        .await
+        {
+            Ok(()) => operations::comments::list_comments(&client, card_id)
+                .await
+                .map_err(|e| e.to_string()),
+            Err(e) => Err(e.to_string()),
+        };
+        JobOutcome::CommentPosted {
+            id,
+            card_id,
+            result,
         }
-        Err(e) => {
-            app.set_status(format!("Error publicando comentario: {}", e));
-        }
-    }
-}
-
-/// `update_card_description` resolves board_number internally from the
-/// client's cached config, which `switch_to_board` keeps in sync via
-/// `client.set_board_number`, so this correctly targets whichever board is
-/// currently active in the TUI.
-pub async fn save_description(
-    client: &HteamClient,
-    app: &mut App,
-    card_id: u64,
-    description: &str,
-) {
-    match operations::cards::update_description(client, card_id, description).await {
-        Ok(()) => {
-            app.set_status("Descripción actualizada.");
-            refresh_current_list(client, app).await;
-        }
-        Err(e) => {
-            app.set_status(format!("Error guardando descripción: {}", e));
-        }
-    }
+    });
 }
 
 /// Opens the description popup for the currently selected card, seeding the
@@ -532,20 +499,50 @@ pub fn description_input_backspace(app: &mut App) {
 
 /// Saves the edited description (if the card is still resolvable) and closes
 /// the popup regardless — mirrors `submit_comment`'s cancel-then-save order.
-pub async fn submit_description(client: &HteamClient, app: &mut App) {
+pub fn submit_description(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     let Some(card) = app.current_card().cloned() else {
+        close_description(app);
+        return;
+    };
+    let Some(list) = app.current_list().cloned() else {
         close_description(app);
         return;
     };
     let text = app.description_input.clone();
     close_description(app);
-    save_description(client, app, card.id, text.as_str()).await;
+
+    let id = app.requests.bump_description();
+    let board_number = app.board_number;
+    let list_id = list.id;
+    let card_id = card.id;
+    app.begin_busy("Guardando descripción...");
+
+    jobs.spawn(async move {
+        let result =
+            match operations::cards::update_description(&client, card_id, text.as_str()).await {
+                Ok(()) => {
+                    let cards = operations::cards::list_cards(&client, list_id, Some(board_number))
+                        .await
+                        .map(|(c, _)| c)
+                        .map_err(|e| e.to_string());
+                    (Ok(()), Some(cards))
+                }
+                Err(e) => (Err(e.to_string()), None),
+            };
+        JobOutcome::DescriptionSaved {
+            id,
+            board_number,
+            list_id,
+            result: result.0,
+            cards: result.1,
+        }
+    });
 }
 
 /// Opens the projects popup. If nothing is active yet, auto-loads the most
 /// recently used saved project (if any) so 'P' shows something useful right
 /// away instead of an empty screen.
-pub async fn open_projects(client: &HteamClient, app: &mut App) {
+pub fn open_projects(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     app.show_projects = true;
     app.composing_project = false;
     app.project_input.clear();
@@ -554,7 +551,7 @@ pub async fn open_projects(client: &HteamClient, app: &mut App) {
 
     if app.active_project.is_none() {
         if let Some(&id) = app.known_projects.first() {
-            load_project(client, app, id).await;
+            load_project(client, app, jobs, id);
         }
     }
 }
@@ -565,6 +562,8 @@ pub fn close_projects(app: &mut App) {
     app.project_input.clear();
     app.projects_detail_focused = false;
     app.show_live_projects = false;
+    app.requests.bump_projects();
+    app.requests.bump_live_projects();
 }
 
 pub fn start_composing_project(app: &mut App) {
@@ -597,22 +596,22 @@ pub fn move_project_selection(app: &mut App, delta: i32) {
 }
 
 /// Loads whatever project id was just typed in, then leaves compose mode.
-pub async fn submit_project_input(client: &HteamClient, app: &mut App) {
+pub fn submit_project_input(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     let Ok(id) = app.project_input.trim().parse::<u64>() else {
         app.set_status("Número de proyecto inválido.");
         return;
     };
     app.composing_project = false;
     app.project_input.clear();
-    load_project(client, app, id).await;
+    load_project(client, app, jobs, id);
 }
 
 /// Loads whichever saved project id is currently highlighted in the list.
-pub async fn select_known_project(client: &HteamClient, app: &mut App) {
+pub fn select_known_project(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     let Some(&id) = app.known_projects.get(app.selected_project_idx) else {
         return;
     };
-    load_project(client, app, id).await;
+    load_project(client, app, jobs, id);
 }
 
 /// Copia el link del proyecto resaltado en el popup al portapapeles ('c') —
@@ -645,13 +644,13 @@ pub fn copy_project_link(client: &HteamClient, app: &mut App) {
 /// list`, filtrado por lo que haya quedado seleccionado en
 /// `live_projects_status_idx` (por default, "Execution"). Al volver a
 /// presionar 'L' con el listado abierto, lo cierra sin volver a pedirlo.
-pub async fn toggle_live_projects(client: &HteamClient, app: &mut App) {
+pub fn toggle_live_projects(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     if app.show_live_projects {
         app.show_live_projects = false;
+        app.requests.bump_live_projects();
         return;
     }
-    fetch_live_projects(client, app).await;
-    app.show_live_projects = true;
+    fetch_live_projects(client, app, jobs, true);
 }
 
 pub fn move_live_project_selection(app: &mut App, delta: i32) {
@@ -667,28 +666,40 @@ pub fn move_live_project_selection(app: &mut App, delta: i32) {
 /// los radios de `/projects/` en el sitio: All → Planning → Execution →
 /// Finished → Cancelled → All) y vuelve a pedir la lista con el nuevo
 /// filtro.
-pub async fn cycle_live_projects_status(client: &HteamClient, app: &mut App, delta: i32) {
+pub fn cycle_live_projects_status(
+    client: Arc<HteamClient>,
+    app: &mut App,
+    jobs: &Jobs,
+    delta: i32,
+) {
     let len = operations::projects::PROJECT_STATUSES.len() as i32;
     let next = (app.live_projects_status_idx as i32 + delta).rem_euclid(len);
     app.live_projects_status_idx = next as usize;
-    fetch_live_projects(client, app).await;
+    fetch_live_projects(client, app, jobs, false);
 }
 
-async fn fetch_live_projects(client: &HteamClient, app: &mut App) {
-    let status = operations::projects::PROJECT_STATUSES[app.live_projects_status_idx];
-    match operations::projects::list(client, Some(status)).await {
-        Ok(projects) => {
-            app.live_projects = projects;
-            app.selected_live_project_idx = 0;
+fn fetch_live_projects(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs, open: bool) {
+    let status_idx = app.live_projects_status_idx;
+    let status = operations::projects::PROJECT_STATUSES[status_idx];
+    let id = app.requests.bump_live_projects();
+    app.begin_busy("Cargando proyectos...");
+    jobs.spawn(async move {
+        let result = operations::projects::list(&client, Some(status))
+            .await
+            .map_err(|e| e.to_string());
+        JobOutcome::LiveProjects {
+            id,
+            status_idx,
+            result,
+            open,
         }
-        Err(e) => app.set_status(format!("Error cargando proyectos: {}", e)),
-    }
+    });
 }
 
 /// Carga el proyecto resaltado en el listado en vivo y vuelve a la vista
 /// normal del popup (mismo efecto que elegir uno de `known_projects`: queda
 /// como `active_project` y se agrega al MRU vía `remember_project`).
-pub async fn select_live_project(client: &HteamClient, app: &mut App) {
+pub fn select_live_project(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     let Some(id) = app
         .live_projects
         .get(app.selected_live_project_idx)
@@ -696,22 +707,33 @@ pub async fn select_live_project(client: &HteamClient, app: &mut App) {
     else {
         return;
     };
-    load_project(client, app, id).await;
+    load_project(client, app, jobs, id);
     app.show_live_projects = false;
 }
 
-async fn load_project(client: &HteamClient, app: &mut App, id: u64) {
-    app.active_project = Some(id);
-    remember_project(app, id);
+fn load_project(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs, project_id: u64) {
+    app.active_project = Some(project_id);
+    remember_project(app, project_id);
+    app.project_milestones.clear();
+    app.project_tasks.clear();
 
-    match operations::projects::milestones(client, id).await {
-        Ok(list) => app.project_milestones = list,
-        Err(e) => app.set_status(format!("Error cargando milestones: {}", e)),
-    }
-    match operations::projects::tasks(client, id).await {
-        Ok(resp) => app.project_tasks = resp.results,
-        Err(e) => app.set_status(format!("Error cargando tasks: {}", e)),
-    }
+    let id = app.requests.bump_projects();
+    app.begin_busy("Cargando proyecto...");
+    jobs.spawn(async move {
+        let milestones = operations::projects::milestones(&client, project_id)
+            .await
+            .map_err(|e| e.to_string());
+        let tasks = operations::projects::tasks(&client, project_id)
+            .await
+            .map(|resp| resp.results)
+            .map_err(|e| e.to_string());
+        JobOutcome::ProjectLoaded {
+            id,
+            project_id,
+            milestones,
+            tasks,
+        }
+    });
 }
 
 /// Moves `id` to the front of the known-projects MRU list (deduping) and
@@ -764,7 +786,7 @@ pub fn new_card_input_backspace(app: &mut App) {
 /// config, kept in sync with `app.board_number` by `switch_to_board` via
 /// `client.set_board_number`, so the card always lands on the board
 /// currently active in the TUI.
-pub async fn submit_new_card(client: &HteamClient, app: &mut App) {
+pub fn submit_new_card(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     let Some(list_id) = app.new_card_list_id else {
         cancel_composing_card(app);
         return;
@@ -775,107 +797,135 @@ pub async fn submit_new_card(client: &HteamClient, app: &mut App) {
         return;
     }
 
-    match operations::cards::create_card(client, &name, Some(list_id)).await {
-        Ok(card) => {
-            app.set_status(format!("Card creada: {}", card.name));
-            cancel_composing_card(app);
-            if let Ok((cards, _)) =
-                operations::cards::list_cards(client, list_id, Some(app.board_number)).await
-            {
-                app.cards_by_list.insert(list_id, cards);
+    let id = app.requests.bump_new_card();
+    let board_number = app.board_number;
+    app.begin_busy("Creando card...");
+    jobs.spawn(async move {
+        let result = match operations::cards::create_card(&client, &name, Some(list_id)).await {
+            Ok(card) => {
+                match operations::cards::list_cards(&client, list_id, Some(board_number)).await {
+                    Ok((cards, _)) => Ok((card.name, cards)),
+                    Err(e) => Err(e.to_string()),
+                }
             }
+            Err(e) => Err(e.to_string()),
+        };
+        JobOutcome::CardCreated {
+            id,
+            board_number,
+            list_id,
+            result,
         }
-        Err(e) => {
-            app.set_status(format!("Error creando card: {}", e));
-        }
-    }
-}
-
-async fn refresh_working_on(client: &HteamClient, app: &mut App) {
-    // Non-fatal: keep the previous set on a transient error instead of
-    // blanking out the border highlight everywhere.
-    if let Ok(items) = operations::working::list_working(client).await {
-        app.working_on = items;
-    }
-}
-
-async fn refresh_user_shift(client: &HteamClient, app: &mut App) {
-    // Non-fatal: keep the previous value on a transient error instead of
-    // blanking out the header.
-    if let Ok(resume) = operations::checkin::workshift_resume(client).await {
-        app.user_shift = resume.last;
-    }
+    });
 }
 
 /// Copia el link de la card seleccionada al portapapeles ('c') — reutiliza
 /// `operations::cards::card_url` y `operations::clipboard::copy`, las mismas
 /// funciones que expone `hteam cards link`.
-pub async fn copy_card_link(client: &HteamClient, app: &mut App) {
+pub fn copy_card_link(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     let Some(card) = app.current_card().cloned() else {
         return;
     };
 
-    match operations::cards::card_url(client, card.id, Some(app.board_number)).await {
-        Ok(url) => match operations::clipboard::copy(&url) {
-            Ok(()) => app.set_status(format!("{} Link copiado: {}", operations::COPY_ICON, url)),
-            Err(e) => app.set_status(format!("Error copiando el link: {}", e)),
-        },
-        Err(e) => app.set_status(format!("Error obteniendo el link: {}", e)),
-    }
+    let id = app.requests.bump_card_link();
+    let board_number = app.board_number;
+    let card_id = card.id;
+    app.begin_busy("Obteniendo link...");
+    jobs.spawn(async move {
+        let result = operations::cards::card_url(&client, card_id, Some(board_number))
+            .await
+            .map_err(|e| e.to_string());
+        JobOutcome::CardLink { id, result }
+    });
 }
 
 /// Toggles "working on" for the currently selected card: stops it if it's
 /// already the active one (using the working-on-it *record* id, not the card
 /// id — `stop_working` needs the former), starts it otherwise.
-pub async fn toggle_working_on(client: &HteamClient, app: &mut App) {
+pub fn toggle_working_on(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     let Some(card) = app.current_card().cloned() else {
         return;
     };
 
-    if let Some(working_id) = app.working_on_id_for(card.id) {
-        match operations::working::stop_working(client, working_id).await {
-            Ok(()) => {
-                app.set_status(format!("Dejaste de trabajar en: {}", card.name));
-                refresh_working_on(client, app).await;
-            }
-            Err(e) => app.set_status(format!("Error deteniendo working on: {}", e)),
-        }
+    let id = app.requests.bump_working();
+    let card_name = card.name.clone();
+    let working_id = app.working_on_id_for(card.id);
+    let card_id = card.id;
+    app.begin_busy(if working_id.is_some() {
+        "Deteniendo working on..."
     } else {
-        match operations::working::start_working(client, card.id).await {
-            Ok(()) => {
-                app.set_status(format!("Working on: {}", card.name));
-                refresh_working_on(client, app).await;
+        "Iniciando working on..."
+    });
+
+    jobs.spawn(async move {
+        let outcome = if let Some(working_id) = working_id {
+            match operations::working::stop_working(&client, working_id).await {
+                Ok(()) => {
+                    let working_on = operations::working::list_working(&client).await.ok();
+                    JobOutcome::WorkingToggled {
+                        id,
+                        message: format!("Dejaste de trabajar en: {}", card_name),
+                        working_on,
+                        error: None,
+                    }
+                }
+                Err(e) => JobOutcome::WorkingToggled {
+                    id,
+                    message: String::new(),
+                    working_on: None,
+                    error: Some(format!("Error deteniendo working on: {}", e)),
+                },
             }
-            Err(e) => app.set_status(format!("Error iniciando working on: {}", e)),
-        }
-    }
+        } else {
+            match operations::working::start_working(&client, card_id).await {
+                Ok(()) => {
+                    let working_on = operations::working::list_working(&client).await.ok();
+                    JobOutcome::WorkingToggled {
+                        id,
+                        message: format!("Working on: {}", card_name),
+                        working_on,
+                        error: None,
+                    }
+                }
+                Err(e) => JobOutcome::WorkingToggled {
+                    id,
+                    message: String::new(),
+                    working_on: None,
+                    error: Some(format!("Error iniciando working on: {}", e)),
+                },
+            }
+        };
+        outcome
+    });
 }
 
 // ── Board-switch popup ──────────────────────────────────────────────────
 
 /// Abre el popup de cambio de board y obtiene la lista desde la API.
-pub async fn open_board_switch(client: &HteamClient, app: &mut App) {
+pub fn open_board_switch(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     app.show_board_switch = true;
     app.available_boards.clear();
     app.selected_board_idx = 0;
-    app.set_status("Cargando boards...");
+    let id = app.requests.bump_boards_popup();
+    let current_board = app.board_number;
+    app.begin_busy("Cargando boards...");
 
-    match operations::boards::list_live(client).await {
-        Ok(boards) => {
-            // Pre-seleccionar el board activo en la lista
-            if let Some(idx) = boards.iter().position(|b| b.id == app.board_number) {
-                app.selected_board_idx = idx;
-            }
-            app.available_boards = boards;
-            app.clear_status();
+    jobs.spawn(async move {
+        let result = operations::boards::list_live(&client)
+            .await
+            .map_err(|e| e.to_string());
+        JobOutcome::BoardsLoaded {
+            id,
+            current_board,
+            result,
         }
-        Err(e) => app.set_status(format!("Error cargando boards: {}", e)),
-    }
+    });
 }
 
 pub fn close_board_switch(app: &mut App) {
     app.show_board_switch = false;
     app.available_boards.clear();
+    app.requests.bump_boards_popup();
 }
 
 pub fn move_board_selection(app: &mut App, delta: i32) {
@@ -888,17 +938,17 @@ pub fn move_board_selection(app: &mut App, delta: i32) {
 }
 
 /// Cambia al board actualmente resaltado en el popup.
-pub async fn select_current_board(client: &HteamClient, app: &mut App) {
+pub fn select_current_board(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     let Some(board) = app.available_boards.get(app.selected_board_idx).cloned() else {
         return;
     };
-    switch_to_board(client, app, board.id).await;
+    switch_to_board(client, app, jobs, board.id);
 }
 
 /// Lógica central del cambio de board: actualiza `board_number` (tanto en
 /// `App` como en el `HteamClient`), limpia el estado del tablero, persiste
-/// en config.toml y recarga las listas/cards.
-async fn switch_to_board(client: &HteamClient, app: &mut App, id: u64) {
+/// en config.toml y recarga las listas/cards en background.
+fn switch_to_board(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs, id: u64) {
     if id == app.board_number {
         close_board_switch(app);
         return;
@@ -911,11 +961,6 @@ async fn switch_to_board(client: &HteamClient, app: &mut App, id: u64) {
     app.selected_list = 0;
     app.working_on.clear();
 
-    // Sin esto, create_card/update_card_description seguirían resolviendo
-    // el board desde la copia de Config cacheada al arrancar el cliente,
-    // operando sobre el board viejo aunque la UI ya muestre el nuevo.
-    client.set_board_number(id).await;
-
     close_board_switch(app);
 
     if let Err(e) = persist_board_switch(id) {
@@ -925,7 +970,23 @@ async fn switch_to_board(client: &HteamClient, app: &mut App, id: u64) {
         ));
     }
 
-    refresh_all(client, app).await;
+    let refresh_id = app.requests.bump_board_refresh();
+    app.begin_busy("Cargando...");
+    jobs.spawn(async move {
+        // Sin esto, create_card/update_card_description seguirían resolviendo
+        // el board desde la copia de Config cacheada al arrancar el cliente,
+        // operando sobre el board viejo aunque la UI ya muestre el nuevo.
+        client.set_board_number(id).await;
+        let (lists, cards, working_on, user_shift) = net::fetch_board_snapshot(&client, id).await;
+        JobOutcome::BoardRefresh {
+            id: refresh_id,
+            board_number: id,
+            lists,
+            cards,
+            working_on,
+            user_shift,
+        }
+    });
 }
 
 fn persist_board_switch(id: u64) -> Result<()> {
