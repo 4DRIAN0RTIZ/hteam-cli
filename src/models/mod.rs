@@ -35,6 +35,8 @@ pub struct List {
 pub struct CardListResponse {
     pub id: u64,
     pub name: String,
+    #[serde(default)]
+    pub total_board_cards: Option<usize>,
     pub cardlist_list: Vec<CardListEntry>,
 }
 

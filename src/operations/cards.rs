@@ -178,6 +178,75 @@ mod tests {
         assert_eq!(cards[0].name, "Fix bug");
     }
 
+    fn card_list_body(total: usize, ids: &[u64]) -> String {
+        let entries: Vec<String> = ids
+            .iter()
+            .map(|id| {
+                format!(
+                    r#"{{"id":{id},"board_id":99,"card":{{"id":{id},"title":"Card {id}","subtitle":"","labels_list":[]}},"is_closed":false,"card_type":0,"time_status":0,"get_time_status":"","position":1}}"#
+                )
+            })
+            .collect();
+        format!(
+            r#"{{"id":1,"name":"Open","total_board_cards":{total},"cardlist_list":[{}]}}"#,
+            entries.join(",")
+        )
+    }
+
+    #[tokio::test]
+    async fn test_list_cards_refetches_all_when_list_exceeds_default_page() {
+        let mut server = mockito::Server::new_async().await;
+        let first_page = server
+            .mock("GET", "/operation/care/operations/483/lists/1/cards/")
+            .match_query(mockito::Matcher::Exact("format=json".to_string()))
+            .with_status(200)
+            .with_body(card_list_body(3, &[1, 2]))
+            .expect(1)
+            .create_async()
+            .await;
+        let full_list = server
+            .mock("GET", "/operation/care/operations/483/lists/1/cards/")
+            .match_query(mockito::Matcher::Exact(
+                "format=json&items_per_page=3".to_string(),
+            ))
+            .with_status(200)
+            .with_body(card_list_body(3, &[1, 2, 3]))
+            .expect(1)
+            .create_async()
+            .await;
+
+        let (cards, _) = list_cards(&client(&server.url()), 1, Some(483))
+            .await
+            .expect("cards");
+
+        first_page.assert_async().await;
+        full_list.assert_async().await;
+        assert_eq!(
+            cards.iter().map(|c| c.id).collect::<Vec<_>>(),
+            vec![1, 2, 3]
+        );
+    }
+
+    #[tokio::test]
+    async fn test_list_cards_skips_refetch_when_all_cards_returned() {
+        let mut server = mockito::Server::new_async().await;
+        let only_request = server
+            .mock("GET", "/operation/care/operations/483/lists/1/cards/")
+            .match_query(mockito::Matcher::Exact("format=json".to_string()))
+            .with_status(200)
+            .with_body(card_list_body(2, &[1, 2]))
+            .expect(1)
+            .create_async()
+            .await;
+
+        let (cards, _) = list_cards(&client(&server.url()), 1, Some(483))
+            .await
+            .expect("cards");
+
+        only_request.assert_async().await;
+        assert_eq!(cards.len(), 2);
+    }
+
     #[tokio::test]
     async fn test_move_card_defaults_from_list_to_open() {
         let mut server = mockito::Server::new_async().await;

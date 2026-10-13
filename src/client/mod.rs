@@ -180,30 +180,15 @@ impl HteamClient {
             None => self.get_board_number().await?,
         };
 
-        let config = self.config.lock().await;
-        let url = format!(
-            "{}/operation/care/operations/{}/lists/{}/cards/?format=json",
-            self.api_base_url, board, list_id
-        );
-        let headers = self.build_headers(&config)?;
-
-        let response = self
-            .client
-            .get(&url)
-            .headers(headers)
-            .send()
-            .await
-            .context("Error al obtener cards")?;
-
-        if !response.status().is_success() {
-            anyhow::bail!(
-                "Error HTTP {}: {}",
-                response.status(),
-                response.text().await?
-            );
+        // Hteam devuelve solo 10 cards por defecto e ignora page/offset/limit.
+        // Si la lista trae más (`total_board_cards`), se repite la petición
+        // pidiéndolas todas con `items_per_page`, igual que el front de Hteam.
+        let mut card_response = self.fetch_card_list(board, list_id, None).await?;
+        if let Some(total) = card_response.total_board_cards {
+            if total > card_response.cardlist_list.len() {
+                card_response = self.fetch_card_list(board, list_id, Some(total)).await?;
+            }
         }
-
-        let card_response: crate::models::CardListResponse = response.json().await?;
 
         // Extract board_id from first entry if available
         let board_id = card_response
@@ -224,6 +209,41 @@ impl HteamClient {
             .collect();
 
         Ok((cards, board_id))
+    }
+
+    async fn fetch_card_list(
+        &self,
+        board: u64,
+        list_id: u64,
+        items_per_page: Option<usize>,
+    ) -> Result<crate::models::CardListResponse> {
+        let config = self.config.lock().await;
+        let mut url = format!(
+            "{}/operation/care/operations/{}/lists/{}/cards/?format=json",
+            self.api_base_url, board, list_id
+        );
+        if let Some(n) = items_per_page {
+            url.push_str(&format!("&items_per_page={}", n));
+        }
+        let headers = self.build_headers(&config)?;
+
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers)
+            .send()
+            .await
+            .context("Error al obtener cards")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+
+        Ok(response.json().await?)
     }
 
     pub async fn get_open_cards(&self, board_number: Option<u64>) -> Result<Vec<Card>> {
