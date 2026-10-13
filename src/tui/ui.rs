@@ -1358,8 +1358,47 @@ fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
 
     for (i, list) in visible.into_iter().enumerate() {
         let is_active_list = i == app.selected_list;
+        let cards = app.view_cards(list.id);
+        let selected_idx = if is_active_list && !cards.is_empty() {
+            Some(app.current_card_index().min(cards.len() - 1))
+        } else {
+            None
+        };
+
+        // Measure with the inner width of a bordered column.
+        let probe = Block::default().borders(Borders::ALL);
+        let inner_w = probe.inner(columns[i]).width;
+        let inner_h = probe.inner(columns[i]).height;
+        let title_width = inner_w.saturating_sub(2);
+        let heights: Vec<u16> = cards
+            .iter()
+            .map(|c| wrapped_line_count(&c.name, title_width) + 1 + 2)
+            .collect();
+
+        let scroll_start =
+            column_scroll_start(inner_h, &heights, selected_idx.filter(|_| is_active_list));
+
+        // How many cards fit from scroll_start for the title cue.
+        let mut used = 0u16;
+        let mut last_drawn = scroll_start.saturating_sub(1);
+        for (ci, h) in heights.iter().enumerate().skip(scroll_start) {
+            if used.saturating_add(*h) > inner_h {
+                break;
+            }
+            used = used.saturating_add(*h);
+            last_drawn = ci;
+        }
+        let hidden_above = scroll_start;
+        let hidden_below = cards.len().saturating_sub(last_drawn.saturating_add(1));
+        let title = match (hidden_above > 0, hidden_below > 0) {
+            (true, true) => format!(" {} ▲{} ▼{} ", list.name, hidden_above, hidden_below),
+            (true, false) => format!(" {} ▲{} ", list.name, hidden_above),
+            (false, true) => format!(" {} ▼{} ", list.name, hidden_below),
+            _ => format!(" {} ", list.name),
+        };
+
         let block = Block::default()
-            .title(format!(" {} ", list.name))
+            .title(title)
             .borders(Borders::ALL)
             .border_style(if is_active_list {
                 Style::default().fg(app.theme.border_active)
@@ -1369,26 +1408,9 @@ fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
         let inner = block.inner(columns[i]);
         frame.render_widget(block, columns[i]);
 
-        let cards = app.view_cards(list.id);
-        let selected_idx = if is_active_list {
-            Some(app.current_card_index())
-        } else {
-            None
-        };
-
-        // Altura mínima: 2 de borde + 2 de contenido (nombre, labels/reloj de
-        // seguimiento) — con 3 la segunda línea de texto nunca se pintaba
-        // (Borders::ALL ya consume 2 de las 3 filas), así que las labels y el
-        // reloj de seguimiento quedaban invisibles incluso antes de esta
-        // feature. Cuando el nombre envuelve a más de 1 línea (título largo),
-        // esas líneas extra se restan del espacio de la línea de labels/reloj
-        // si la altura se queda fija en 4 — por eso se calcula por card según
-        // cuántas líneas ocupa el nombre al envolver.
-        let title_width = inner.width.saturating_sub(2);
         let mut y = inner.y;
-        for (ci, card) in cards.into_iter().enumerate() {
-            let title_rows = wrapped_line_count(&card.name, title_width);
-            let card_h: u16 = title_rows + 1 + 2;
+        for (ci, card) in cards.iter().enumerate().skip(scroll_start) {
+            let card_h = heights[ci];
             if y + card_h > inner.y + inner.height {
                 break;
             }
@@ -1399,9 +1421,7 @@ fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
                 height: card_h,
             };
 
-            // La lista actual (ej. "DOING") ya se ve en el título de la columna,
-            // y "Follow-up" ya se comunica con el ícono de reloj — repetirlas
-            // como texto sería ruido.
+            // List name / Follow-up label are already shown elsewhere — skip noise.
             let labels = card
                 .labels
                 .iter()
@@ -1454,6 +1474,40 @@ fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
     }
 }
 
+/// First card index to draw so `selected` stays inside `viewport_h`.
+fn column_scroll_start(viewport_h: u16, heights: &[u16], selected: Option<usize>) -> usize {
+    if heights.is_empty() {
+        return 0;
+    }
+    let Some(sel) = selected else {
+        return 0;
+    };
+    let sel = sel.min(heights.len() - 1);
+
+    // If everything from 0..=sel fits, no scroll.
+    let mut top_to_sel = 0u16;
+    for h in heights.iter().take(sel + 1) {
+        top_to_sel = top_to_sel.saturating_add(*h);
+    }
+    if top_to_sel <= viewport_h {
+        return 0;
+    }
+
+    // Scroll so the selection sits on the bottom edge of the viewport
+    // (vim-style: grow upward from sel until we fill the column).
+    let mut used = heights[sel];
+    let mut start = sel;
+    while start > 0 {
+        let prev = heights[start - 1];
+        if used.saturating_add(prev) > viewport_h {
+            break;
+        }
+        used = used.saturating_add(prev);
+        start -= 1;
+    }
+    start
+}
+
 /// Texto del estado de turno mostrado a la derecha del header, p.ej.
 /// "adrian.ortiz · trabajando desde 07:55 " o "adrian.ortiz · salió a las 17:01 ".
 fn user_status_line(app: &App) -> Option<String> {
@@ -1475,4 +1529,32 @@ fn format_time(iso: &str) -> String {
     chrono::DateTime::parse_from_rfc3339(iso)
         .map(|dt| dt.format("%H:%M").to_string())
         .unwrap_or_else(|_| iso.to_string())
+}
+
+#[cfg(test)]
+mod board_scroll_tests {
+    use super::column_scroll_start;
+
+    #[test]
+    fn no_selection_starts_at_zero() {
+        assert_eq!(column_scroll_start(20, &[4, 4, 4, 4, 4], None), 0);
+    }
+
+    #[test]
+    fn selection_in_view_stays_at_zero() {
+        assert_eq!(column_scroll_start(20, &[4, 4, 4, 4], Some(2)), 0);
+    }
+
+    #[test]
+    fn selection_past_viewport_scrolls() {
+        // 6 cards x 4h = 24 > 10 viewport; select last → start near end
+        let heights = vec![4u16; 6];
+        let start = column_scroll_start(10, &heights, Some(5));
+        assert!(start > 0, "must scroll down, got {start}");
+        // from start..=5 must fit in 10
+        let used: u16 = heights[start..=5].iter().sum();
+        assert!(used <= 10, "window too tall: {used}");
+        assert!(heights[start..=5].contains(&4));
+        assert_eq!(start, 4); // sel=5: grow up → start=4 (8h), start=3 would be 12h > 10
+    }
 }
