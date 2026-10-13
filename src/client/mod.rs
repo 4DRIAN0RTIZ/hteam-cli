@@ -29,6 +29,7 @@ fn truncate_for_error(s: &str, max_chars: usize) -> String {
     s.chars().take(max_chars).collect()
 }
 
+#[derive(Clone)]
 pub struct HteamClient {
     client: Client,
     config: Arc<Mutex<Config>>,
@@ -143,12 +144,17 @@ impl HteamClient {
             None => self.get_board_number().await?,
         };
 
-        let config = self.config.lock().await;
-        let url = format!(
-            "{}/operation/care/operations/{}/lists/?format=json",
-            self.api_base_url, board
-        );
-        let headers = self.build_headers(&config)?;
+        // Build URL/headers under the config lock, then drop it before HTTP so
+        // parallel list/card fetches are not serialized on this mutex.
+        let (url, headers) = {
+            let config = self.config.lock().await;
+            let url = format!(
+                "{}/operation/care/operations/{}/lists/?format=json",
+                self.api_base_url, board
+            );
+            let headers = self.build_headers(&config)?;
+            (url, headers)
+        };
 
         let response = self
             .client
@@ -217,15 +223,19 @@ impl HteamClient {
         list_id: u64,
         items_per_page: Option<usize>,
     ) -> Result<crate::models::CardListResponse> {
-        let config = self.config.lock().await;
-        let mut url = format!(
-            "{}/operation/care/operations/{}/lists/{}/cards/?format=json",
-            self.api_base_url, board, list_id
-        );
-        if let Some(n) = items_per_page {
-            url.push_str(&format!("&items_per_page={}", n));
-        }
-        let headers = self.build_headers(&config)?;
+        // Same pattern as get_lists: hold config only while copying headers.
+        let (url, headers) = {
+            let config = self.config.lock().await;
+            let mut url = format!(
+                "{}/operation/care/operations/{}/lists/{}/cards/?format=json",
+                self.api_base_url, board, list_id
+            );
+            if let Some(n) = items_per_page {
+                url.push_str(&format!("&items_per_page={}", n));
+            }
+            let headers = self.build_headers(&config)?;
+            (url, headers)
+        };
 
         let response = self
             .client

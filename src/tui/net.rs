@@ -1,8 +1,9 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::sync::Arc;
 
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Semaphore};
+use tokio::task::JoinSet;
 
 use crate::client::HteamClient;
 use crate::models::{
@@ -147,6 +148,9 @@ pub struct WeeklyObjectivesLoaded {
 }
 
 /// Snapshot used by board refresh / board-switch jobs.
+/// Max in-flight card-list HTTP requests during a board refresh.
+const LIST_CARD_CONCURRENCY: usize = 4;
+
 pub async fn fetch_board_snapshot(
     client: &HteamClient,
     board_number: u64,
@@ -156,35 +160,80 @@ pub async fn fetch_board_snapshot(
     Option<Vec<WorkingOnStatus>>,
     Option<Option<WorkShiftRecord>>,
 ) {
-    let user_shift = match operations::checkin::workshift_resume(client).await {
-        Ok(resume) => Some(resume.last),
-        Err(_) => None,
-    };
+    let (user_shift, lists_result) = tokio::join!(
+        async {
+            match operations::checkin::workshift_resume(client).await {
+                Ok(resume) => Some(resume.last),
+                Err(_) => None,
+            }
+        },
+        async {
+            operations::cards::list_lists(client, Some(board_number))
+                .await
+                .map_err(|e| format!("Error cargando listas: {}", e))
+        },
+    );
 
-    let lists = match operations::cards::list_lists(client, Some(board_number)).await {
+    let lists = match lists_result {
         Ok(lists) => lists,
-        Err(e) => {
-            return (
-                Err(format!("Error cargando listas: {}", e)),
-                HashMap::new(),
-                None,
-                user_shift,
-            );
+        Err(msg) => {
+            return (Err(msg), HashMap::new(), None, user_shift);
         }
     };
 
-    let mut cards = HashMap::new();
-    for list in &lists {
-        let entry = match operations::cards::list_cards(client, list.id, Some(board_number)).await {
-            Ok((list_cards, _)) => Ok(list_cards),
-            Err(e) => Err(format!("Error cargando '{}': {}", list.name, e)),
-        };
-        cards.insert(list.id, entry);
-    }
-
-    let working_on = operations::working::list_working(client).await.ok();
+    let (cards, working_on) = tokio::join!(
+        fetch_list_cards_parallel(client, board_number, &lists),
+        async { operations::working::list_working(client).await.ok() },
+    );
 
     (Ok(lists), cards, working_on, user_shift)
+}
+
+async fn fetch_list_cards_parallel(
+    client: &HteamClient,
+    board_number: u64,
+    lists: &[List],
+) -> HashMap<u64, Result<Vec<Card>, String>> {
+    if lists.is_empty() {
+        return HashMap::new();
+    }
+
+    let semaphore = Arc::new(Semaphore::new(LIST_CARD_CONCURRENCY));
+    let mut set = JoinSet::new();
+
+    for list in lists {
+        let client = client.clone();
+        let list_id = list.id;
+        let list_name = list.name.clone();
+        let semaphore = semaphore.clone();
+        set.spawn(async move {
+            let _permit = semaphore
+                .acquire()
+                .await
+                .expect("list-card semaphore stays open");
+            let entry =
+                match operations::cards::list_cards(&client, list_id, Some(board_number)).await {
+                    Ok((list_cards, _)) => Ok(list_cards),
+                    Err(e) => Err(format!("Error cargando '{}': {}", list_name, e)),
+                };
+            (list_id, entry)
+        });
+    }
+
+    let mut cards = HashMap::with_capacity(lists.len());
+    while let Some(joined) = set.join_next().await {
+        match joined {
+            Ok((list_id, entry)) => {
+                cards.insert(list_id, entry);
+            }
+            Err(e) => {
+                // JoinError has no list id; surface a generic failure so the
+                // refresh still completes for the remaining lists.
+                let _ = e;
+            }
+        }
+    }
+    cards
 }
 
 pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
@@ -210,15 +259,18 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
             }
             match lists {
                 Ok(lists) => {
+                    let list_ids: HashSet<u64> = lists.iter().map(|l| l.id).collect();
                     app.all_lists = lists;
-                    app.cards_by_list.clear();
-                    let mut error_msg = None;
+                    // Drop cards for lists that no longer exist, but keep prior
+                    // data for lists whose fetch failed this round.
+                    app.cards_by_list.retain(|id, _| list_ids.contains(id));
+                    let mut failed = Vec::new();
                     for (list_id, entry) in cards {
                         match entry {
                             Ok(list_cards) => {
                                 app.cards_by_list.insert(list_id, list_cards);
                             }
-                            Err(msg) => error_msg = Some(msg),
+                            Err(msg) => failed.push(msg),
                         }
                     }
                     if let Some(items) = working_on {
@@ -230,14 +282,17 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
                     } else {
                         0
                     };
-                    match error_msg {
-                        Some(msg) => app.set_status(msg),
-                        None if app.all_lists.is_empty() => {
-                            app.set_status("Este board no tiene listas.")
+                    if failed.is_empty() {
+                        if app.all_lists.is_empty() {
+                            app.set_status("Este board no tiene listas.");
+                        } else {
+                            app.clear_status();
                         }
-                        None => app.clear_status(),
+                    } else {
+                        app.set_status(failed.join(" · "));
                     }
                 }
+                // Keep whatever is already on screen if the lists call fails.
                 Err(msg) => app.set_status(msg),
             }
         }
@@ -713,6 +768,141 @@ mod tests {
         assert!(app.status.is_none());
     }
 
+    fn sample_card(id: u64, name: &str) -> Card {
+        Card {
+            id,
+            name: name.to_string(),
+            description: None,
+            status: None,
+            labels: Vec::new(),
+            number: None,
+            title_url: None,
+            subtitle_url: None,
+            responsible: None,
+            worker: None,
+            time_status: None,
+        }
+    }
+
+    #[test]
+    fn board_refresh_keeps_prior_cards_when_a_list_fails() {
+        let mut app = test_app(1);
+        app.all_lists = vec![sample_list(10, "Todo"), sample_list(20, "Doing")];
+        app.cards_by_list
+            .insert(10, vec![sample_card(1, "old-todo")]);
+        app.cards_by_list
+            .insert(20, vec![sample_card(2, "old-doing")]);
+
+        let id = app.requests.bump_board_refresh();
+        let mut cards = HashMap::new();
+        cards.insert(10, Ok(vec![sample_card(3, "new-todo")]));
+        cards.insert(20, Err("Error cargando 'Doing': timeout".into()));
+
+        apply_outcome(
+            &mut app,
+            JobOutcome::BoardRefresh {
+                id,
+                board_number: 1,
+                lists: Ok(vec![sample_list(10, "Todo"), sample_list(20, "Doing")]),
+                cards,
+                working_on: None,
+                user_shift: None,
+            },
+        );
+
+        assert_eq!(app.cards_by_list[&10][0].name, "new-todo");
+        assert_eq!(
+            app.cards_by_list[&20][0].name, "old-doing",
+            "failed list must keep previous cards"
+        );
+        assert_eq!(
+            app.status.as_deref(),
+            Some("Error cargando 'Doing': timeout")
+        );
+    }
+
+    #[test]
+    fn board_refresh_drops_cards_for_removed_lists() {
+        let mut app = test_app(1);
+        app.all_lists = vec![sample_list(10, "Todo"), sample_list(99, "Gone")];
+        app.cards_by_list.insert(10, vec![sample_card(1, "keep")]);
+        app.cards_by_list.insert(99, vec![sample_card(2, "drop")]);
+
+        let id = app.requests.bump_board_refresh();
+        let mut cards = HashMap::new();
+        cards.insert(10, Ok(vec![sample_card(1, "keep")]));
+
+        apply_outcome(
+            &mut app,
+            JobOutcome::BoardRefresh {
+                id,
+                board_number: 1,
+                lists: Ok(vec![sample_list(10, "Todo")]),
+                cards,
+                working_on: None,
+                user_shift: None,
+            },
+        );
+
+        assert!(app.cards_by_list.contains_key(&10));
+        assert!(
+            !app.cards_by_list.contains_key(&99),
+            "cards for lists no longer on the board must go"
+        );
+        assert!(app.status.is_none());
+    }
+
+    #[test]
+    fn board_refresh_joins_multiple_list_errors_in_status() {
+        let mut app = test_app(1);
+        let id = app.requests.bump_board_refresh();
+        let mut cards = HashMap::new();
+        cards.insert(10, Err("Error cargando 'A': 500".into()));
+        cards.insert(20, Err("Error cargando 'B': 503".into()));
+
+        apply_outcome(
+            &mut app,
+            JobOutcome::BoardRefresh {
+                id,
+                board_number: 1,
+                lists: Ok(vec![sample_list(10, "A"), sample_list(20, "B")]),
+                cards,
+                working_on: None,
+                user_shift: None,
+            },
+        );
+
+        let status = app.status.expect("status");
+        assert!(status.contains("Error cargando 'A': 500"));
+        assert!(status.contains("Error cargando 'B': 503"));
+        assert!(status.contains('·'));
+    }
+
+    #[test]
+    fn board_refresh_list_error_keeps_existing_board() {
+        let mut app = test_app(1);
+        app.all_lists = vec![sample_list(10, "Todo")];
+        app.cards_by_list
+            .insert(10, vec![sample_card(1, "still-here")]);
+
+        let id = app.requests.bump_board_refresh();
+        apply_outcome(
+            &mut app,
+            JobOutcome::BoardRefresh {
+                id,
+                board_number: 1,
+                lists: Err("Error cargando listas: boom".into()),
+                cards: HashMap::new(),
+                working_on: None,
+                user_shift: None,
+            },
+        );
+
+        assert_eq!(app.all_lists.len(), 1);
+        assert_eq!(app.cards_by_list[&10][0].name, "still-here");
+        assert_eq!(app.status.as_deref(), Some("Error cargando listas: boom"));
+    }
+
     #[test]
     fn stale_comments_do_not_overwrite_open_popup() {
         let mut app = test_app(1);
@@ -805,5 +995,72 @@ mod tests {
 
         assert_eq!(app.mention_suggestions.len(), 1);
         assert_eq!(app.mention_suggestions[0].selected_text, "ana");
+    }
+
+    fn test_client(server_url: &str) -> HteamClient {
+        use crate::config::{AuthConfig, Config};
+
+        let config = Config {
+            auth: AuthConfig {
+                board_number: Some(483),
+                csrf_token: Some("csrf".into()),
+                session_id: Some("sid".into()),
+                ..AuthConfig::default()
+            },
+            ..Config::default()
+        };
+        HteamClient::new_for_test(config, server_url.to_string(), server_url.to_string())
+            .expect("test client")
+    }
+
+    fn empty_card_list_body(list_id: u64) -> String {
+        format!(r#"{{"id":{list_id},"name":"L","cardlist_list":[],"total_board_cards":0}}"#)
+    }
+
+    #[tokio::test]
+    async fn fetch_board_snapshot_loads_each_list_and_keeps_partial_errors() {
+        let mut server = mockito::Server::new_async().await;
+        let _lists = server
+            .mock("GET", "/operation/care/operations/483/lists/")
+            .match_query(mockito::Matcher::UrlEncoded(
+                "format".into(),
+                "json".into(),
+            ))
+            .with_status(200)
+            .with_body(
+                r#"[{"id":10,"name":"Todo","total_board_cards":0},{"id":20,"name":"Doing","total_board_cards":0}]"#,
+            )
+            .create_async()
+            .await;
+        let _todo_cards = server
+            .mock("GET", "/operation/care/operations/483/lists/10/cards/")
+            .match_query(mockito::Matcher::UrlEncoded("format".into(), "json".into()))
+            .with_status(200)
+            .with_body(empty_card_list_body(10))
+            .create_async()
+            .await;
+        let _doing_cards = server
+            .mock("GET", "/operation/care/operations/483/lists/20/cards/")
+            .match_query(mockito::Matcher::UrlEncoded("format".into(), "json".into()))
+            .with_status(500)
+            .with_body("boom")
+            .create_async()
+            .await;
+
+        let client = test_client(&server.url());
+        let (lists, cards, _, _) = fetch_board_snapshot(&client, 483).await;
+
+        let lists = lists.expect("lists");
+        assert_eq!(lists.len(), 2);
+        assert!(cards.get(&10).unwrap().is_ok());
+        assert!(
+            cards
+                .get(&20)
+                .unwrap()
+                .as_ref()
+                .unwrap_err()
+                .contains("Doing"),
+            "failed list should be named in the error"
+        );
     }
 }
