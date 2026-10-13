@@ -779,6 +779,7 @@ mod tests {
             title_url: None,
             subtitle_url: None,
             responsible: None,
+            priority: None,
             worker: None,
             time_status: None,
         }
