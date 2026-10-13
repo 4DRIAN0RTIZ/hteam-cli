@@ -118,6 +118,9 @@ async fn process_command(line: &str) -> Result<()> {
         "reopen" => {
             handle_lifecycle_command("reopen", args).await?;
         }
+        "dates" => {
+            handle_dates_command(args).await?;
+        }
         "detail" | "show" => {
             handle_detail_command(args).await?;
         }
@@ -172,6 +175,7 @@ fn print_help() {
     println!("  move, mv <id> --to <n>  Mover card a otra lista");
     println!("  close <id>              Cerrar task (API close/)");
     println!("  reopen <id>             Reabrir task (API reopen/)");
+    println!("  dates <id> --start|--due  Fechas YYYY-MM-DD");
     println!("  detail, show <id>       Ver detalle de un card");
     println!("  comment, co <id> <txt>  Agregar comentario");
     println!();
@@ -257,6 +261,55 @@ async fn handle_create_command(args: &[&str]) -> Result<()> {
         CardsCommands::Create(CreateArgs {
             name,
             list_id: None,
+        }),
+        None,
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+async fn handle_dates_command(args: &[&str]) -> Result<()> {
+    use crate::cli::cards::{CardsCommands, DatesArgs};
+
+    if args.is_empty() {
+        println!("⚠️  Uso: dates <card_id> [--start YYYY-MM-DD] [--due YYYY-MM-DD]");
+        return Ok(());
+    }
+
+    let card_id = args[0].parse::<u64>()?;
+    let mut start = None;
+    let mut due = None;
+    let mut i = 1;
+    while i < args.len() {
+        match args[i] {
+            "--start" => {
+                if i + 1 < args.len() {
+                    start = Some(args[i + 1].to_string());
+                    i += 2;
+                } else {
+                    println!("⚠️  Falta valor para --start");
+                    return Ok(());
+                }
+            }
+            "--due" => {
+                if i + 1 < args.len() {
+                    due = Some(args[i + 1].to_string());
+                    i += 2;
+                } else {
+                    println!("⚠️  Falta valor para --due");
+                    return Ok(());
+                }
+            }
+            _ => i += 1,
+        }
+    }
+
+    cli::cards::execute(
+        CardsCommands::Dates(DatesArgs {
+            card_id,
+            start,
+            due,
         }),
         None,
         false,

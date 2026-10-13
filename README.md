@@ -70,6 +70,11 @@ hteam cards close 12345 --family operation
 hteam cards reopen 12345
 hteam cards reopen 6005 --family project
 
+# Fechas de inicio / vencimiento (YYYY-MM-DD; usa board_id interno, no el de la operación)
+hteam cards dates 12345 --start 2026-10-14
+hteam cards dates 12345 --due 2026-10-20
+hteam cards dates 12345 --start 2026-10-14 --due 2026-10-20
+
 # Actualizar descripción (rápido)
 hteam cards update-desc 12345 --description "Nueva descripción"
 
@@ -143,6 +148,7 @@ Inicia el servidor MCP sobre **stdio**. Se integra con Claude Desktop, Claude Co
 | `cards_closed` | Cards cerrados |
 | `card_close` | Cerrar task (API close/, familia operation/project) |
 | `card_reopen` | Reabrir task (API reopen/) |
+| `card_dates` | Editar start/due (YYYY-MM-DD, board-card dates/) |
 | `card_detail` | Detalle completo de un card |
 | `card_labels` | Labels disponibles de un card |
 | `card_create` | Crear card |

@@ -206,6 +206,33 @@ pub async fn board_id(client: &HteamClient) -> Result<u64> {
     client.get_board_id().await
 }
 
+/// Resolve the **internal** board id for board-card AJAX routes.
+/// `board` is the operation/process number (`--board` / config `board_number`),
+/// not the AJAX `board_id`. When omitted, uses the configured board.
+pub async fn resolve_board_id(client: &HteamClient, board: Option<u64>) -> Result<u64> {
+    match board {
+        None => client.get_board_id().await,
+        Some(operation) => {
+            let (_, bid) = client.get_cards(1, Some(operation)).await?;
+            if let Some(id) = bid {
+                return Ok(id);
+            }
+            for list in client.get_lists(Some(operation)).await? {
+                if list.card_count.unwrap_or(0) == 0 {
+                    continue;
+                }
+                let (_, bid) = client.get_cards(list.id, Some(operation)).await?;
+                if let Some(id) = bid {
+                    return Ok(id);
+                }
+            }
+            anyhow::bail!(
+                "no se pudo resolver board_id interno para el board/operación {operation}"
+            )
+        }
+    }
+}
+
 /// `type_time`: `estimate` or `time_spend` (AJAX form, not legacy `spend`).
 pub async fn set_time(
     client: &HteamClient,
@@ -228,6 +255,68 @@ pub async fn set_date(
     value: &str,
 ) -> Result<()> {
     client.set_card_date(board_id, card_id, field, value).await
+}
+
+/// Result of one or more board-card date POSTs.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct CardDatesResult {
+    pub card_id: u64,
+    pub board_id: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start_date: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub due_date: Option<String>,
+}
+
+/// Validate a real calendar date in `YYYY-MM-DD` format.
+pub fn parse_date_yyyy_mm_dd(value: &str) -> Result<String> {
+    use chrono::NaiveDate;
+
+    let v = value.trim();
+    let date = NaiveDate::parse_from_str(v, "%Y-%m-%d")
+        .map_err(|_| anyhow::anyhow!("fecha inválida '{value}' (usa YYYY-MM-DD)"))?;
+    if date.format("%Y-%m-%d").to_string() != v || date.format("%Y").to_string().len() != 4 {
+        anyhow::bail!("fecha inválida '{value}' (usa YYYY-MM-DD)");
+    }
+    Ok(date.format("%Y-%m-%d").to_string())
+}
+
+/// Set start and/or due date via `POST …/boards/{board_id}/card/{id}/dates/`.
+/// Resolves the internal `board_id` (never uses the operation id as board_id).
+pub async fn set_dates(
+    client: &HteamClient,
+    card_id: u64,
+    board: Option<u64>,
+    start_date: Option<&str>,
+    due_date: Option<&str>,
+) -> Result<CardDatesResult> {
+    if start_date.is_none() && due_date.is_none() {
+        anyhow::bail!("indica al menos --start o --due (YYYY-MM-DD)");
+    }
+
+    let start = start_date.map(parse_date_yyyy_mm_dd).transpose()?;
+    let due = due_date.map(parse_date_yyyy_mm_dd).transpose()?;
+    let board_id = resolve_board_id(client, board).await?;
+
+    if let Some(ref d) = start {
+        client
+            .set_card_date(board_id, card_id, "start_date", d)
+            .await
+            .with_context(|| format!("error al setear start_date de {card_id}"))?;
+    }
+    if let Some(ref d) = due {
+        client
+            .set_card_date(board_id, card_id, "due_date", d)
+            .await
+            .with_context(|| format!("error al setear due_date de {card_id}"))?;
+    }
+
+    Ok(CardDatesResult {
+        card_id,
+        board_id,
+        start_date: start,
+        due_date: due,
+    })
 }
 
 /// URL pública de la página de detalle de una card (`/operations/{board}/tasks/{id}/`).
@@ -1115,6 +1204,72 @@ mod tests {
         assert!(
             err.to_string().contains("familia"),
             "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn parse_date_yyyy_mm_dd_accepts_valid_and_rejects_bad() {
+        assert_eq!(parse_date_yyyy_mm_dd("2026-10-14").unwrap(), "2026-10-14");
+        assert!(parse_date_yyyy_mm_dd("2026-10-14T00:00:00").is_err());
+        assert!(parse_date_yyyy_mm_dd("14/10/2026").is_err());
+        assert!(parse_date_yyyy_mm_dd("2026-13-01").is_err());
+        assert!(parse_date_yyyy_mm_dd("2026-02-30").is_err());
+    }
+
+    #[tokio::test]
+    async fn test_set_dates_posts_to_internal_board_id() {
+        let mut server = mockito::Server::new_async().await;
+        // Cached board_id in test client is unset → resolve via open list cards.
+        let _lists = server
+            .mock("GET", "/operation/care/operations/483/lists/1/cards/")
+            .match_query(mockito::Matcher::UrlEncoded(
+                "format".to_string(),
+                "json".to_string(),
+            ))
+            .with_status(200)
+            .with_body(
+                r#"{"id":1,"name":"Open","cardlist_list":[{"id":10,"board_id":99,"card":{"id":42,"title":"t","subtitle":"","labels_list":[]},"is_closed":false,"card_type":0,"time_status":0,"get_time_status":"","position":1}]}"#,
+            )
+            .create_async()
+            .await;
+        let _start = server
+            .mock("POST", "/boards/care/boards/99/card/42/dates/")
+            .match_body(mockito::Matcher::Regex(r"start_date=2026-10-14".into()))
+            .with_status(200)
+            .with_body("{}")
+            .create_async()
+            .await;
+        let _due = server
+            .mock("POST", "/boards/care/boards/99/card/42/dates/")
+            .match_body(mockito::Matcher::Regex(r"due_date=2026-10-20".into()))
+            .with_status(200)
+            .with_body("{}")
+            .create_async()
+            .await;
+
+        let result = set_dates(
+            &client(&server.url()),
+            42,
+            None,
+            Some("2026-10-14"),
+            Some("2026-10-20"),
+        )
+        .await
+        .expect("set dates");
+
+        assert_eq!(result.board_id, 99);
+        assert_eq!(result.start_date.as_deref(), Some("2026-10-14"));
+        assert_eq!(result.due_date.as_deref(), Some("2026-10-20"));
+    }
+
+    #[tokio::test]
+    async fn test_set_dates_requires_at_least_one_field() {
+        let err = set_dates(&client("https://example.test"), 1, None, None, None)
+            .await
+            .expect_err("need dates");
+        assert!(
+            err.to_string().contains("--start") || err.to_string().contains("--due"),
+            "unexpected: {err}"
         );
     }
 
