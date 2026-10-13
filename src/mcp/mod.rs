@@ -43,6 +43,22 @@ struct ListCardsParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+struct SearchCardsParams {
+    #[schemars(description = "Texto libre sobre nombre o descripción (opcional)")]
+    query: Option<String>,
+    #[schemars(description = "Responsable: username, email o id numérico (opcional)")]
+    responsible: Option<String>,
+    #[schemars(description = "Prioridad (opcional, p.ej. 1/2/3)")]
+    priority: Option<String>,
+    #[schemars(description = "Labels requeridas (AND); opcional")]
+    labels: Option<Vec<String>>,
+    #[schemars(description = "Limitar a una lista del board (opcional)")]
+    list_id: Option<u64>,
+    #[schemars(description = "ID del board (opcional; usa el configurado si se omite)")]
+    board: Option<u64>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 struct CardParams {
     #[schemars(description = "ID del card / task")]
     card_id: u64,
@@ -195,6 +211,33 @@ impl HteamMcpServer {
             .await
             .map_err(err)?;
         ok(cards)
+    }
+
+    #[tool(
+        description = "Buscar y filtrar cards del board por texto, responsable, prioridad y/o labels. Devuelve hits con list_id, list_name y card."
+    )]
+    async fn cards_search(
+        &self,
+        Parameters(SearchCardsParams {
+            query,
+            responsible,
+            priority,
+            labels,
+            list_id,
+            board,
+        }): Parameters<SearchCardsParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let filters = operations::cards::CardSearchFilters {
+            text: query,
+            responsible,
+            priority,
+            labels: labels.unwrap_or_default(),
+        };
+        let scope = operations::cards::CardSearchScope { board, list_id };
+        let hits = operations::cards::search(&self.client, scope, filters)
+            .await
+            .map_err(err)?;
+        ok(hits)
     }
 
     #[tool(description = "Obtener cards abiertos (lista 1)")]

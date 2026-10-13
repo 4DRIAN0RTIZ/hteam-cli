@@ -11,6 +11,8 @@ pub enum CardsCommands {
     Lists,
     /// Ver cards de una lista
     List(ListCardsArgs),
+    /// Buscar y filtrar cards del board (texto, responsable, prioridad, labels)
+    Search(SearchArgs),
     /// Ver detalle de un card
     Detail(DetailArgs),
     /// Copiar el link de un card al portapapeles
@@ -43,6 +45,29 @@ pub enum CardsCommands {
 pub struct ListCardsArgs {
     /// ID de la lista
     pub list_id: u64,
+}
+
+#[derive(Args, Debug)]
+pub struct SearchArgs {
+    /// Texto libre (nombre o descripción, case-insensitive)
+    #[arg(short = 'q', long)]
+    pub query: Option<String>,
+
+    /// Filtrar por responsable (username/email o id numérico)
+    #[arg(long)]
+    pub responsible: Option<String>,
+
+    /// Filtrar por prioridad (1=alta, 2=media, 3=baja u otro valor del API)
+    #[arg(long)]
+    pub priority: Option<String>,
+
+    /// Label requerida (repetible; AND entre labels)
+    #[arg(long = "label")]
+    pub labels: Vec<String>,
+
+    /// Limitar a una lista del board
+    #[arg(long)]
+    pub list_id: Option<u64>,
 }
 
 #[derive(Args, Debug)]
@@ -174,6 +199,7 @@ pub async fn execute(cmd: CardsCommands, board: Option<u64>, json: bool) -> Resu
     match cmd {
         CardsCommands::Lists => lists(board, json).await,
         CardsCommands::List(args) => list_cards(args, board, json).await,
+        CardsCommands::Search(args) => search_cards(args, board, json).await,
         CardsCommands::Detail(args) => card_detail(args, json).await,
         CardsCommands::Link(args) => card_link(args, board, json).await,
         CardsCommands::Create(args) => create_card(args, json).await,
@@ -234,6 +260,87 @@ async fn list_cards(args: ListCardsArgs, board: Option<u64>, json: bool) -> Resu
     table.with(Style::rounded());
 
     println!("\n🎴 Cards en lista {}:\n", args.list_id);
+    println!("{}", table);
+    println!();
+
+    Ok(())
+}
+
+async fn search_cards(args: SearchArgs, board: Option<u64>, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+
+    let filters = operations::cards::CardSearchFilters {
+        text: args.query,
+        responsible: args.responsible,
+        priority: args.priority,
+        labels: args.labels,
+    };
+    if filters.is_empty() && args.list_id.is_none() && !json {
+        eprintln!(
+            "{} Sin filtros: se listarán todas las cards del board (puede tardar).",
+            "ℹ".blue()
+        );
+    }
+    let scope = operations::cards::CardSearchScope {
+        board,
+        list_id: args.list_id,
+    };
+
+    let hits = operations::cards::search(&session.client, scope, filters).await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&hits)?);
+        return Ok(());
+    }
+
+    if hits.is_empty() {
+        println!("⚠️  Ninguna card coincide con los filtros.");
+        return Ok(());
+    }
+
+    #[derive(tabled::Tabled)]
+    struct Row {
+        #[tabled(rename = "Lista")]
+        list: String,
+        #[tabled(rename = "List ID")]
+        list_id: u64,
+        #[tabled(rename = "ID")]
+        id: u64,
+        #[tabled(rename = "Nombre")]
+        name: String,
+        #[tabled(rename = "Responsable")]
+        responsible: String,
+        #[tabled(rename = "Labels")]
+        labels: String,
+    }
+
+    let rows: Vec<Row> = hits
+        .iter()
+        .map(|h| Row {
+            list: h.list_name.clone(),
+            list_id: h.list_id,
+            id: h.card.id,
+            name: h.card.name.clone(),
+            responsible: h
+                .card
+                .responsible
+                .as_ref()
+                .and_then(operations::cards::responsible_display)
+                .unwrap_or_else(|| "-".into()),
+            labels: h
+                .card
+                .labels
+                .iter()
+                .map(|l| l.name.as_str())
+                .collect::<Vec<_>>()
+                .join(", "),
+        })
+        .collect();
+
+    let mut table = Table::new(&rows);
+    table.with(Style::rounded());
+
+    println!("\n🔍 {} card(s):\n", rows.len());
     println!("{}", table);
     println!();
 
