@@ -1288,7 +1288,7 @@ mod tests {
             ))
             .with_status(200)
             .with_body(
-                r##"{"id":11216,"name":"GBI","description":"d","labels":[],"dependence":"#5 - Lectura"}"##,
+                r##"{"id":11216,"name":"GBI","description":"d","labels":[],"dependence":"#5 - Lectura","start_date":"2026-10-13T00:00:00-06:00","responsible":140}"##,
             )
             .create_async()
             .await;
@@ -1319,12 +1319,14 @@ mod tests {
             .mock("GET", "/operation/care/tasks/11216/")
             .match_query(mockito::Matcher::UrlEncoded("format".into(), "json".into()))
             .with_status(200)
-            .with_body(r#"{"id":11216,"name":"GBI","description":"d","labels":[],"priority":3}"#)
+            .with_body(r#"{"id":11216,"name":"GBI","description":"d","labels":[],"priority":3,"start_date":"2026-10-13T00:00:00-06:00","responsible":140}"#)
             .create_async()
             .await;
         let _edit = server
             .mock("POST", "/operations/483/tasks/11216/edit/")
-            .match_body(mockito::Matcher::Regex("dependence=8965".into()))
+            .match_body(mockito::Matcher::Regex(
+                r"start_date=2026-10-13&dependence=8965".into(),
+            ))
             .with_status(200)
             .create_async()
             .await;
