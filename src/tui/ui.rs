@@ -886,23 +886,12 @@ fn detail_field_value(app: &App, detail: &crate::models::CardDetail, field: Deta
                 .unwrap_or(&serde_json::Value::Null),
         )
         .unwrap_or_else(|| "-".into()),
-        DetailField::Priority => {
-            let raw = detail
-                .priority
-                .as_ref()
-                .map(|v| match v {
-                    serde_json::Value::String(s) => s.clone(),
-                    other => other.to_string(),
-                })
-                .filter(|s| !s.is_empty() && s != "null");
-            match raw.as_deref() {
-                Some("1") => "1  alta".into(),
-                Some("2") => "2  media".into(),
-                Some("3") => "3  baja".into(),
-                Some(s) => s.to_string(),
-                None => "-".into(),
-            }
-        }
+        DetailField::Priority => detail
+            .priority
+            .as_ref()
+            .map(operations::cards::priority_label)
+            .filter(|s| !s.is_empty() && s != "null" && s != "-")
+            .unwrap_or_else(|| "-".into()),
         DetailField::Dependence => app
             .task_detail_dependence_label
             .clone()

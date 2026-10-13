@@ -34,15 +34,17 @@ fn truncate_for_error(s: &str, max_chars: usize) -> String {
 /// Task JSON often omits or mangles these (dependence label string, null priority,
 /// missing time_estimated); the form is the source of truth for preserve-on-patch.
 #[derive(Debug, Clone, Default)]
-struct TaskEditFormBaseline {
-    csrf: Option<String>,
-    name: String,
-    description: String,
-    time_estimated: String,
-    start_date: String,
-    dependence: String,
-    responsible: String,
-    priority: String,
+pub struct TaskEditFormBaseline {
+    pub csrf: Option<String>,
+    pub name: String,
+    pub description: String,
+    pub time_estimated: String,
+    pub start_date: String,
+    /// Bare depends-on task id, or empty if none.
+    pub dependence: String,
+    pub responsible: String,
+    /// Priority select value `1`..=`5` (web: 1 very low … 5 very high).
+    pub priority: String,
 }
 
 fn parse_task_edit_form(html: &str) -> TaskEditFormBaseline {
@@ -658,6 +660,11 @@ impl HteamClient {
         config.auth.board_id = None;
     }
 
+    /// Operation / process id used in `/operations/{board}/…` URLs (`board_number` in config).
+    pub async fn operation_board_number(&self) -> Result<u64> {
+        self.get_board_number().await
+    }
+
     pub async fn get_board_id(&self) -> Result<u64> {
         {
             let config = self.config.lock().await;
@@ -1191,6 +1198,39 @@ impl HteamClient {
 
         let resp: ProjectTasksResponse = response.json().await?;
         Ok(resp)
+    }
+
+    /// Load current HTML edit-form values (priority, dependence id, estimate, …).
+    /// Task JSON often leaves these null or as display labels only.
+    pub async fn get_task_edit_form(
+        &self,
+        board_number: u64,
+        card_id: u64,
+    ) -> Result<TaskEditFormBaseline> {
+        let url = format!(
+            "{}/operations/{}/tasks/{}/edit/",
+            self.site_base_url, board_number, card_id
+        );
+        let headers = {
+            let config = self.config.lock().await;
+            self.build_headers(&config)?
+        };
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers)
+            .send()
+            .await
+            .context("Error al cargar formulario de edit")?;
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await.unwrap_or_default()
+            );
+        }
+        let html = response.text().await.unwrap_or_default();
+        Ok(parse_task_edit_form(&html))
     }
 
     pub async fn update_card_full(
