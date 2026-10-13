@@ -206,7 +206,7 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
             ],
         ),
         HelpContext::Reminders => (
-            " Ayuda: Reminders — Esc/q/? cerrar ",
+            " Ayuda: Reminders — Esc/q/? ",
             &[
                 "Reminders",
                 "  j/k, ↓/↑        scroll",
@@ -386,35 +386,87 @@ fn draw_new_card_popup(frame: &mut Frame, app: &App) {
 }
 
 fn draw_reminders_popup(frame: &mut Frame, app: &App) {
-    let area = centered_rect(60, 60, frame.area());
+    let area = centered_rect(68, 70, frame.area());
+    let n = app.reminders.len();
+    let title = if n == 0 {
+        " Reminders — a agregar · ? · Esc ".to_string()
+    } else {
+        format!(" Reminders ({n}) — a agregar · j/k scroll · ? · Esc ")
+    };
     let inner = draw_frame(
         frame,
         area,
-        " Reminders — 'a' agregar · '?' ayuda · Esc cerrar ",
+        title,
         app.theme.border_reminders,
         app.theme.background,
         app.theme.foreground,
     );
 
-    let lines: Vec<String> = if app.reminders.is_empty() {
-        vec!["Sin reminders pendientes.".to_string()]
-    } else {
-        app.reminders
-            .iter()
-            .map(|r| {
-                let title = r
-                    .content_object
-                    .as_ref()
-                    .map(|c| c.title.as_str())
-                    .unwrap_or("(sin título)");
-                let date = r.reminder_date.as_deref().unwrap_or("sin fecha");
-                format!("• {} — {}", title, date)
-            })
-            .collect()
-    };
+    let mut lines: Vec<Line> = Vec::new();
+    lines.push(section_header(
+        app,
+        if n == 1 { "1 pendiente" } else { "Pendientes" },
+    ));
+    if n > 0 {
+        lines.push(muted_hint(
+            app,
+            format!("{n} en total · a nuevo sobre la card seleccionada"),
+        ));
+    }
+    lines.push(Line::from(""));
 
-    let p = Paragraph::new(lines.join("\n"))
-        .wrap(Wrap { trim: true })
+    if app.reminders.is_empty() {
+        lines.push(empty_state_line(app, "Sin reminders pendientes."));
+        lines.push(Line::from(""));
+        lines.push(muted_hint(
+            app,
+            "Selecciona una card en el board y pulsa a para crear uno",
+        ));
+    } else {
+        for (i, r) in app.reminders.iter().enumerate() {
+            if i > 0 {
+                lines.push(Line::from(Span::styled(
+                    "  · · ·",
+                    Style::default().fg(app.theme.muted),
+                )));
+            }
+            let title = r
+                .content_object
+                .as_ref()
+                .map(|c| c.title.as_str())
+                .unwrap_or("(sin título)");
+            let date_raw = r.reminder_date.as_deref().unwrap_or("");
+            let date = if date_raw.is_empty() {
+                "sin fecha".to_string()
+            } else {
+                // Show YYYY-MM-DD when the API includes a time suffix.
+                date_raw.chars().take(10).collect()
+            };
+            lines.push(Line::from(vec![
+                Span::styled("› ", Style::default().fg(app.theme.border_reminders)),
+                Span::styled(
+                    title.to_string(),
+                    Style::default()
+                        .fg(app.theme.highlight)
+                        .add_modifier(Modifier::BOLD),
+                ),
+            ]));
+            lines.push(Line::from(vec![
+                Span::raw("  "),
+                Span::styled("fecha  ", Style::default().fg(app.theme.muted)),
+                Span::styled(date, Style::default().fg(app.theme.foreground)),
+                Span::styled(
+                    format!("  · card {}", r.object_id),
+                    Style::default().fg(app.theme.muted),
+                ),
+            ]));
+        }
+        lines.push(Line::from(""));
+        lines.push(muted_hint(app, "a nuevo · Esc cerrar"));
+    }
+
+    let p = Paragraph::new(Text::from(lines))
+        .wrap(Wrap { trim: false })
         .scroll((app.reminders_scroll.offset(), 0));
     frame.render_widget(p, inner);
 }
