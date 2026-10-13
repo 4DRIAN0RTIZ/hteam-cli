@@ -6,7 +6,7 @@ use anyhow::Result;
 use crate::client::HteamClient;
 use crate::operations;
 
-use super::app::{App, HelpContext};
+use super::app::{App, HelpContext, UpdateAvailableInfo};
 use super::net::{self, JobOutcome, Jobs, WeeklyObjectivesLoaded};
 
 /// Abre el popup de ayuda mostrando solo la sección de `ctx` — ver
@@ -196,6 +196,52 @@ async fn load_weekly_objectives(
 
 pub fn close_weekly_objectives(app: &mut App) {
     app.show_weekly_objectives = false;
+}
+
+/// Opens the one-shot post-update changelog popup with the extracted markdown.
+pub fn open_startup_changelog(app: &mut App, text: String) {
+    app.startup_changelog = Some(text);
+    app.show_changelog = true;
+    app.changelog_scroll.reset();
+}
+
+pub fn close_startup_changelog(app: &mut App) {
+    app.show_changelog = false;
+    app.startup_changelog = None;
+    app.changelog_scroll.reset();
+    // If a newer release was also noticed at startup, show that popup next.
+    if app.update_available.is_some() {
+        app.show_update_available = true;
+    }
+}
+
+/// Copies the public CHANGELOG.md URL so the user can open the full history.
+pub fn copy_changelog_link(app: &mut App) {
+    match operations::clipboard::copy(operations::update::CHANGELOG_URL) {
+        Ok(()) => app.set_status(format!("{} Changelog link copiado", operations::COPY_ICON)),
+        Err(e) => app.set_status(format!("Error copiando el link: {}", e)),
+    }
+}
+
+pub fn open_update_available(app: &mut App, info: UpdateAvailableInfo) {
+    app.update_available = Some(info);
+    // Don't stack on top of the changelog; open_startup_changelog close chains it.
+    if !app.show_changelog {
+        app.show_update_available = true;
+    }
+}
+
+pub fn close_update_available(app: &mut App) {
+    app.show_update_available = false;
+    app.update_available = None;
+}
+
+/// Copies the GitHub releases page URL from the Update Available popup.
+pub fn copy_releases_link(app: &mut App) {
+    match operations::clipboard::copy(operations::update::RELEASES_URL) {
+        Ok(()) => app.set_status(format!("{} Releases link copiado", operations::COPY_ICON)),
+        Err(e) => app.set_status(format!("Error copiando el link: {}", e)),
+    }
 }
 
 /// Creates a reminder for whichever card was selected on the board when the
@@ -1148,5 +1194,78 @@ mod tests {
         clear_mention_state(&mut app);
         assert!(app.mention_debounce_at.is_none());
         assert!(app.mention_suggestions.is_empty());
+    }
+
+    #[test]
+    fn open_startup_changelog_shows_popup_with_text() {
+        let mut app = test_app();
+        open_startup_changelog(&mut app, "## [0.9.0]\n\n- something".into());
+
+        assert!(app.show_changelog);
+        assert_eq!(
+            app.startup_changelog.as_deref(),
+            Some("## [0.9.0]\n\n- something")
+        );
+        assert_eq!(app.changelog_scroll.offset(), 0);
+    }
+
+    #[test]
+    fn close_startup_changelog_clears_popup_state() {
+        let mut app = test_app();
+        open_startup_changelog(&mut app, "notes".into());
+        app.changelog_scroll.by(3);
+
+        close_startup_changelog(&mut app);
+
+        assert!(!app.show_changelog);
+        assert!(app.startup_changelog.is_none());
+        assert_eq!(app.changelog_scroll.offset(), 0);
+        assert!(!app.show_update_available);
+    }
+
+    #[test]
+    fn close_changelog_opens_pending_update_available() {
+        let mut app = test_app();
+        open_startup_changelog(&mut app, "notes".into());
+        open_update_available(
+            &mut app,
+            UpdateAvailableInfo {
+                current_version: "0.9.0".into(),
+                latest_version: "0.10.0".into(),
+            },
+        );
+        assert!(app.show_changelog);
+        assert!(
+            !app.show_update_available,
+            "update popup waits until changelog closes"
+        );
+
+        close_startup_changelog(&mut app);
+
+        assert!(!app.show_changelog);
+        assert!(app.show_update_available);
+        assert_eq!(
+            app.update_available
+                .as_ref()
+                .map(|i| i.latest_version.as_str()),
+            Some("0.10.0")
+        );
+    }
+
+    #[test]
+    fn open_update_available_alone_shows_popup() {
+        let mut app = test_app();
+        open_update_available(
+            &mut app,
+            UpdateAvailableInfo {
+                current_version: "0.9.0".into(),
+                latest_version: "0.10.0".into(),
+            },
+        );
+
+        assert!(app.show_update_available);
+        close_update_available(&mut app);
+        assert!(!app.show_update_available);
+        assert!(app.update_available.is_none());
     }
 }

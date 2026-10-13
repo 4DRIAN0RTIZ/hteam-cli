@@ -12,6 +12,13 @@ use crate::models::{
 use super::theme::Theme;
 use super::widgets::{Scroll, TextInput};
 
+/// Current vs latest version for the startup "Update Available" popup.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UpdateAvailableInfo {
+    pub current_version: String,
+    pub latest_version: String,
+}
+
 /// Qué sección muestra el popup de ayuda ('?') — cada popup con muchos
 /// keybindings propios (que ya no entran en una sola línea de título sin
 /// truncarse) tiene el suyo, en vez de forzar al usuario a buscarlo dentro
@@ -103,6 +110,12 @@ pub struct App {
     pub weekly_objectives_synced_at: Option<chrono::DateTime<chrono::Utc>>,
     pub weekly_objectives_error: Option<String>,
     pub show_weekly_objectives: bool,
+    /// Changelog text shown once after a binary update (startup popup).
+    pub startup_changelog: Option<String>,
+    pub show_changelog: bool,
+    /// Newer GitHub release noticed at startup (popup, not only footer).
+    pub update_available: Option<UpdateAvailableInfo>,
+    pub show_update_available: bool,
     /// True while typing a new project id inside the projects popup.
     pub composing_project: bool,
     pub project_input: TextInput,
@@ -125,6 +138,8 @@ pub struct App {
     pub reminders_scroll: Scroll,
     /// Scroll offset para el popup de objetivos semanales.
     pub weekly_objectives_scroll: Scroll,
+    /// Scroll offset for the post-update changelog popup.
+    pub changelog_scroll: Scroll,
     /// Scroll offset para la lista de comentarios (solo en modo lectura, no al componer).
     pub comments_scroll: Scroll,
     /// True cuando el foco del popup de proyectos está en el panel de detalle (derecha).
@@ -276,6 +291,10 @@ impl App {
             weekly_objectives_synced_at: None,
             weekly_objectives_error: None,
             show_weekly_objectives: false,
+            startup_changelog: None,
+            show_changelog: false,
+            update_available: None,
+            show_update_available: false,
             composing_project: false,
             project_input: TextInput::default(),
             composing_card: false,
@@ -289,6 +308,7 @@ impl App {
             help_scroll: Scroll::default(),
             reminders_scroll: Scroll::default(),
             weekly_objectives_scroll: Scroll::default(),
+            changelog_scroll: Scroll::default(),
             comments_scroll: Scroll::default(),
             projects_detail_focused: false,
             projects_scroll: Scroll::default(),

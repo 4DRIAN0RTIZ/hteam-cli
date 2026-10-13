@@ -40,6 +40,10 @@ pub fn draw(frame: &mut Frame, app: &App) {
 
     if app.show_help {
         draw_help_popup(frame, app);
+    } else if app.show_changelog {
+        draw_changelog_popup(frame, app);
+    } else if app.show_update_available {
+        draw_update_available_popup(frame, app);
     } else if app.show_reminders {
         draw_reminders_popup(frame, app);
     } else if app.show_weekly_objectives {
@@ -261,6 +265,57 @@ fn draw_help_popup(frame: &mut Frame, app: &App) {
     let p = Paragraph::new(lines.join("\n"))
         .wrap(Wrap { trim: true })
         .scroll((app.help_scroll.offset(), 0));
+    frame.render_widget(p, inner);
+}
+
+fn draw_changelog_popup(frame: &mut Frame, app: &App) {
+    let area = centered_rect(70, 80, frame.area());
+    let inner = draw_frame(
+        frame,
+        area,
+        " CHANGELOG — j/k scroll · c copiar link · Enter/Esc cerrar ",
+        app.theme.border_help,
+        app.theme.background,
+        app.theme.foreground,
+    );
+
+    let text = app
+        .startup_changelog
+        .as_deref()
+        .unwrap_or("(sin changelog)")
+        .trim_end();
+
+    let p = Paragraph::new(text)
+        .wrap(Wrap { trim: false })
+        .scroll((app.changelog_scroll.offset(), 0));
+    frame.render_widget(p, inner);
+}
+
+fn draw_update_available_popup(frame: &mut Frame, app: &App) {
+    let area = centered_rect(55, 28, frame.area());
+    let inner = draw_frame(
+        frame,
+        area,
+        " Update Available — c copiar releases · Enter/Esc cerrar ",
+        app.theme.border_help,
+        app.theme.background,
+        app.theme.foreground,
+    );
+
+    let (current, latest) = match &app.update_available {
+        Some(info) => (info.current_version.as_str(), info.latest_version.as_str()),
+        None => ("?", "?"),
+    };
+
+    let text = format!(
+        "Hay una versión nueva de hteam.\n\n\
+  actual:  {current}\n\
+  última:  {latest}\n\n\
+Corré `hteam update` para instalarla.\n\
+'c' copia el link de releases en GitHub."
+    );
+
+    let p = Paragraph::new(text).wrap(Wrap { trim: false });
     frame.render_widget(p, inner);
 }
 
