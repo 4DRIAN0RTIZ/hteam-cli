@@ -117,8 +117,7 @@ fn draw_title_bar(frame: &mut Frame, app: &App, area: Rect) {
 /// "v0.4.0") pegada a la orilla derecha.
 fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
     let status = app
-        .status
-        .clone()
+        .footer_message()
         .unwrap_or_else(|| " '?' ayuda · q salir".to_string());
 
     let version = format!("v{} ", env!("CARGO_PKG_VERSION"));
@@ -785,12 +784,7 @@ fn draw_board_switch_popup(frame: &mut Frame, app: &App) {
     );
 
     if app.available_boards.is_empty() {
-        let msg = if app
-            .status
-            .as_deref()
-            .map(|s| s.contains("Cargando"))
-            .unwrap_or(false)
-        {
+        let msg = if app.is_loading_boards() {
             "Cargando boards..."
         } else {
             "No se pudieron cargar los boards. Presiona 'r' para reintentar."
