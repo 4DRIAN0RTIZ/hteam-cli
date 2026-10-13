@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(tui)* Show changelog and update-available popups on startup
 - *(operations)* Add shared card search and filter layer
 - *(cards)* Expose shared search on CLI and MCP
+- *(tui)* Filter board cards with / search
 
 ## [0.9.0] - 2026-09-11
 
