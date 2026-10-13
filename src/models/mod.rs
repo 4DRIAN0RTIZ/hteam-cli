@@ -173,6 +173,10 @@ pub struct CardDetail {
     pub priority: Option<serde_json::Value>,
     #[serde(default)]
     pub closed: Option<bool>,
+    /// Site path like `/operations/{op}/tasks/{id}/` or `/projects/{p}/tasks/{id}/`.
+    /// Used to pick the close/reopen API family.
+    #[serde(default)]
+    pub title_url: Option<String>,
 }
 
 /// Response from `POST .../card/{id}/times/`.

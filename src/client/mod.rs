@@ -18,6 +18,45 @@ use crate::models::{
 const BASE_URL: &str = "https://hteam.mx/api";
 const SITE_URL: &str = "https://hteam.mx";
 
+/// Hteam keeps operation tasks and project tasks on separate API trees.
+/// Close/reopen must hit the matching family (both POSTs may succeed on the
+/// wrong tree today, but the web always uses the URL family from `title_url`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskFamily {
+    Operation,
+    Project,
+}
+
+impl TaskFamily {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Operation => "operation",
+            Self::Project => "project",
+        }
+    }
+
+    pub fn parse(s: &str) -> Result<Self> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "operation" | "operations" | "op" => Ok(Self::Operation),
+            "project" | "projects" | "proj" => Ok(Self::Project),
+            other => {
+                anyhow::bail!("familia de task desconocida '{other}' (usa operation o project)")
+            }
+        }
+    }
+
+    /// Infer family from a task `title_url` (`/operations/…` vs `/projects/…`).
+    pub fn from_title_url(title_url: &str) -> Option<Self> {
+        if title_url.contains("/projects/") {
+            Some(Self::Project)
+        } else if title_url.contains("/operations/") {
+            Some(Self::Operation)
+        } else {
+            None
+        }
+    }
+}
+
 /// Format the site's own hidden `date` comment field uses — server-local
 /// time, not UTC. `operations::comments` re-exposes this as the format
 /// every caller (CLI, MCP, REPL, TUI) validates user input against.
@@ -429,6 +468,83 @@ impl HteamClient {
 
         let detail: CardDetail = response.json().await?;
         Ok(detail)
+    }
+
+    /// Resolve whether `task_id` is an operation or project task.
+    /// Prefers `title_url` from the operation-task detail payload (works for both).
+    pub async fn resolve_task_family(&self, task_id: u64) -> Result<TaskFamily> {
+        let detail = self.get_card_detail(task_id).await?;
+        if let Some(url) = detail.title_url.as_deref() {
+            if let Some(family) = TaskFamily::from_title_url(url) {
+                return Ok(family);
+            }
+        }
+        // Board/operation tasks are the CLI default when the URL is missing.
+        Ok(TaskFamily::Operation)
+    }
+
+    /// POST `/operation|project-new/care/tasks/{id}/close/`.
+    pub async fn close_task(&self, task_id: u64, family: TaskFamily) -> Result<String> {
+        self.post_task_lifecycle(task_id, family, "close").await
+    }
+
+    /// POST `/operation|project-new/care/tasks/{id}/reopen/`.
+    pub async fn reopen_task(&self, task_id: u64, family: TaskFamily) -> Result<String> {
+        self.post_task_lifecycle(task_id, family, "reopen").await
+    }
+
+    async fn post_task_lifecycle(
+        &self,
+        task_id: u64,
+        family: TaskFamily,
+        action: &str,
+    ) -> Result<String> {
+        let (url, headers) = {
+            let config = self.config.lock().await;
+            let path = match family {
+                TaskFamily::Operation => format!(
+                    "{}/operation/care/tasks/{}/{}/",
+                    self.api_base_url, task_id, action
+                ),
+                TaskFamily::Project => format!(
+                    "{}/project-new/care/tasks/{}/{}/",
+                    self.api_base_url, task_id, action
+                ),
+            };
+            let headers = self.build_headers(&config)?;
+            (path, headers)
+        };
+
+        let response = self
+            .client
+            .post(&url)
+            .headers(headers)
+            .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header("Origin", self.site_base_url.as_str())
+            .body("")
+            .send()
+            .await
+            .with_context(|| format!("Error al {action} la task {task_id}"))?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+
+        let text = response.text().await.unwrap_or_default();
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) {
+            if let Some(status) = v.get("status").and_then(|s| s.as_str()) {
+                return Ok(status.to_string());
+            }
+        }
+        if text.trim().is_empty() {
+            Ok(format!("task {action}d"))
+        } else {
+            Ok(text.trim().chars().take(200).collect())
+        }
     }
 
     /// Board-card JSON used by the web sidebar: has `estimated_time`,
@@ -2198,6 +2314,81 @@ mod tests {
         let client = authenticated_client(&server.url());
 
         client.cancel_follow_up(13310).await.expect("cancel");
+    }
+
+    #[test]
+    fn task_family_from_title_url_and_parse() {
+        assert_eq!(
+            TaskFamily::from_title_url("/operations/447/tasks/1/"),
+            Some(TaskFamily::Operation)
+        );
+        assert_eq!(
+            TaskFamily::from_title_url("/projects/335/tasks/6005/"),
+            Some(TaskFamily::Project)
+        );
+        assert_eq!(TaskFamily::from_title_url("/other/"), None);
+        assert_eq!(TaskFamily::parse("op").unwrap(), TaskFamily::Operation);
+        assert_eq!(TaskFamily::parse("project").unwrap(), TaskFamily::Project);
+        assert!(TaskFamily::parse("board").is_err());
+    }
+
+    #[tokio::test]
+    async fn test_resolve_task_family_from_title_url() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/operation/care/tasks/6005/")
+            .match_query(Matcher::UrlEncoded(
+                "format".to_string(),
+                "json".to_string(),
+            ))
+            .with_status(200)
+            .with_body(
+                r#"{"id":6005,"name":"t","labels":[],"list":null,"title_url":"/projects/335/tasks/6005/"}"#,
+            )
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        assert_eq!(
+            client.resolve_task_family(6005).await.expect("family"),
+            TaskFamily::Project
+        );
+    }
+
+    #[tokio::test]
+    async fn test_close_task_posts_operation_family() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("POST", "/operation/care/tasks/42/close/")
+            .with_status(200)
+            .with_body(r#"{"status":"The task has been closed"}"#)
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        let msg = client
+            .close_task(42, TaskFamily::Operation)
+            .await
+            .expect("close");
+        assert_eq!(msg, "The task has been closed");
+    }
+
+    #[tokio::test]
+    async fn test_reopen_task_posts_project_family() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("POST", "/project-new/care/tasks/6005/reopen/")
+            .with_status(200)
+            .with_body(r#"{"status":"The task has been reopened"}"#)
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        let msg = client
+            .reopen_task(6005, TaskFamily::Project)
+            .await
+            .expect("reopen");
+        assert_eq!(msg, "The task has been reopened");
     }
 
     #[tokio::test]
