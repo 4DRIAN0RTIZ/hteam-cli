@@ -642,7 +642,7 @@ pub fn open_task_detail(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     let card_id = card.id;
     app.begin_busy("Cargando detalle...");
     jobs.spawn(async move {
-        let result = operations::cards::card_detail(&client, card_id)
+        let result = operations::cards::card_detail_enriched(&client, card_id)
             .await
             .map_err(|e| e.to_string());
         JobOutcome::TaskDetailLoaded {
@@ -803,7 +803,8 @@ pub fn submit_detail_field(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs)
                     let times =
                         operations::cards::set_time(&client, bid, card_id, "estimate", &value)
                             .await?;
-                    let mut detail = operations::cards::card_detail(&client, card_id).await?;
+                    let mut detail =
+                        operations::cards::card_detail_enriched(&client, card_id).await?;
                     if let Some(est) = times.estimated_time {
                         detail.time_estimated = Some(est);
                     }
@@ -823,7 +824,8 @@ pub fn submit_detail_field(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs)
                     let times =
                         operations::cards::set_time(&client, bid, card_id, "time_spend", &value)
                             .await?;
-                    let mut detail = operations::cards::card_detail(&client, card_id).await?;
+                    let mut detail =
+                        operations::cards::card_detail_enriched(&client, card_id).await?;
                     if let Some(est) = times.estimated_time {
                         detail.time_estimated = Some(est);
                     }
@@ -839,7 +841,7 @@ pub fn submit_detail_field(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs)
                     return Ok(detail);
                 }
             }
-            operations::cards::card_detail(&client, card_id).await
+            operations::cards::card_detail_enriched(&client, card_id).await
         };
 
         let result = match save.await {

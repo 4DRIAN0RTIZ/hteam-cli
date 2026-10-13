@@ -640,6 +640,7 @@ fn task_detail_lines<'a>(app: &'a App, detail: &'a crate::models::CardDetail) ->
     lines
 }
 
+/// Shared popup chrome: section divider used by detail, comments, etc.
 fn section_header<'a>(app: &App, title: &'a str) -> Line<'a> {
     Line::from(Span::styled(
         format!("── {title} ──"),
@@ -647,6 +648,29 @@ fn section_header<'a>(app: &App, title: &'a str) -> Line<'a> {
             .fg(app.theme.border_active)
             .add_modifier(Modifier::BOLD),
     ))
+}
+
+fn muted_hint(app: &App, text: impl Into<String>) -> Line<'static> {
+    Line::from(Span::styled(
+        text.into(),
+        Style::default().fg(app.theme.muted),
+    ))
+}
+
+fn empty_state_line<'a>(app: &App, text: &'a str) -> Line<'a> {
+    Line::from(Span::styled(
+        text,
+        Style::default()
+            .fg(app.theme.muted)
+            .add_modifier(Modifier::ITALIC),
+    ))
+}
+
+fn selected_row_style(app: &App) -> Style {
+    Style::default()
+        .bg(app.theme.selection_bg)
+        .fg(app.theme.selection_fg)
+        .add_modifier(Modifier::BOLD)
 }
 
 fn detail_field_line<'a>(
@@ -666,10 +690,7 @@ fn detail_field_line<'a>(
 
     let empty = raw == "-" && !is_edit;
     let row_style = if is_sel {
-        Style::default()
-            .bg(app.theme.selection_bg)
-            .fg(app.theme.selection_fg)
-            .add_modifier(Modifier::BOLD)
+        selected_row_style(app)
     } else {
         Style::default()
     };
@@ -787,12 +808,12 @@ fn detail_field_value(detail: &crate::models::CardDetail, field: DetailField) ->
 }
 
 fn draw_comments_popup(frame: &mut Frame, app: &App) {
-    let area = centered_rect(70, 70, frame.area());
+    let area = centered_rect(72, 75, frame.area());
 
     let title = if app.composing_comment {
-        " Nuevo comentario — Ctrl+S enviar · Esc cancelar "
+        " Comentario nuevo — Ctrl+S enviar · Esc cancelar "
     } else {
-        " Comentarios — 'a' agregar · '?' ayuda · Esc cerrar "
+        " Comentarios — a agregar · j/k · ? · Esc "
     };
     let inner = draw_frame(
         frame,
@@ -808,8 +829,7 @@ fn draw_comments_popup(frame: &mut Frame, app: &App) {
         return;
     }
 
-    // De acá en adelante app.composing_comment es siempre true — las otras
-    // dos ramas ya retornaron arriba.
+    // composing_comment is true below — list-only path returned above.
     let text_width = inner.width.saturating_sub(2).max(1);
     let content_rows = wrapped_line_count(app.comment_input.as_str(), text_width);
     let suggestion_rows = app.mention_suggestions.len().min(5) as u16;
@@ -831,33 +851,86 @@ fn draw_comments_popup(frame: &mut Frame, app: &App) {
 const DATE_FIELD_HEIGHT: u16 = 3;
 
 fn draw_comment_list(frame: &mut Frame, app: &App, area: Rect) {
-    let text = if app.comments.is_empty() {
-        Text::from("Sin comentarios todavía.")
+    let mut lines: Vec<Line> = Vec::new();
+
+    if !app.composing_comment {
+        let n = app.comments.len();
+        lines.push(section_header(
+            app,
+            if n == 1 {
+                "1 comentario"
+            } else {
+                // lifetime: section_header needs 'a str — use static for empty/count via leak-free owned
+                "Comentarios"
+            },
+        ));
+        if n > 0 {
+            lines.push(muted_hint(app, format!("{n} en total · a nuevo")));
+        }
+        lines.push(Line::from(""));
+    }
+
+    if app.comments.is_empty() {
+        lines.push(empty_state_line(app, "Sin comentarios todavía."));
+        if !app.composing_comment {
+            lines.push(Line::from(""));
+            lines.push(muted_hint(app, "a escribir · Esc cerrar"));
+        }
     } else {
-        let mut lines: Vec<Line> = Vec::new();
-        for c in &app.comments {
-            lines.push(Line::from(format!("{} ({}):", c.user_name, c.submit_date)));
-            lines.push(Line::from(c.comment.as_str()));
-            // El seguimiento se cuelga del comentario específico al que está
-            // atado (mismo id) — como en la web, no como un aviso genérico
-            // arriba de toda la lista.
+        for (i, c) in app.comments.iter().enumerate() {
+            if i > 0 {
+                lines.push(Line::from(Span::styled(
+                    "  · · ·",
+                    Style::default().fg(app.theme.muted),
+                )));
+            }
+            lines.push(Line::from(vec![
+                Span::styled("› ", Style::default().fg(app.theme.border_comments)),
+                Span::styled(
+                    c.user_name.as_str(),
+                    Style::default()
+                        .fg(app.theme.highlight)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!("  {}", c.submit_date),
+                    Style::default().fg(app.theme.muted),
+                ),
+            ]));
+            // Indent body under author
+            for body_line in c.comment.lines() {
+                lines.push(Line::from(vec![
+                    Span::raw("  "),
+                    Span::styled(body_line, Style::default().fg(app.theme.foreground)),
+                ]));
+            }
+            // Follow-up hangs off the specific comment (same id), like the web.
             if let Some(follow_up) = &app.current_follow_up {
                 if follow_up.comment_id == c.id {
-                    lines.push(Line::from(Span::styled(
-                        format!(
-                            "  Seguimiento: {} — 'v' completar · 'x' cancelar",
-                            follow_up.date
+                    lines.push(Line::from(vec![
+                        Span::raw("  "),
+                        Span::styled(
+                            format!("⏱ seguimiento {}", follow_up.date),
+                            Style::default()
+                                .fg(app.theme.warning)
+                                .add_modifier(Modifier::BOLD),
                         ),
-                        Style::default().fg(app.theme.warning),
-                    )));
+                        Span::styled(
+                            "  · v completar · x cancelar",
+                            Style::default().fg(app.theme.muted),
+                        ),
+                    ]));
                 }
             }
             lines.push(Line::from(""));
         }
-        Text::from(lines)
-    };
-    let p = Paragraph::new(text)
-        .wrap(Wrap { trim: true })
+        if !app.composing_comment {
+            lines.push(muted_hint(app, "a nuevo · j/k scroll · Esc cerrar"));
+        }
+    }
+
+    let p = Paragraph::new(Text::from(lines))
+        .wrap(Wrap { trim: false })
         .scroll((app.comments_scroll.offset(), 0));
     frame.render_widget(p, area);
 }
@@ -870,41 +943,56 @@ fn draw_comment_input(frame: &mut Frame, app: &App, area: Rect, text_width: u16)
 }
 
 fn draw_comment_date_field(frame: &mut Frame, app: &App, area: Rect) {
-    let border_color = if app.comment_date_focused {
-        app.theme.highlight
+    let focused = app.comment_date_focused;
+    let border_color = if focused {
+        app.theme.selection_bg
     } else {
         app.theme.muted
     };
     let block = Block::default()
-        .title(" Fecha (YYYY-MM-DD HH:MM) — Tab enfoca ")
+        .title(if focused {
+            " › Fecha (YYYY-MM-DD HH:MM) — Tab "
+        } else {
+            " Fecha (YYYY-MM-DD HH:MM) — Tab "
+        })
         .borders(Borders::ALL)
         .border_style(Style::default().fg(border_color));
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
-    let text = if app.comment_date_input.as_str().is_empty() {
+    let empty = app.comment_date_input.as_str().is_empty();
+    let text = if empty {
         "ahora (hora local)".to_string()
     } else {
-        app.comment_date_input.as_str().to_string()
+        format!("{}▌", app.comment_date_input.as_str())
     };
-    let style = if app.comment_date_input.as_str().is_empty() {
+    let style = if focused {
+        selected_row_style(app)
+    } else if empty {
         Style::default().fg(app.theme.muted)
     } else {
-        Style::default()
+        Style::default().fg(app.theme.foreground)
     };
     frame.render_widget(Paragraph::new(text).style(style), inner);
 }
 
 fn draw_comment_text_field(frame: &mut Frame, app: &App, area: Rect, text_width: u16) {
-    let border_color = if app.comment_date_focused {
-        app.theme.muted
+    let focused = !app.comment_date_focused;
+    let border_color = if focused {
+        app.theme.selection_bg
     } else {
-        app.theme.highlight
+        app.theme.muted
     };
     let title = if app.comment_follow {
-        " Comentario (@ para mencionar) · 🔔 seguimiento ON "
+        if focused {
+            " › Comentario · @ mencionar · seguimiento ON "
+        } else {
+            " Comentario · @ mencionar · seguimiento ON "
+        }
+    } else if focused {
+        " › Comentario · @ mencionar "
     } else {
-        " Comentario (@ para mencionar) "
+        " Comentario · @ mencionar "
     };
     let block = Block::default()
         .title(title)
@@ -914,23 +1002,37 @@ fn draw_comment_text_field(frame: &mut Frame, app: &App, area: Rect, text_width:
     frame.render_widget(block, area);
 
     let content_rows = wrapped_line_count(app.comment_input.as_str(), text_width);
-    let mut text = app.comment_input.as_str().to_string();
+    let mut lines: Vec<Line> = vec![Line::from(Span::styled(
+        format!("{}▌", app.comment_input.as_str()),
+        if focused {
+            Style::default().fg(app.theme.foreground)
+        } else {
+            Style::default().fg(app.theme.muted)
+        },
+    ))];
+
     if !app.mention_suggestions.is_empty() {
+        lines.push(Line::from(""));
+        lines.push(section_header(app, "Menciones"));
         for (i, user) in app.mention_suggestions.iter().take(5).enumerate() {
-            let marker = if i == app.mention_selected {
-                "▶"
+            let sel = i == app.mention_selected;
+            let style = if sel {
+                selected_row_style(app)
             } else {
-                " "
+                Style::default().fg(app.theme.foreground)
             };
-            text.push_str(&format!("\n{} {}", marker, user.text));
+            let marker = if sel { "› " } else { "  " };
+            lines.push(Line::from(vec![
+                Span::styled(marker, style),
+                Span::styled(user.text.as_str(), style),
+            ]));
         }
     }
 
-    // Once the box has hit its cap, scroll so the lines you just typed stay
-    // in view instead of silently clipping off the bottom.
+    // Keep the cursor line visible when the box is height-capped.
     let scroll_y = content_rows.saturating_sub(inner.height);
-    let p = Paragraph::new(text)
-        .wrap(Wrap { trim: true })
+    let p = Paragraph::new(Text::from(lines))
+        .wrap(Wrap { trim: false })
         .scroll((scroll_y, 0));
     frame.render_widget(p, inner);
 }

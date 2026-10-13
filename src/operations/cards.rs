@@ -74,6 +74,89 @@ pub async fn card_detail(client: &HteamClient, card_id: u64) -> Result<CardDetai
     client.get_card_detail(card_id).await
 }
 
+/// Task detail + board-card merge. The operation-task endpoint lacks
+/// estimated/spent time and rich labels; the board-card endpoint supplies
+/// `estimated_time` / `time_spent` / `labels_list` / object responsible.
+pub async fn card_detail_enriched(client: &HteamClient, card_id: u64) -> Result<CardDetail> {
+    let mut detail = client.get_card_detail(card_id).await?;
+    let board_id = match client.get_board_id().await {
+        Ok(id) => id,
+        Err(_) => return Ok(detail),
+    };
+    let Ok(raw) = client.get_board_card(board_id, card_id).await else {
+        return Ok(detail);
+    };
+    merge_board_card_into_detail(&mut detail, &raw);
+    Ok(detail)
+}
+
+fn merge_board_card_into_detail(detail: &mut CardDetail, raw: &serde_json::Value) {
+    let card = raw.get("card").unwrap_or(raw);
+
+    if let Some(et) = card.get("estimated_time").and_then(|v| v.as_str()) {
+        let t = et.trim();
+        if !t.is_empty() && t != "---" {
+            detail.time_estimated = Some(t.to_string());
+        }
+    }
+    // Board card uses `time_spent`; times POST response uses `time_spend`.
+    if let Some(ts) = card
+        .get("time_spent")
+        .or_else(|| card.get("time_spend"))
+        .and_then(|v| v.as_str())
+    {
+        let t = ts.trim();
+        if !t.is_empty() && t != "---" {
+            detail.time_spend = Some(t.to_string());
+        }
+    }
+    if detail.start_date.is_none() {
+        if let Some(s) = card.get("start_date").and_then(|v| v.as_str()) {
+            detail.start_date = Some(s.to_string());
+        }
+    }
+    if detail.due_date.is_none() {
+        if let Some(s) = card.get("due_date").and_then(|v| v.as_str()) {
+            detail.due_date = Some(s.to_string());
+        }
+    }
+    if let Some(arr) = card.get("labels_list").and_then(|v| v.as_array()) {
+        let mut labels = Vec::new();
+        for item in arr {
+            if let Ok(lab) = serde_json::from_value::<Label>(item.clone()) {
+                labels.push(lab);
+            }
+        }
+        if !labels.is_empty() {
+            detail.labels = labels;
+        }
+    }
+    // Prefer object responsible over bare id from task detail.
+    if let Some(resp) = card.get("responsible") {
+        if resp.is_object() || resp.as_str().is_some() {
+            detail.responsible = Some(resp.clone());
+        }
+    }
+    if detail.number.is_none() {
+        if let Some(n) = card.get("number").and_then(|v| v.as_u64()) {
+            detail.number = Some(n);
+        }
+    }
+    if detail.closed.is_none() {
+        if let Some(c) = card.get("closed").and_then(|v| v.as_bool()) {
+            detail.closed = Some(c);
+        }
+    }
+    // Priority is often missing from both endpoints; keep whatever detail had.
+    if detail.priority.is_none() {
+        if let Some(p) = card.get("priority") {
+            if !p.is_null() {
+                detail.priority = Some(p.clone());
+            }
+        }
+    }
+}
+
 /// Internal board id used by board-card AJAX routes (times/dates/labels).
 pub async fn board_id(client: &HteamClient) -> Result<u64> {
     client.get_board_id().await
@@ -920,6 +1003,67 @@ mod tests {
                 .and_then(|v| v.get("username"))
                 .and_then(|v| v.as_str()),
             Some("ana")
+        );
+    }
+
+    #[tokio::test]
+    async fn card_detail_enriched_merges_board_card_times_and_labels() {
+        let mut server = mockito::Server::new_async().await;
+        let _detail = server
+            .mock("GET", "/operation/care/tasks/11216/")
+            .match_query(mockito::Matcher::UrlEncoded(
+                "format".into(),
+                "json".into(),
+            ))
+            .with_status(200)
+            .with_body(
+                r#"{"id":11216,"name":"GBI","description":"desc","labels":[315],"responsible":140,"start_date":"2026-10-13T00:00:00-06:00","due_date":"2026-10-13T00:00:00-06:00","number":304}"#,
+            )
+            .create_async()
+            .await;
+        let _lists = server
+            .mock("GET", "/operation/care/operations/483/lists/")
+            .match_query(mockito::Matcher::UrlEncoded("format".into(), "json".into()))
+            .with_status(200)
+            .with_body(r#"[{"id":1,"name":"Open","total_board_cards":1}]"#)
+            .create_async()
+            .await;
+        let _open_cards = server
+            .mock("GET", "/operation/care/operations/483/lists/1/cards/")
+            .match_query(mockito::Matcher::UrlEncoded(
+                "format".into(),
+                "json".into(),
+            ))
+            .with_status(200)
+            .with_body(
+                r#"{"id":1,"name":"Open","cardlist_list":[{"id":1,"board_id":483,"card":{"id":1,"title":"x","subtitle":"","labels_list":[]},"is_closed":false,"card_type":0,"time_status":0,"get_time_status":"","position":1}]}"#,
+            )
+            .create_async()
+            .await;
+        let _board_card = server
+            .mock("GET", "/boards/care/boards/483/card/11216/")
+            .match_query(mockito::Matcher::UrlEncoded(
+                "format".into(),
+                "json".into(),
+            ))
+            .with_status(200)
+            .with_body(
+                r##"{"card":{"id":11216,"number":304,"name":"GBI","labels_list":[{"name":"DOING","color":"#53FF1F"}],"responsible":{"username":"adrian.ortiz","email":"a@x"},"start_date":"2026-10-13T00:00:00-06:00","due_date":"2026-10-13T00:00:00-06:00","estimated_time":"1h 30m","time_spent":"45m","closed":false}}"##,
+            )
+            .create_async()
+            .await;
+
+        let detail = card_detail_enriched(&client(&server.url()), 11216)
+            .await
+            .expect("enriched");
+
+        assert_eq!(detail.time_estimated.as_deref(), Some("1h 30m"));
+        assert_eq!(detail.time_spend.as_deref(), Some("45m"));
+        assert_eq!(detail.labels.len(), 1);
+        assert_eq!(detail.labels[0].name, "DOING");
+        assert_eq!(
+            responsible_display(detail.responsible.as_ref().unwrap()).as_deref(),
+            Some("adrian.ortiz")
         );
     }
 

@@ -295,6 +295,39 @@ impl HteamClient {
         Ok(detail)
     }
 
+    /// Board-card JSON used by the web sidebar: has `estimated_time`,
+    /// `time_spent`, `labels_list`, object `responsible` — fields the task
+    /// detail endpoint often omits or only exposes as bare ids.
+    pub async fn get_board_card(&self, board_id: u64, card_id: u64) -> Result<serde_json::Value> {
+        let (url, headers) = {
+            let config = self.config.lock().await;
+            let url = format!(
+                "{}/boards/care/boards/{}/card/{}/?format=json",
+                self.api_base_url, board_id, card_id
+            );
+            let headers = self.build_headers(&config)?;
+            (url, headers)
+        };
+
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers)
+            .send()
+            .await
+            .context("Error al obtener board card")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+
+        Ok(response.json().await?)
+    }
+
     pub async fn get_card_comments(&self, card_id: u64) -> Result<Vec<Comment>> {
         let config = self.config.lock().await;
         let url = format!(

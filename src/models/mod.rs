@@ -125,8 +125,11 @@ impl Card {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Label {
+    /// Missing on some board-card `labels_list` payloads (name+color only).
+    #[serde(default)]
     pub id: u64,
     pub name: String,
+    #[serde(default)]
     pub color: String,
 }
 
