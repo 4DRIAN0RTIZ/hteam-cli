@@ -783,6 +783,21 @@ mod tests {
             .expect("test client")
     }
 
+    fn sample_edit_form_html() -> &'static str {
+        r#"<!DOCTYPE html><html><head><title>Edit task</title></head><body>
+<form method="post">
+<input type="hidden" name="csrfmiddlewaretoken" value="tok">
+<input type="text" name="name" value="GBI">
+<textarea name="description">d</textarea>
+<input type="text" name="time_estimated" value="1h 30m">
+<input type="text" name="start_date" value="2026-10-13">
+<select name="dependence"><option value="">---------</option><option value="8965" selected>Lectura</option></select>
+<select name="responsible"><option value="140" selected>adrian</option></select>
+<select name="priority"><option value="3" selected>Normal</option></select>
+<input type="hidden" name="id" value="11216">
+</form></body></html>"#
+    }
+
     #[tokio::test]
     async fn test_list_lists_delegates_to_client() {
         let mut server = mockito::Server::new_async().await;
@@ -952,6 +967,12 @@ mod tests {
             .with_body(
                 r#"{"id":42,"name":"Old","description":"old desc","labels":[],"list":null,"priority":3}"#,
             )
+            .create_async()
+            .await;
+        let _form = server
+            .mock("GET", "/operations/483/tasks/42/edit/")
+            .with_status(200)
+            .with_body(sample_edit_form_html())
             .create_async()
             .await;
         let _update = server
@@ -1292,6 +1313,12 @@ mod tests {
             )
             .create_async()
             .await;
+        let _form = server
+            .mock("GET", "/operations/483/tasks/11216/edit/")
+            .with_status(200)
+            .with_body(sample_edit_form_html())
+            .create_async()
+            .await;
         let _edit = server
             .mock("POST", "/operations/483/tasks/11216/edit/")
             .match_body(mockito::Matcher::Regex("dependence=(&|$)".into()))
@@ -1322,11 +1349,19 @@ mod tests {
             .with_body(r#"{"id":11216,"name":"GBI","description":"d","labels":[],"priority":3,"start_date":"2026-10-13T00:00:00-06:00","responsible":140}"#)
             .create_async()
             .await;
+        let _form = server
+            .mock("GET", "/operations/483/tasks/11216/edit/")
+            .with_status(200)
+            .with_body(sample_edit_form_html())
+            .create_async()
+            .await;
         let _edit = server
             .mock("POST", "/operations/483/tasks/11216/edit/")
-            .match_body(mockito::Matcher::Regex(
-                r"start_date=2026-10-13&dependence=8965".into(),
-            ))
+            .match_body(mockito::Matcher::AllOf(vec![
+                mockito::Matcher::Regex(r"start_date=2026-10-13".into()),
+                mockito::Matcher::Regex(r"dependence=8965".into()),
+                mockito::Matcher::Regex(r"time_estimated=1h\+30m".into()),
+            ]))
             .with_status(200)
             .create_async()
             .await;
@@ -1342,6 +1377,48 @@ mod tests {
         )
         .await
         .expect("update dependence");
+    }
+
+    #[tokio::test]
+    async fn update_priority_preserves_dependence_and_time_from_form() {
+        let mut server = mockito::Server::new_async().await;
+        let _detail = server
+            .mock("GET", "/operation/care/tasks/11216/")
+            .match_query(mockito::Matcher::UrlEncoded("format".into(), "json".into()))
+            .with_status(200)
+            .with_body(
+                r##"{"id":11216,"name":"GBI","description":"d","labels":[],"dependence":"#5 - Lectura","start_date":"2026-10-13T00:00:00-06:00","responsible":140}"##,
+            )
+            .create_async()
+            .await;
+        let _form = server
+            .mock("GET", "/operations/483/tasks/11216/edit/")
+            .with_status(200)
+            .with_body(sample_edit_form_html())
+            .create_async()
+            .await;
+        let _edit = server
+            .mock("POST", "/operations/483/tasks/11216/edit/")
+            .match_body(mockito::Matcher::AllOf(vec![
+                mockito::Matcher::Regex("priority=4".into()),
+                mockito::Matcher::Regex("dependence=8965".into()),
+                mockito::Matcher::Regex(r"time_estimated=1h\+30m".into()),
+            ]))
+            .with_status(200)
+            .create_async()
+            .await;
+
+        update_card_fields(
+            &client(&server.url()),
+            11216,
+            483,
+            CardFieldUpdates {
+                priority: Some("4"),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("priority preserves dep+time");
     }
 
     #[tokio::test]
