@@ -507,16 +507,16 @@ fn draw_description_popup(frame: &mut Frame, app: &App) {
 }
 
 fn draw_task_detail_popup(frame: &mut Frame, app: &App) {
-    let area = centered_rect(72, 80, frame.area());
+    let area = centered_rect(74, 82, frame.area());
     let title = if app.editing_detail_field {
         let field = DetailField::ALL[app.task_detail_field_idx.min(DetailField::ALL.len() - 1)];
         format!(
-            " Editar {} — {} · Enter/Ctrl+S guardar · Esc cancelar ",
+            " ✎ {} — {} · Enter/Ctrl+S guardar · Esc ",
             field.label(),
             field.hint()
         )
     } else {
-        " Detalle — j/k campo · e editar · '?' ayuda · Esc cerrar ".to_string()
+        " Detalle — j/k · e editar · ? · Esc ".to_string()
     };
     let inner = draw_frame(
         frame,
@@ -527,58 +527,206 @@ fn draw_task_detail_popup(frame: &mut Frame, app: &App) {
         app.theme.foreground,
     );
 
-    let text = if let Some(err) = &app.task_detail_error {
-        format!("No se pudo cargar el detalle.\n\n{}", err)
+    let lines: Vec<Line> = if let Some(err) = &app.task_detail_error {
+        vec![
+            Line::from(Span::styled(
+                "No se pudo cargar el detalle",
+                Style::default()
+                    .fg(app.theme.danger)
+                    .add_modifier(Modifier::BOLD),
+            )),
+            Line::from(""),
+            Line::from(Span::styled(
+                err.clone(),
+                Style::default().fg(app.theme.muted),
+            )),
+        ]
     } else if let Some(detail) = &app.task_detail {
-        let num = detail
-            .number
-            .map(|n| format!("#{} ", n))
-            .unwrap_or_default();
-        let mut lines = vec![
-            format!("{}{}  (id {})", num, detail.name, detail.id),
-            String::new(),
-        ];
-
-        let field = DetailField::ALL[app.task_detail_field_idx.min(DetailField::ALL.len() - 1)];
-        for f in DetailField::ALL {
-            let marker = if *f == field { ">" } else { " " };
-            let value = detail_field_value(detail, *f);
-            if app.editing_detail_field && *f == field {
-                lines.push(format!(
-                    "{} {}: {}_",
-                    marker,
-                    f.label(),
-                    app.detail_edit_input.as_str()
-                ));
-            } else {
-                lines.push(format!("{} {}: {}", marker, f.label(), value));
-            }
-        }
-
-        lines.push(String::new());
-        let labels = if detail.labels.is_empty() {
-            "-".into()
-        } else {
-            detail
-                .labels
-                .iter()
-                .map(|l| l.name.as_str())
-                .collect::<Vec<_>>()
-                .join(", ")
-        };
-        lines.push(format!("Labels: {}", labels));
-        if let Some(list) = &detail.list {
-            lines.push(format!("Lista: {}", list.name));
-        }
-        lines.join("\n")
+        task_detail_lines(app, detail)
     } else {
-        "Cargando detalle...".to_string()
+        vec![Line::from(Span::styled(
+            "Cargando detalle…",
+            Style::default()
+                .fg(app.theme.muted)
+                .add_modifier(Modifier::ITALIC),
+        ))]
     };
 
-    let p = Paragraph::new(text)
+    let p = Paragraph::new(Text::from(lines))
         .wrap(Wrap { trim: false })
         .scroll((app.task_detail_scroll.offset(), 0));
     frame.render_widget(p, inner);
+}
+
+fn task_detail_lines<'a>(app: &'a App, detail: &'a crate::models::CardDetail) -> Vec<Line<'a>> {
+    let mut lines: Vec<Line> = Vec::new();
+    let selected = DetailField::ALL[app.task_detail_field_idx.min(DetailField::ALL.len() - 1)];
+
+    // Header
+    let mut title_spans = Vec::new();
+    if let Some(n) = detail.number {
+        title_spans.push(Span::styled(
+            format!("#{n} "),
+            Style::default()
+                .fg(app.theme.highlight)
+                .add_modifier(Modifier::BOLD),
+        ));
+    }
+    title_spans.push(Span::styled(
+        detail.name.clone(),
+        Style::default()
+            .fg(app.theme.foreground)
+            .add_modifier(Modifier::BOLD),
+    ));
+    lines.push(Line::from(title_spans));
+    lines.push(Line::from(Span::styled(
+        format!("id {} · task detail", detail.id),
+        Style::default().fg(app.theme.muted),
+    )));
+
+    if let Some(list) = &detail.list {
+        lines.push(Line::from(vec![
+            Span::styled("lista  ", Style::default().fg(app.theme.muted)),
+            Span::styled(
+                list.name.clone(),
+                Style::default().fg(app.theme.border_active),
+            ),
+        ]));
+    }
+    if detail.closed == Some(true) {
+        lines.push(Line::from(Span::styled(
+            "cerrada",
+            Style::default()
+                .fg(app.theme.danger)
+                .add_modifier(Modifier::BOLD),
+        )));
+    }
+
+    lines.push(Line::from(""));
+    lines.push(section_header(app, "Información"));
+    for f in [
+        DetailField::Name,
+        DetailField::Description,
+        DetailField::Responsible,
+        DetailField::Priority,
+    ] {
+        lines.push(detail_field_line(app, detail, f, selected));
+    }
+
+    lines.push(Line::from(""));
+    lines.push(section_header(app, "Fechas"));
+    for f in [DetailField::StartDate, DetailField::DueDate] {
+        lines.push(detail_field_line(app, detail, f, selected));
+    }
+
+    lines.push(Line::from(""));
+    lines.push(section_header(app, "Tiempo"));
+    for f in [DetailField::TimeEstimated, DetailField::TimeSpent] {
+        lines.push(detail_field_line(app, detail, f, selected));
+    }
+
+    lines.push(Line::from(""));
+    lines.push(section_header(app, "Labels"));
+    lines.push(detail_labels_line(app, detail));
+
+    if !app.editing_detail_field {
+        lines.push(Line::from(""));
+        lines.push(Line::from(Span::styled(
+            "e editar campo · j/k mover · Esc cerrar",
+            Style::default().fg(app.theme.muted),
+        )));
+    }
+
+    lines
+}
+
+fn section_header<'a>(app: &App, title: &'a str) -> Line<'a> {
+    Line::from(Span::styled(
+        format!("── {title} ──"),
+        Style::default()
+            .fg(app.theme.border_active)
+            .add_modifier(Modifier::BOLD),
+    ))
+}
+
+fn detail_field_line<'a>(
+    app: &'a App,
+    detail: &'a crate::models::CardDetail,
+    field: DetailField,
+    selected: DetailField,
+) -> Line<'a> {
+    let is_sel = field == selected;
+    let is_edit = is_sel && app.editing_detail_field;
+    let label = format!("{:<12}", field.label());
+    let raw = if is_edit {
+        format!("{}▌", app.detail_edit_input.as_str())
+    } else {
+        detail_field_value(detail, field)
+    };
+
+    let empty = raw == "-" && !is_edit;
+    let row_style = if is_sel {
+        Style::default()
+            .bg(app.theme.selection_bg)
+            .fg(app.theme.selection_fg)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default()
+    };
+    let label_style = if is_sel {
+        row_style
+    } else {
+        Style::default().fg(app.theme.muted)
+    };
+    let value_style = if is_sel {
+        row_style
+    } else if empty {
+        Style::default().fg(app.theme.muted)
+    } else if field == DetailField::Responsible {
+        Style::default().fg(app.theme.highlight)
+    } else {
+        Style::default().fg(app.theme.foreground)
+    };
+
+    let marker = if is_sel { "› " } else { "  " };
+    Line::from(vec![
+        Span::styled(marker, row_style),
+        Span::styled(label, label_style),
+        Span::styled(" ", row_style),
+        Span::styled(raw, value_style),
+    ])
+}
+
+fn detail_labels_line<'a>(app: &'a App, detail: &'a crate::models::CardDetail) -> Line<'a> {
+    if detail.labels.is_empty() {
+        return Line::from(Span::styled(
+            "  (sin labels)",
+            Style::default().fg(app.theme.muted),
+        ));
+    }
+    let mut spans = vec![Span::raw("  ")];
+    for (i, lab) in detail.labels.iter().enumerate() {
+        if i > 0 {
+            spans.push(Span::raw(" "));
+        }
+        let fg = parse_hex_color(&lab.color).unwrap_or(app.theme.highlight);
+        spans.push(Span::styled(
+            format!("[{}]", lab.name),
+            Style::default().fg(fg).add_modifier(Modifier::BOLD),
+        ));
+    }
+    Line::from(spans)
+}
+
+fn parse_hex_color(s: &str) -> Option<ratatui::style::Color> {
+    let s = s.trim().trim_start_matches('#');
+    if s.len() != 6 {
+        return None;
+    }
+    let r = u8::from_str_radix(&s[0..2], 16).ok()?;
+    let g = u8::from_str_radix(&s[2..4], 16).ok()?;
+    let b = u8::from_str_radix(&s[4..6], 16).ok()?;
+    Some(ratatui::style::Color::Rgb(r, g, b))
 }
 
 fn detail_field_value(detail: &crate::models::CardDetail, field: DetailField) -> String {
@@ -587,7 +735,7 @@ fn detail_field_value(detail: &crate::models::CardDetail, field: DetailField) ->
         DetailField::Description => detail
             .description
             .clone()
-            .filter(|s| !s.is_empty())
+            .filter(|s| !s.trim().is_empty())
             .unwrap_or_else(|| "-".into()),
         DetailField::Responsible => operations::cards::responsible_display(
             detail
@@ -596,15 +744,23 @@ fn detail_field_value(detail: &crate::models::CardDetail, field: DetailField) ->
                 .unwrap_or(&serde_json::Value::Null),
         )
         .unwrap_or_else(|| "-".into()),
-        DetailField::Priority => detail
-            .priority
-            .as_ref()
-            .map(|v| match v {
-                serde_json::Value::String(s) => s.clone(),
-                other => other.to_string(),
-            })
-            .filter(|s| !s.is_empty() && s != "null")
-            .unwrap_or_else(|| "-".into()),
+        DetailField::Priority => {
+            let raw = detail
+                .priority
+                .as_ref()
+                .map(|v| match v {
+                    serde_json::Value::String(s) => s.clone(),
+                    other => other.to_string(),
+                })
+                .filter(|s| !s.is_empty() && s != "null");
+            match raw.as_deref() {
+                Some("1") => "1  alta".into(),
+                Some("2") => "2  media".into(),
+                Some("3") => "3  baja".into(),
+                Some(s) => s.to_string(),
+                None => "-".into(),
+            }
+        }
         DetailField::StartDate => detail
             .start_date
             .as_deref()
@@ -620,12 +776,12 @@ fn detail_field_value(detail: &crate::models::CardDetail, field: DetailField) ->
         DetailField::TimeEstimated => detail
             .time_estimated
             .clone()
-            .filter(|s| !s.is_empty())
+            .filter(|s| !s.trim().is_empty())
             .unwrap_or_else(|| "-".into()),
         DetailField::TimeSpent => detail
             .time_spend
             .clone()
-            .filter(|s| !s.is_empty())
+            .filter(|s| !s.trim().is_empty())
             .unwrap_or_else(|| "-".into()),
     }
 }
