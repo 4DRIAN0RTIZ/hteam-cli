@@ -175,7 +175,7 @@ fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
 fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
     match ctx {
         HelpContext::Board => (
-            " Ayuda — j/k scroll · Esc/q/? cerrar ",
+            " Ayuda ",
             &[
                 "Board",
                 "  j/k, ↓/↑        mover selección",
@@ -206,7 +206,7 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
             ],
         ),
         HelpContext::Reminders => (
-            " Ayuda: Reminders — Esc/q/? ",
+            " Ayuda · Reminders ",
             &[
                 "Reminders",
                 "  j/k, ↓/↑        scroll",
@@ -215,7 +215,7 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
             ],
         ),
         HelpContext::WeeklyObjectives => (
-            " Ayuda: Objetivos semanales — Esc/q/? cerrar ",
+            " Ayuda · Objetivos semanales ",
             &[
                 "Objetivos semanales",
                 "  j/k, ↓/↑        scroll",
@@ -224,7 +224,7 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
             ],
         ),
         HelpContext::Comments => (
-            " Ayuda: Comentarios — Esc/q/? cerrar ",
+            " Ayuda · Comentarios ",
             &[
                 "Comentarios",
                 "  j/k, ↓/↑        scroll",
@@ -246,7 +246,7 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
             ],
         ),
         HelpContext::Projects => (
-            " Ayuda: Proyectos — Esc/q/? cerrar ",
+            " Ayuda · Proyectos ",
             &[
                 "Proyectos guardados",
                 "  a               agregar uno nuevo por ID",
@@ -270,7 +270,7 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
             ],
         ),
         HelpContext::TaskDetail => (
-            " Ayuda: Detalle — Esc/q/? cerrar ",
+            " Ayuda · Detalle ",
             &[
                 "Detalle de task",
                 "  j/k             cambiar campo",
@@ -281,7 +281,7 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
             ],
         ),
         HelpContext::BoardSwitch => (
-            " Ayuda: Cambiar de board — Esc/q/? cerrar ",
+            " Ayuda · Cambiar de board ",
             &[
                 "Cambiar de board",
                 "  j/k, ↓/↑        mover selección",
@@ -316,19 +316,22 @@ fn draw_changelog_popup(frame: &mut Frame, app: &App) {
     let inner = draw_frame(
         frame,
         area,
-        " CHANGELOG — j/k scroll · c copiar link · Enter/Esc cerrar ",
+        " CHANGELOG ",
         app.theme.border_help,
         app.theme.background,
         app.theme.foreground,
     );
 
-    let text = app
+    let body = app
         .startup_changelog
         .as_deref()
         .unwrap_or("(sin changelog)")
         .trim_end();
+    let mut lines: Vec<Line> = body.lines().map(|l| Line::from(l.to_string())).collect();
+    lines.push(Line::from(""));
+    lines.push(muted_hint(app, "j/k scroll · c copiar link · Enter/Esc"));
 
-    let p = Paragraph::new(text)
+    let p = Paragraph::new(Text::from(lines))
         .wrap(Wrap { trim: false })
         .scroll((app.changelog_scroll.offset(), 0));
     frame.render_widget(p, inner);
@@ -339,7 +342,7 @@ fn draw_update_available_popup(frame: &mut Frame, app: &App) {
     let inner = draw_frame(
         frame,
         area,
-        " Update Available — c copiar releases · Enter/Esc cerrar ",
+        " Update Available ",
         app.theme.border_help,
         app.theme.background,
         app.theme.foreground,
@@ -350,15 +353,19 @@ fn draw_update_available_popup(frame: &mut Frame, app: &App) {
         None => ("?", "?"),
     };
 
-    let text = format!(
-        "Hay una versión nueva de hteam.\n\n\
-  actual:  {current}\n\
-  última:  {latest}\n\n\
-Ejecuta `hteam update` para instalarla.\n\
-'c' copia el link de releases en GitHub."
-    );
+    let mut lines = vec![
+        Line::from("Hay una versión nueva de hteam."),
+        Line::from(""),
+        Line::from(format!("  actual:  {current}")),
+        Line::from(format!("  última:  {latest}")),
+        Line::from(""),
+        Line::from("Ejecuta `hteam update` para instalarla."),
+        Line::from(""),
+        muted_hint(app, "c copiar releases · Enter/Esc"),
+    ];
+    let _ = &mut lines;
 
-    let p = Paragraph::new(text).wrap(Wrap { trim: false });
+    let p = Paragraph::new(Text::from(lines)).wrap(Wrap { trim: false });
     frame.render_widget(p, inner);
 }
 
@@ -371,7 +378,7 @@ fn draw_new_card_popup(frame: &mut Frame, app: &App) {
         .map(|l| l.name.as_str())
         .unwrap_or("?");
 
-    let title = format!(" Nueva card en {} — Enter crear · Esc cancelar ", list_name);
+    let title = format!(" Nueva card · {} ", list_name);
     let inner = draw_frame(
         frame,
         area,
@@ -381,17 +388,22 @@ fn draw_new_card_popup(frame: &mut Frame, app: &App) {
         app.theme.foreground,
     );
 
+    let chunks = Layout::vertical([Constraint::Min(1), Constraint::Length(1)]).split(inner);
     let p = Paragraph::new(app.new_card_input.as_str()).wrap(Wrap { trim: true });
-    frame.render_widget(p, inner);
+    frame.render_widget(p, chunks[0]);
+    frame.render_widget(
+        Paragraph::new(muted_hint(app, "Enter crear · Esc")),
+        chunks[1],
+    );
 }
 
 fn draw_reminders_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(68, 70, frame.area());
     let n = app.reminders.len();
     let title = if n == 0 {
-        " Reminders — a agregar · ? · Esc ".to_string()
+        " Reminders ".to_string()
     } else {
-        format!(" Reminders ({n}) — a agregar · j/k scroll · ? · Esc ")
+        format!(" Reminders ({n}) ")
     };
     let inner = draw_frame(
         frame,
@@ -408,20 +420,14 @@ fn draw_reminders_popup(frame: &mut Frame, app: &App) {
         if n == 1 { "1 pendiente" } else { "Pendientes" },
     ));
     if n > 0 {
-        lines.push(muted_hint(
-            app,
-            format!("{n} en total · a nuevo sobre la card seleccionada"),
-        ));
+        lines.push(muted_hint(app, format!("{n} en total")));
     }
     lines.push(Line::from(""));
 
     if app.reminders.is_empty() {
         lines.push(empty_state_line(app, "Sin reminders pendientes."));
         lines.push(Line::from(""));
-        lines.push(muted_hint(
-            app,
-            "Selecciona una card en el board y pulsa a para crear uno",
-        ));
+        lines.push(muted_hint(app, "Selecciona una card y pulsa a · ? · Esc"));
     } else {
         for (i, r) in app.reminders.iter().enumerate() {
             if i > 0 {
@@ -462,7 +468,7 @@ fn draw_reminders_popup(frame: &mut Frame, app: &App) {
             ]));
         }
         lines.push(Line::from(""));
-        lines.push(muted_hint(app, "a nuevo · Esc cerrar"));
+        lines.push(muted_hint(app, "a nuevo · j/k scroll · ? · Esc"));
     }
 
     let p = Paragraph::new(Text::from(lines))
@@ -476,41 +482,55 @@ fn draw_weekly_objectives_popup(frame: &mut Frame, app: &App) {
     let inner = draw_frame(
         frame,
         area,
-        " Objetivos semanales — 'f' refetch · '?' ayuda · Esc cerrar ",
+        " Objetivos semanales ",
         app.theme.border_objectives,
         app.theme.background,
         app.theme.foreground,
     );
 
-    let text = if let Some(error) = &app.weekly_objectives_error {
-        format!("No se pudieron cargar los objetivos semanales.\n\n{}\n\nPresiona 'f' para reintentar ignorando el cache.", error)
+    let mut lines: Vec<Line> = if let Some(error) = &app.weekly_objectives_error {
+        vec![
+            Line::from("No se pudieron cargar los objetivos semanales."),
+            Line::from(""),
+            Line::from(error.clone()),
+        ]
     } else if let Some(set) = &app.weekly_objectives {
         let source = if app.weekly_objectives_from_cache {
             "cache"
         } else {
             "red"
         };
-        let mut lines = vec![format!("🎯 {}", set.title), String::new()];
+        let mut lines = vec![Line::from(format!("🎯 {}", set.title)), Line::from("")];
 
         for objective in &set.objectives {
-            lines.push(format!("## {}", objective.name));
+            lines.push(Line::from(format!("## {}", objective.name)));
             for task in &objective.tasks {
                 let mark = if task.done { "x" } else { " " };
-                lines.push(format!("   [{}] {}", mark, task.description));
+                lines.push(Line::from(format!("   [{}] {}", mark, task.description)));
             }
-            lines.push(String::new());
+            lines.push(Line::from(""));
         }
 
         if let Some(synced_at) = app.weekly_objectives_synced_at {
-            lines.push(format!("{}, {}", source, relative_time(synced_at)));
+            lines.push(Line::from(format!(
+                "{}, {}",
+                source,
+                relative_time(synced_at)
+            )));
         }
-
-        lines.join("\n")
+        lines
     } else {
-        "Cargando objetivos semanales...".to_string()
+        vec![Line::from(Span::styled(
+            "Cargando objetivos semanales…",
+            Style::default()
+                .fg(app.theme.muted)
+                .add_modifier(Modifier::ITALIC),
+        ))]
     };
+    lines.push(Line::from(""));
+    lines.push(muted_hint(app, "f refetch · j/k scroll · ? · Esc"));
 
-    let p = Paragraph::new(text)
+    let p = Paragraph::new(Text::from(lines))
         .wrap(Wrap { trim: true })
         .scroll((app.weekly_objectives_scroll.offset(), 0));
     frame.render_widget(p, inner);
@@ -536,10 +556,7 @@ fn draw_description_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(70, 70, frame.area());
 
     let card_name = app.current_card().map(|c| c.name.as_str()).unwrap_or("?");
-    let title = format!(
-        " Descripción de \"{}\" — Enter salto de línea · Ctrl+S guardar · Esc cancelar ",
-        card_name
-    );
+    let title = format!(" Descripción · {} ", card_name);
     let inner = draw_frame(
         frame,
         area,
@@ -549,13 +566,18 @@ fn draw_description_popup(frame: &mut Frame, app: &App) {
         app.theme.foreground,
     );
 
-    let text_width = inner.width.saturating_sub(2).max(1);
+    let chunks = Layout::vertical([Constraint::Min(1), Constraint::Length(1)]).split(inner);
+    let text_width = chunks[0].width.saturating_sub(2).max(1);
     let content_rows = wrapped_line_count(app.description_input.as_str(), text_width);
-    let scroll_y = content_rows.saturating_sub(inner.height);
+    let scroll_y = content_rows.saturating_sub(chunks[0].height);
     let p = Paragraph::new(app.description_input.as_str())
         .wrap(Wrap { trim: true })
         .scroll((scroll_y, 0));
-    frame.render_widget(p, inner);
+    frame.render_widget(p, chunks[0]);
+    frame.render_widget(
+        Paragraph::new(muted_hint(app, "Enter salto · Ctrl+S guardar · Esc")),
+        chunks[1],
+    );
 }
 
 fn draw_task_detail_popup(frame: &mut Frame, app: &App) {
@@ -563,19 +585,15 @@ fn draw_task_detail_popup(frame: &mut Frame, app: &App) {
     let title = if app.picking_dependence {
         let f = app.dependence_picker_filter.as_str();
         if f.is_empty() {
-            " Depende de — j/k elegir · Enter · x quitar · tipea para filtrar · Esc ".to_string()
+            " Depende de ".to_string()
         } else {
-            format!(" Depende de — filtro: {f}_ · j/k · Enter · x · Esc ")
+            format!(" Depende de · filtro: {f}_ ")
         }
     } else if app.editing_detail_field {
         let field = DetailField::ALL[app.task_detail_field_idx.min(DetailField::ALL.len() - 1)];
-        format!(
-            " ✎ {} — {} · Enter/Ctrl+S guardar · Esc ",
-            field.label(),
-            field.hint()
-        )
+        format!(" ✎ {} ", field.label())
     } else {
-        " Detalle — j/k · e · Enter en Depende de = saltar · ? · Esc ".to_string()
+        " Detalle ".to_string()
     };
     let inner = draw_frame(
         frame,
@@ -623,10 +641,6 @@ fn dependence_picker_lines(app: &App) -> Vec<Line<'static>> {
     use super::events::filtered_dependence_picker_indices;
     let mut lines = vec![
         section_header(app, "Elegir task dependencia"),
-        muted_hint(
-            app,
-            "Enter confirma · x quita dependencia · escribe para filtrar",
-        ),
         Line::from(""),
     ];
     let idxs = filtered_dependence_picker_indices(app);
@@ -639,6 +653,8 @@ fn dependence_picker_lines(app: &App) -> Vec<Line<'static>> {
                 "Ninguna task coincide con el filtro."
             },
         ));
+        lines.push(Line::from(""));
+        lines.push(muted_hint(app, "escribe para filtrar · Esc"));
         return lines;
     }
     // Keep selection near middle of a window of ~12 rows.
@@ -675,6 +691,11 @@ fn dependence_picker_lines(app: &App) -> Vec<Line<'static>> {
     if end < idxs.len() {
         lines.push(muted_hint(app, format!("▼ {} más abajo", idxs.len() - end)));
     }
+    lines.push(Line::from(""));
+    lines.push(muted_hint(
+        app,
+        "j/k · Enter confirma · x quita · escribe para filtrar · Esc",
+    ));
     lines
 }
 
@@ -750,12 +771,18 @@ fn task_detail_lines<'a>(app: &'a App, detail: &'a crate::models::CardDetail) ->
     lines.push(section_header(app, "Labels"));
     lines.push(detail_labels_line(app, detail));
 
-    if !app.editing_detail_field {
-        lines.push(Line::from(""));
-        lines.push(Line::from(Span::styled(
-            "e editar campo · j/k mover · Esc cerrar",
-            Style::default().fg(app.theme.muted),
-        )));
+    lines.push(Line::from(""));
+    if app.editing_detail_field {
+        let field = DetailField::ALL[app.task_detail_field_idx.min(DetailField::ALL.len() - 1)];
+        lines.push(muted_hint(
+            app,
+            format!("{} · Enter/Ctrl+S guardar · Esc cancelar", field.hint()),
+        ));
+    } else {
+        lines.push(muted_hint(
+            app,
+            "j/k campo · e editar · Enter en Depende de = saltar · ? · Esc",
+        ));
     }
 
     lines
@@ -926,9 +953,9 @@ fn draw_comments_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(72, 75, frame.area());
 
     let title = if app.composing_comment {
-        " Comentario nuevo — Ctrl+S enviar · Esc cancelar "
+        " Comentario nuevo "
     } else {
-        " Comentarios — a agregar · j/k · ? · Esc "
+        " Comentarios "
     };
     let inner = draw_frame(
         frame,
@@ -980,7 +1007,7 @@ fn draw_comment_list(frame: &mut Frame, app: &App, area: Rect) {
             },
         ));
         if n > 0 {
-            lines.push(muted_hint(app, format!("{n} en total · a nuevo")));
+            lines.push(muted_hint(app, format!("{n} en total")));
         }
         lines.push(Line::from(""));
     }
@@ -989,7 +1016,7 @@ fn draw_comment_list(frame: &mut Frame, app: &App, area: Rect) {
         lines.push(empty_state_line(app, "Sin comentarios todavía."));
         if !app.composing_comment {
             lines.push(Line::from(""));
-            lines.push(muted_hint(app, "a escribir · Esc cerrar"));
+            lines.push(muted_hint(app, "a escribir · j/k · ? · Esc"));
         }
     } else {
         for (i, c) in app.comments.iter().enumerate() {
@@ -1040,7 +1067,7 @@ fn draw_comment_list(frame: &mut Frame, app: &App, area: Rect) {
             lines.push(Line::from(""));
         }
         if !app.composing_comment {
-            lines.push(muted_hint(app, "a nuevo · j/k scroll · Esc cerrar"));
+            lines.push(muted_hint(app, "a nuevo · j/k scroll · ? · Esc"));
         }
     }
 
@@ -1065,11 +1092,7 @@ fn draw_comment_date_field(frame: &mut Frame, app: &App, area: Rect) {
         app.theme.muted
     };
     let block = Block::default()
-        .title(if focused {
-            " › Fecha (YYYY-MM-DD HH:MM) — Tab "
-        } else {
-            " Fecha (YYYY-MM-DD HH:MM) — Tab "
-        })
+        .title(if focused { " › Fecha " } else { " Fecha " })
         .borders(Borders::ALL)
         .border_style(Style::default().fg(border_color));
     let inner = block.inner(area);
@@ -1098,16 +1121,16 @@ fn draw_comment_text_field(frame: &mut Frame, app: &App, area: Rect, text_width:
     } else {
         app.theme.muted
     };
-    let title = if app.comment_follow {
-        if focused {
-            " › Comentario · @ mencionar · seguimiento ON "
+    let title = if focused {
+        if app.comment_follow {
+            " › Comentario · seguimiento ON "
         } else {
-            " Comentario · @ mencionar · seguimiento ON "
+            " › Comentario "
         }
-    } else if focused {
-        " › Comentario · @ mencionar "
+    } else if app.comment_follow {
+        " Comentario · seguimiento ON "
     } else {
-        " Comentario · @ mencionar "
+        " Comentario "
     };
     let block = Block::default()
         .title(title)
@@ -1143,6 +1166,12 @@ fn draw_comment_text_field(frame: &mut Frame, app: &App, area: Rect, text_width:
             ]));
         }
     }
+
+    lines.push(Line::from(""));
+    lines.push(muted_hint(
+        app,
+        "@ mención · Tab fecha · f seguimiento · Ctrl+S enviar · Esc",
+    ));
 
     // Keep the cursor line visible when the box is height-capped.
     let scroll_y = content_rows.saturating_sub(inner.height);
@@ -1192,14 +1221,14 @@ fn draw_projects_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(80, 75, frame.area());
 
     let title = if app.composing_project {
-        " Nuevo project id — dígitos + Enter · Esc cancelar ".to_string()
+        " Nuevo project id ".to_string()
     } else if app.show_live_projects {
         format!(
-            " Proyectos en vivo ({}) — Enter elegir · '?' ayuda · Esc/L volver ",
+            " Proyectos en vivo ({}) ",
             operations::projects::PROJECT_STATUSES[app.live_projects_status_idx]
         )
     } else {
-        " Proyectos — 'a' agregar · 'L' en vivo · '?' ayuda · Esc cerrar ".to_string()
+        " Proyectos ".to_string()
     };
     let inner = draw_frame(
         frame,
@@ -1372,7 +1401,7 @@ fn draw_board_switch_popup(frame: &mut Frame, app: &App) {
     let inner = draw_frame(
         frame,
         area,
-        " Cambiar board — Enter seleccionar · '?' ayuda · Esc cerrar ",
+        " Cambiar board ",
         app.theme.border_board_switch,
         app.theme.background,
         app.theme.foreground,
@@ -1387,13 +1416,6 @@ fn draw_board_switch_popup(frame: &mut Frame, app: &App) {
         frame.render_widget(Paragraph::new(msg), inner);
         return;
     }
-
-    // Scroll automático para mantener el ítem seleccionado en pantalla
-    let scroll_y = if app.selected_board_idx + 1 > inner.height as usize {
-        (app.selected_board_idx + 1 - inner.height as usize) as u16
-    } else {
-        0
-    };
 
     let lines: Vec<Line> = app
         .available_boards
@@ -1438,11 +1460,20 @@ fn draw_board_switch_popup(frame: &mut Frame, app: &App) {
         })
         .collect();
 
+    let chunks = Layout::vertical([Constraint::Min(1), Constraint::Length(1)]).split(inner);
+    let scroll_y = if app.selected_board_idx + 1 > chunks[0].height as usize {
+        (app.selected_board_idx + 1 - chunks[0].height as usize) as u16
+    } else {
+        0
+    };
     let p = Paragraph::new(Text::from(lines)).scroll((scroll_y, 0));
-    frame.render_widget(p, inner);
+    frame.render_widget(p, chunks[0]);
+    frame.render_widget(
+        Paragraph::new(muted_hint(app, "j/k · Enter seleccionar · ? · Esc")),
+        chunks[1],
+    );
 }
 
-/// Trunca `s` a `max` caracteres y rellena con espacios si es más corto.
 fn trunc_str(s: &str, max: usize) -> String {
     let chars: String = s.chars().take(max).collect();
     format!("{:<width$}", chars, width = max)
