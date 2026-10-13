@@ -1100,6 +1100,29 @@ impl HteamClient {
         };
 
         let detail = patch.detail;
+        // Form expects a bare task id (or empty to clear). Never re-post the
+        // human label string the detail API returns ("#5 - Title…").
+        let dependence_owned: String = if let Some(dep) = patch.dependence {
+            dep.to_string()
+        } else {
+            match detail.dependence.as_ref() {
+                Some(serde_json::Value::Number(n)) => n.to_string(),
+                Some(serde_json::Value::String(s))
+                    if !s.is_empty() && s.chars().all(|c| c.is_ascii_digit()) =>
+                {
+                    s.clone()
+                }
+                Some(serde_json::Value::Object(map)) => map
+                    .get("id")
+                    .and_then(|v| match v {
+                        serde_json::Value::Number(n) => Some(n.to_string()),
+                        serde_json::Value::String(s) => Some(s.clone()),
+                        _ => None,
+                    })
+                    .unwrap_or_default(),
+                _ => String::new(),
+            }
+        };
         let fields = vec![
             format!("csrfmiddlewaretoken={}", encode(csrf)),
             format!("process_id={}", board_number),
@@ -1124,18 +1147,7 @@ impl HteamClient {
                 "start_date={}",
                 encode(detail.start_date.as_deref().unwrap_or(""))
             ),
-            format!(
-                "dependence={}",
-                encode(
-                    patch.dependence.unwrap_or(
-                        &detail
-                            .dependence
-                            .as_ref()
-                            .map(val_to_str)
-                            .unwrap_or_default()
-                    )
-                )
-            ),
+            format!("dependence={}", encode(&dependence_owned)),
             format!(
                 "responsible={}",
                 encode(

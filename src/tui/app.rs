@@ -84,7 +84,8 @@ impl DetailField {
             DetailField::Description => "texto (Ctrl+S guarda)",
             DetailField::Responsible => "username",
             DetailField::Priority => "1 alta · 2 media · 3 baja",
-            DetailField::Dependence => "id de task (vacío = sin dependencia)",
+            DetailField::Dependence => "j/k elegir · Enter confirmar · / filtrar · Esc",
+
             DetailField::StartDate | DetailField::DueDate => "YYYY-MM-DD",
             DetailField::TimeEstimated | DetailField::TimeSpent => "ej. 1h · 45m · +30m",
         }
@@ -132,7 +133,15 @@ pub struct App {
     pub task_detail_error: Option<String>,
     /// Human label for depends-on (`#n name`) when resolved.
     pub task_detail_dependence_label: Option<String>,
+    /// Internal task id for depends-on (jump), when known.
+    pub task_detail_dependence_id: Option<u64>,
     pub task_detail_field_idx: usize,
+    /// Picker of board tasks while editing Depende de.
+    pub picking_dependence: bool,
+    pub dependence_picker_idx: usize,
+    pub dependence_picker_filter: TextInput,
+    /// Cached board tasks for the picker: (id, number, name).
+    pub dependence_picker_items: Vec<(u64, Option<u64>, String)>,
     pub task_detail_scroll: Scroll,
     /// Editing one field inside the detail popup.
     pub editing_detail_field: bool,
@@ -349,7 +358,12 @@ impl App {
             task_detail_list_id: None,
             task_detail_error: None,
             task_detail_dependence_label: None,
+            task_detail_dependence_id: None,
             task_detail_field_idx: 0,
+            picking_dependence: false,
+            dependence_picker_idx: 0,
+            dependence_picker_filter: TextInput::default(),
+            dependence_picker_items: Vec::new(),
             task_detail_scroll: Scroll::default(),
             editing_detail_field: false,
             detail_edit_input: TextInput::default(),

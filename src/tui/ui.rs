@@ -508,7 +508,14 @@ fn draw_description_popup(frame: &mut Frame, app: &App) {
 
 fn draw_task_detail_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(74, 82, frame.area());
-    let title = if app.editing_detail_field {
+    let title = if app.picking_dependence {
+        let f = app.dependence_picker_filter.as_str();
+        if f.is_empty() {
+            " Depende de — j/k elegir · Enter · x quitar · tipea para filtrar · Esc ".to_string()
+        } else {
+            format!(" Depende de — filtro: {f}_ · j/k · Enter · x · Esc ")
+        }
+    } else if app.editing_detail_field {
         let field = DetailField::ALL[app.task_detail_field_idx.min(DetailField::ALL.len() - 1)];
         format!(
             " ✎ {} — {} · Enter/Ctrl+S guardar · Esc ",
@@ -516,7 +523,7 @@ fn draw_task_detail_popup(frame: &mut Frame, app: &App) {
             field.hint()
         )
     } else {
-        " Detalle — j/k · e editar · ? · Esc ".to_string()
+        " Detalle — j/k · e · Enter en Depende de = saltar · ? · Esc ".to_string()
     };
     let inner = draw_frame(
         frame,
@@ -527,7 +534,9 @@ fn draw_task_detail_popup(frame: &mut Frame, app: &App) {
         app.theme.foreground,
     );
 
-    let lines: Vec<Line> = if let Some(err) = &app.task_detail_error {
+    let lines: Vec<Line> = if app.picking_dependence {
+        dependence_picker_lines(app)
+    } else if let Some(err) = &app.task_detail_error {
         vec![
             Line::from(Span::styled(
                 "No se pudo cargar el detalle",
@@ -556,6 +565,65 @@ fn draw_task_detail_popup(frame: &mut Frame, app: &App) {
         .wrap(Wrap { trim: false })
         .scroll((app.task_detail_scroll.offset(), 0));
     frame.render_widget(p, inner);
+}
+
+fn dependence_picker_lines(app: &App) -> Vec<Line<'static>> {
+    use super::events::filtered_dependence_picker_indices;
+    let mut lines = vec![
+        section_header(app, "Elegir task dependencia"),
+        muted_hint(
+            app,
+            "Enter confirma · x quita dependencia · escribe para filtrar",
+        ),
+        Line::from(""),
+    ];
+    let idxs = filtered_dependence_picker_indices(app);
+    if idxs.is_empty() {
+        lines.push(empty_state_line(
+            app,
+            if app.dependence_picker_items.is_empty() {
+                "No hay otras tasks cargadas en el board."
+            } else {
+                "Ninguna task coincide con el filtro."
+            },
+        ));
+        return lines;
+    }
+    // Keep selection near middle of a window of ~12 rows.
+    let sel_pos = idxs
+        .iter()
+        .position(|i| *i == app.dependence_picker_idx)
+        .unwrap_or(0);
+    let window = 14usize;
+    let start = sel_pos.saturating_sub(window / 2);
+    let end = (start + window).min(idxs.len());
+    let start = end.saturating_sub(window);
+    if start > 0 {
+        lines.push(muted_hint(app, format!("▲ {} más arriba", start)));
+    }
+    for &item_i in &idxs[start..end] {
+        let (id, num, name) = &app.dependence_picker_items[item_i];
+        let sel = item_i == app.dependence_picker_idx;
+        let style = if sel {
+            selected_row_style(app)
+        } else {
+            Style::default().fg(app.theme.foreground)
+        };
+        let marker = if sel { "› " } else { "  " };
+        let num_s = num
+            .map(|n| format!("#{n}"))
+            .unwrap_or_else(|| format!("id {id}"));
+        lines.push(Line::from(vec![
+            Span::styled(marker, style),
+            Span::styled(format!("{num_s:<8} "), style),
+            Span::styled(name.clone(), style),
+            Span::styled(format!("  ({id})"), Style::default().fg(app.theme.muted)),
+        ]));
+    }
+    if end < idxs.len() {
+        lines.push(muted_hint(app, format!("▼ {} más abajo", idxs.len() - end)));
+    }
+    lines
 }
 
 fn task_detail_lines<'a>(app: &'a App, detail: &'a crate::models::CardDetail) -> Vec<Line<'a>> {

@@ -300,7 +300,30 @@ async fn run_loop(
         }
 
         if app.show_task_detail {
-            if app.editing_detail_field {
+            if app.picking_dependence {
+                match key.code {
+                    KeyCode::Esc => events::cancel_edit_detail_field(app),
+                    KeyCode::Enter => events::confirm_dependence_picker(client.clone(), app, &jobs),
+                    KeyCode::Char('j') | KeyCode::Down => events::dependence_picker_move(app, 1),
+                    KeyCode::Char('k') | KeyCode::Up => events::dependence_picker_move(app, -1),
+                    KeyCode::Char('x') => events::clear_dependence(client.clone(), app, &jobs),
+                    KeyCode::Backspace => {
+                        app.dependence_picker_filter.backspace();
+                        let idxs = events::filtered_dependence_picker_indices(app);
+                        if !idxs.is_empty() && !idxs.contains(&app.dependence_picker_idx) {
+                            app.dependence_picker_idx = idxs[0];
+                        }
+                    }
+                    KeyCode::Char(c) if !c.is_control() => {
+                        app.dependence_picker_filter.push(c);
+                        let idxs = events::filtered_dependence_picker_indices(app);
+                        if !idxs.is_empty() {
+                            app.dependence_picker_idx = idxs[0];
+                        }
+                    }
+                    _ => {}
+                }
+            } else if app.editing_detail_field {
                 match key.code {
                     KeyCode::Esc => events::cancel_edit_detail_field(app),
                     KeyCode::Enter => events::submit_detail_field(client.clone(), app, &jobs),
@@ -317,6 +340,14 @@ async fn run_loop(
                     KeyCode::Char('j') | KeyCode::Down => events::detail_move_field(app, 1),
                     KeyCode::Char('k') | KeyCode::Up => events::detail_move_field(app, -1),
                     KeyCode::Char('e') => events::start_edit_detail_field(app),
+                    KeyCode::Enter => {
+                        use app::DetailField;
+                        let field = DetailField::ALL
+                            [app.task_detail_field_idx.min(DetailField::ALL.len() - 1)];
+                        if field == DetailField::Dependence {
+                            events::jump_to_dependence(client.clone(), app, &jobs);
+                        }
+                    }
                     KeyCode::Char('?') => events::open_help(app, HelpContext::TaskDetail),
                     _ => {}
                 }

@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 use anyhow::Result;
 
 use crate::client::HteamClient;
+use crate::models::Card;
 use crate::operations;
 
 use super::app::{App, DetailField, HelpContext, UpdateAvailableInfo};
@@ -627,57 +628,106 @@ pub fn open_task_detail(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     let Some(card) = app.current_card().cloned() else {
         return;
     };
-    let list_id = app.current_list().map(|l| l.id);
+    open_task_detail_by_id(client, app, jobs, card.id, app.current_list().map(|l| l.id));
+}
+
+pub fn open_task_detail_by_id(
+    client: Arc<HteamClient>,
+    app: &mut App,
+    jobs: &Jobs,
+    card_id: u64,
+    list_id: Option<u64>,
+) {
     app.show_task_detail = true;
     app.task_detail = None;
     app.task_detail_error = None;
     app.task_detail_dependence_label = None;
-    app.task_detail_card_id = Some(card.id);
-    app.task_detail_list_id = list_id;
+    app.task_detail_dependence_id = None;
+    app.task_detail_card_id = Some(card_id);
+    app.task_detail_list_id = list_id.or_else(|| {
+        app.cards_by_list
+            .iter()
+            .find_map(|(lid, cards)| cards.iter().find(|c| c.id == card_id).map(|_| *lid))
+    });
     app.task_detail_field_idx = 0;
     app.task_detail_scroll.reset();
     app.editing_detail_field = false;
+    app.picking_dependence = false;
     app.detail_edit_input.clear();
+    app.dependence_picker_filter.clear();
+    app.dependence_picker_items.clear();
 
     let id = app.requests.bump_task_detail();
-    let card_id = card.id;
+    let board_cards: Vec<Card> = app
+        .cards_by_list
+        .values()
+        .flat_map(|v| v.iter().cloned())
+        .collect();
     app.begin_busy("Cargando detalle...");
     jobs.spawn(async move {
-        let result = match operations::cards::card_detail_enriched(&client, card_id).await {
+        let loaded = match operations::cards::card_detail_enriched(&client, card_id).await {
             Ok(detail) => {
-                let dependence_label = resolve_dependence_label(&client, &detail.dependence).await;
-                Ok((detail, dependence_label))
+                let (label, dep_id) =
+                    resolve_dependence_meta(&client, &detail.dependence, &board_cards).await;
+                Ok((detail, label, dep_id))
             }
             Err(e) => Err(e.to_string()),
         };
-        let (result, dependence_label) = match result {
-            Ok((d, lab)) => (Ok(d), lab),
-            Err(e) => (Err(e), None),
+        let (result, dependence_label, dependence_id) = match loaded {
+            Ok((d, lab, did)) => (Ok(d), lab, did),
+            Err(e) => (Err(e), None, None),
         };
         JobOutcome::TaskDetailLoaded {
             id,
             card_id,
             result,
             dependence_label,
+            dependence_id,
         }
     });
 }
 
-async fn resolve_dependence_label(
+pub fn jump_to_dependence(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    let Some(dep_id) = app.task_detail_dependence_id.or_else(|| {
+        let detail = app.task_detail.as_ref()?;
+        let cards: Vec<&Card> = app.cards_by_list.values().flatten().collect();
+        let q = operations::cards::dependence_display(&detail.dependence)?;
+        operations::cards::resolve_dependence_query(&q, cards)
+    }) else {
+        app.set_status("No se pudo resolver la dependencia en el board actual.");
+        return;
+    };
+    if app.task_detail_card_id == Some(dep_id) {
+        return;
+    }
+    open_task_detail_by_id(client, app, jobs, dep_id, None);
+}
+
+async fn resolve_dependence_meta(
     client: &HteamClient,
     dependence: &Option<serde_json::Value>,
-) -> Option<String> {
-    // Task detail JSON often already has the web label string
-    // ("#5 - Lectura - …"), not the internal id.
-    if let Some(label) = operations::cards::dependence_display(dependence) {
-        if operations::cards::dependence_task_id(dependence).is_none() {
-            return Some(label);
+    board_cards: &[Card],
+) -> (Option<String>, Option<u64>) {
+    let label = operations::cards::dependence_display(dependence);
+    let mut dep_id = operations::cards::dependence_task_id(dependence);
+    if dep_id.is_none() {
+        if let Some(ref lab) = label {
+            dep_id = operations::cards::resolve_dependence_query(lab, board_cards.iter());
         }
     }
-    let dep_id = operations::cards::dependence_task_id(dependence)?;
-    let dep = operations::cards::card_detail(client, dep_id).await.ok()?;
-    let num = dep.number.map(|n| format!("#{n} ")).unwrap_or_default();
-    Some(format!("{num}{} (id {dep_id})", dep.name))
+    let label = match (label.clone(), dep_id) {
+        (Some(l), _) if operations::cards::dependence_task_id(dependence).is_none() => Some(l),
+        (_, Some(id)) => {
+            if let Ok(dep) = operations::cards::card_detail(client, id).await {
+                let num = dep.number.map(|n| format!("#{n} ")).unwrap_or_default();
+                Some(format!("{num}{} (id {id})", dep.name))
+            } else {
+                label.or(Some(format!("id {id}")))
+            }
+        }
+        (l, _) => l,
+    };
+    (label, dep_id)
 }
 
 pub fn close_task_detail(app: &mut App) {
@@ -687,9 +737,213 @@ pub fn close_task_detail(app: &mut App) {
     app.task_detail_list_id = None;
     app.task_detail_error = None;
     app.task_detail_dependence_label = None;
+    app.task_detail_dependence_id = None;
     app.editing_detail_field = false;
+    app.picking_dependence = false;
     app.detail_edit_input.clear();
+    app.dependence_picker_items.clear();
+    app.dependence_picker_filter.clear();
     let _ = app.requests.bump_task_detail();
+}
+
+/// Build the board task list for depends-on picking.
+pub fn open_dependence_picker(app: &mut App) {
+    let self_id = app.task_detail_card_id;
+    let mut items: Vec<(u64, Option<u64>, String)> = app
+        .cards_by_list
+        .values()
+        .flatten()
+        .filter(|c| Some(c.id) != self_id)
+        .map(|c| (c.id, c.number, c.name.clone()))
+        .collect();
+    items.sort_by(|a, b| {
+        a.2.to_lowercase()
+            .cmp(&b.2.to_lowercase())
+            .then(a.0.cmp(&b.0))
+    });
+    items.dedup_by(|a, b| a.0 == b.0);
+    app.dependence_picker_items = items;
+    app.dependence_picker_filter.clear();
+    app.dependence_picker_idx = 0;
+    if let Some(cur) = app.task_detail_dependence_id {
+        if let Some(i) = app
+            .dependence_picker_items
+            .iter()
+            .position(|(id, _, _)| *id == cur)
+        {
+            app.dependence_picker_idx = i;
+        }
+    }
+    app.picking_dependence = true;
+    app.editing_detail_field = true;
+}
+
+pub fn filtered_dependence_picker_indices(app: &App) -> Vec<usize> {
+    let f = app.dependence_picker_filter.as_str().trim().to_lowercase();
+    app.dependence_picker_items
+        .iter()
+        .enumerate()
+        .filter(|(_, (id, num, name))| {
+            if f.is_empty() {
+                return true;
+            }
+            name.to_lowercase().contains(&f)
+                || id.to_string().contains(&f)
+                || num
+                    .map(|n| n.to_string().contains(&f) || format!("#{n}").contains(&f))
+                    .unwrap_or(false)
+        })
+        .map(|(i, _)| i)
+        .collect()
+}
+
+pub fn dependence_picker_move(app: &mut App, delta: i32) {
+    let indices = filtered_dependence_picker_indices(app);
+    if indices.is_empty() {
+        return;
+    }
+    let cur_pos = indices
+        .iter()
+        .position(|i| *i == app.dependence_picker_idx)
+        .unwrap_or(0) as i32;
+    let next = (cur_pos + delta).rem_euclid(indices.len() as i32) as usize;
+    app.dependence_picker_idx = indices[next];
+}
+
+pub fn confirm_dependence_picker(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    let indices = filtered_dependence_picker_indices(app);
+    if indices.is_empty() {
+        app.set_status("No hay tasks que coincidan con el filtro.");
+        return;
+    }
+    if !indices.contains(&app.dependence_picker_idx) {
+        app.dependence_picker_idx = indices[0];
+    }
+    let (dep_id, _, name) = app.dependence_picker_items[app.dependence_picker_idx].clone();
+    app.picking_dependence = false;
+    app.editing_detail_field = false;
+    app.detail_edit_input.set(dep_id.to_string());
+    // Save immediately with the chosen id.
+    let card_id = match app.task_detail_card_id {
+        Some(id) => id,
+        None => return,
+    };
+    let list_id = app.task_detail_list_id;
+    let board_number = app.board_number;
+    let board_cards: Vec<Card> = app
+        .cards_by_list
+        .values()
+        .flat_map(|v| v.iter().cloned())
+        .collect();
+    let id = app.requests.bump_task_detail();
+    let value = dep_id.to_string();
+    app.begin_busy(format!("Guardando dependencia: {name}..."));
+    jobs.spawn(async move {
+        let save = async {
+            operations::cards::update_card_fields(
+                &client,
+                card_id,
+                board_number,
+                operations::cards::CardFieldUpdates {
+                    dependence: Some(value.as_str()),
+                    ..Default::default()
+                },
+            )
+            .await?;
+            operations::cards::card_detail_enriched(&client, card_id).await
+        };
+        let result = match save.await {
+            Ok(detail) => {
+                let (dependence_label, dependence_id) =
+                    resolve_dependence_meta(&client, &detail.dependence, &board_cards).await;
+                let cards = if let Some(lid) = list_id {
+                    Some(
+                        operations::cards::list_cards(&client, lid, Some(board_number))
+                            .await
+                            .map(|(c, _)| c)
+                            .map_err(|e| e.to_string()),
+                    )
+                } else {
+                    None
+                };
+                (Ok(detail), dependence_label, dependence_id, cards)
+            }
+            Err(e) => (Err(e.to_string()), None, None, None),
+        };
+        JobOutcome::TaskDetailSaved {
+            id,
+            card_id,
+            list_id,
+            board_number,
+            result: result.0,
+            dependence_label: result.1,
+            dependence_id: result.2,
+            cards: result.3,
+        }
+    });
+}
+
+pub fn clear_dependence(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    app.picking_dependence = false;
+    app.editing_detail_field = false;
+    app.detail_edit_input.set("");
+    // reuse confirm path with empty
+    let card_id = match app.task_detail_card_id {
+        Some(id) => id,
+        None => return,
+    };
+    let list_id = app.task_detail_list_id;
+    let board_number = app.board_number;
+    let board_cards: Vec<Card> = app
+        .cards_by_list
+        .values()
+        .flat_map(|v| v.iter().cloned())
+        .collect();
+    let id = app.requests.bump_task_detail();
+    app.begin_busy("Quitando dependencia...");
+    jobs.spawn(async move {
+        let save = async {
+            operations::cards::update_card_fields(
+                &client,
+                card_id,
+                board_number,
+                operations::cards::CardFieldUpdates {
+                    dependence: Some(""),
+                    ..Default::default()
+                },
+            )
+            .await?;
+            operations::cards::card_detail_enriched(&client, card_id).await
+        };
+        let result = match save.await {
+            Ok(detail) => {
+                let (dependence_label, dependence_id) =
+                    resolve_dependence_meta(&client, &detail.dependence, &board_cards).await;
+                let cards = if let Some(lid) = list_id {
+                    Some(
+                        operations::cards::list_cards(&client, lid, Some(board_number))
+                            .await
+                            .map(|(c, _)| c)
+                            .map_err(|e| e.to_string()),
+                    )
+                } else {
+                    None
+                };
+                (Ok(detail), dependence_label, dependence_id, cards)
+            }
+            Err(e) => (Err(e.to_string()), None, None, None),
+        };
+        JobOutcome::TaskDetailSaved {
+            id,
+            card_id,
+            list_id,
+            board_number,
+            result: result.0,
+            dependence_label: result.1,
+            dependence_id: result.2,
+            cards: result.3,
+        }
+    });
 }
 
 pub fn detail_move_field(app: &mut App, delta: i32) {
@@ -706,6 +960,10 @@ pub fn start_edit_detail_field(app: &mut App) {
         return;
     };
     let field = DetailField::ALL[app.task_detail_field_idx.min(DetailField::ALL.len() - 1)];
+    if field == DetailField::Dependence {
+        open_dependence_picker(app);
+        return;
+    }
     let seed = match field {
         DetailField::Name => detail.name.clone(),
         DetailField::Description => detail.description.clone().unwrap_or_default(),
@@ -750,7 +1008,9 @@ pub fn start_edit_detail_field(app: &mut App) {
 
 pub fn cancel_edit_detail_field(app: &mut App) {
     app.editing_detail_field = false;
+    app.picking_dependence = false;
     app.detail_edit_input.clear();
+    app.dependence_picker_filter.clear();
 }
 
 pub fn detail_edit_push(app: &mut App, c: char) {
@@ -774,8 +1034,14 @@ pub fn submit_detail_field(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs)
     let value = app.detail_edit_input.as_str().trim().to_string();
     let list_id = app.task_detail_list_id;
     let board_number = app.board_number;
+    let board_cards: Vec<Card> = app
+        .cards_by_list
+        .values()
+        .flat_map(|v| v.iter().cloned())
+        .collect();
     let id = app.requests.bump_task_detail();
     app.editing_detail_field = false;
+    app.picking_dependence = false;
     app.begin_busy(format!("Guardando {}...", field.label()));
 
     jobs.spawn(async move {
@@ -890,7 +1156,8 @@ pub fn submit_detail_field(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs)
 
         let result = match save.await {
             Ok(detail) => {
-                let dependence_label = resolve_dependence_label(&client, &detail.dependence).await;
+                let (dependence_label, dependence_id) =
+                    resolve_dependence_meta(&client, &detail.dependence, &board_cards).await;
                 let cards = if let Some(lid) = list_id {
                     Some(
                         operations::cards::list_cards(&client, lid, Some(board_number))
@@ -901,9 +1168,9 @@ pub fn submit_detail_field(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs)
                 } else {
                     None
                 };
-                (Ok(detail), dependence_label, cards)
+                (Ok(detail), dependence_label, dependence_id, cards)
             }
-            Err(e) => (Err(e.to_string()), None, None),
+            Err(e) => (Err(e.to_string()), None, None, None),
         };
 
         JobOutcome::TaskDetailSaved {
@@ -913,7 +1180,8 @@ pub fn submit_detail_field(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs)
             board_number,
             result: result.0,
             dependence_label: result.1,
-            cards: result.2,
+            dependence_id: result.2,
+            cards: result.3,
         }
     });
 }
