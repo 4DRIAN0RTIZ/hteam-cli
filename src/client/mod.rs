@@ -30,6 +30,106 @@ fn truncate_for_error(s: &str, max_chars: usize) -> String {
     s.chars().take(max_chars).collect()
 }
 
+/// Values scraped from GET `/operations/{board}/tasks/{id}/edit/`.
+/// Task JSON often omits or mangles these (dependence label string, null priority,
+/// missing time_estimated); the form is the source of truth for preserve-on-patch.
+#[derive(Debug, Clone, Default)]
+struct TaskEditFormBaseline {
+    csrf: Option<String>,
+    name: String,
+    description: String,
+    time_estimated: String,
+    start_date: String,
+    dependence: String,
+    responsible: String,
+    priority: String,
+}
+
+fn parse_task_edit_form(html: &str) -> TaskEditFormBaseline {
+    use scraper::{Html, Selector};
+
+    let doc = Html::parse_document(html);
+    let mut out = TaskEditFormBaseline::default();
+
+    let input_value = |name: &str| -> String {
+        let sel = match Selector::parse(&format!(r#"input[name="{name}"]"#)) {
+            Ok(s) => s,
+            Err(_) => return String::new(),
+        };
+        doc.select(&sel)
+            .next()
+            .and_then(|el| el.value().attr("value"))
+            .unwrap_or("")
+            .to_string()
+    };
+
+    let textarea_value = |name: &str| -> String {
+        let sel = match Selector::parse(&format!(r#"textarea[name="{name}"]"#)) {
+            Ok(s) => s,
+            Err(_) => return String::new(),
+        };
+        doc.select(&sel)
+            .next()
+            .map(|el| el.text().collect::<String>())
+            .unwrap_or_default()
+            .trim()
+            .to_string()
+    };
+
+    let select_selected = |name: &str| -> String {
+        let sel = match Selector::parse(&format!(r#"select[name="{name}"] option[selected]"#)) {
+            Ok(s) => s,
+            Err(_) => return String::new(),
+        };
+        if let Some(el) = doc.select(&sel).next() {
+            return el.value().attr("value").unwrap_or("").to_string();
+        }
+        // Fallback: first option with a value attribute if nothing marked selected.
+        let all = match Selector::parse(&format!(r#"select[name="{name}"] option"#)) {
+            Ok(s) => s,
+            Err(_) => return String::new(),
+        };
+        for el in doc.select(&all) {
+            if el.value().attr("selected").is_some() {
+                return el.value().attr("value").unwrap_or("").to_string();
+            }
+        }
+        String::new()
+    };
+
+    let csrf = input_value("csrfmiddlewaretoken");
+    out.csrf = if csrf.is_empty() { None } else { Some(csrf) };
+    out.name = input_value("name");
+    out.description = textarea_value("description");
+    out.time_estimated = input_value("time_estimated");
+    out.start_date = input_value("start_date");
+    out.dependence = select_selected("dependence");
+    out.responsible = select_selected("responsible");
+    out.priority = select_selected("priority");
+    out
+}
+
+fn dependence_id_from_detail(value: &Option<serde_json::Value>) -> Option<String> {
+    match value.as_ref() {
+        Some(serde_json::Value::Number(n)) => Some(n.to_string()),
+        Some(serde_json::Value::String(s))
+            if !s.is_empty() && s.chars().all(|c| c.is_ascii_digit()) =>
+        {
+            Some(s.clone())
+        }
+        Some(serde_json::Value::Object(map)) => map.get("id").and_then(|v| match v {
+            serde_json::Value::Number(n) => Some(n.to_string()),
+            serde_json::Value::String(s)
+                if !s.is_empty() && s.chars().all(|c| c.is_ascii_digit()) =>
+            {
+                Some(s.clone())
+            }
+            _ => None,
+        }),
+        _ => None,
+    }
+}
+
 /// HTML task edit form expects `YYYY-MM-DD`; detail JSON often has full ISO.
 fn form_date_yyyy_mm_dd(raw: Option<&str>) -> String {
     let s = raw.unwrap_or("").trim();
@@ -1099,13 +1199,39 @@ impl HteamClient {
         board_number: u64,
         patch: UpdateCardPatch<'_>,
     ) -> Result<()> {
-        let config = self.config.lock().await;
         let url = format!(
             "{}/operations/{}/tasks/{}/edit/",
             self.site_base_url, board_number, card_id
         );
-        let headers = self.build_headers(&config)?;
-        let csrf = config.auth.csrf_token.as_deref().unwrap_or("");
+        let (headers, csrf_config) = {
+            let config = self.config.lock().await;
+            let headers = self.build_headers(&config)?;
+            let csrf = config.auth.csrf_token.clone().unwrap_or_default();
+            (headers, csrf)
+        };
+
+        // Task JSON omits / mangles fields the HTML form has (dependence id,
+        // priority select). Load the edit form so we preserve current values
+        // when the patch only touches one field (e.g. priority must not wipe
+        // dependence).
+        let form_html = {
+            let response = self
+                .client
+                .get(&url)
+                .headers(headers.clone())
+                .send()
+                .await
+                .context("Error al cargar formulario de edit")?;
+            if !response.status().is_success() {
+                anyhow::bail!(
+                    "Error HTTP {}: {}",
+                    response.status(),
+                    response.text().await.unwrap_or_default()
+                );
+            }
+            response.text().await.unwrap_or_default()
+        };
+        let baseline = parse_task_edit_form(&form_html);
 
         let encode = |s: &str| {
             let mut out = String::new();
@@ -1131,65 +1257,83 @@ impl HteamClient {
         };
 
         let detail = patch.detail;
+        let csrf = baseline
+            .csrf
+            .as_deref()
+            .filter(|s| !s.is_empty())
+            .unwrap_or(csrf_config.as_str());
+
         // Form expects a bare task id (or empty to clear). Never re-post the
         // human label string the detail API returns ("#5 - Title…").
         let dependence_owned: String = if let Some(dep) = patch.dependence {
             dep.to_string()
+        } else if let Some(id) = dependence_id_from_detail(&detail.dependence) {
+            id
         } else {
-            match detail.dependence.as_ref() {
-                Some(serde_json::Value::Number(n)) => n.to_string(),
-                Some(serde_json::Value::String(s))
-                    if !s.is_empty() && s.chars().all(|c| c.is_ascii_digit()) =>
-                {
-                    s.clone()
-                }
-                Some(serde_json::Value::Object(map)) => map
-                    .get("id")
-                    .and_then(|v| match v {
-                        serde_json::Value::Number(n) => Some(n.to_string()),
-                        serde_json::Value::String(s) => Some(s.clone()),
-                        _ => None,
-                    })
-                    .unwrap_or_default(),
-                _ => String::new(),
+            baseline.dependence.clone()
+        };
+
+        // Detail JSON uses ISO datetimes; the HTML form only accepts YYYY-MM-DD.
+        let start_date_owned = {
+            let from_detail = form_date_yyyy_mm_dd(detail.start_date.as_deref());
+            if !from_detail.is_empty() {
+                from_detail
+            } else {
+                form_date_yyyy_mm_dd(Some(baseline.start_date.as_str()))
             }
         };
-        // Detail JSON uses ISO datetimes; the HTML form only accepts YYYY-MM-DD.
-        // Posting the full ISO returns HTTP 200 with the edit page and does not save.
-        let start_date_owned = form_date_yyyy_mm_dd(detail.start_date.as_deref());
-        // responsible may be a bare id or an object `{id, username}` from some payloads.
-        let responsible_owned = patch
-            .responsible
-            .map(str::to_string)
-            .unwrap_or_else(|| form_user_id(detail.responsible.as_ref()));
+
+        let responsible_owned = patch.responsible.map(str::to_string).unwrap_or_else(|| {
+            let from_detail = form_user_id(detail.responsible.as_ref());
+            if !from_detail.is_empty() {
+                from_detail
+            } else {
+                baseline.responsible.clone()
+            }
+        });
+
         let priority_owned = patch.priority.map(str::to_string).unwrap_or_else(|| {
             detail
                 .priority
                 .as_ref()
                 .map(val_to_str)
                 .filter(|s| !s.is_empty())
+                .or_else(|| {
+                    let p = baseline.priority.trim();
+                    if p.is_empty() {
+                        None
+                    } else {
+                        Some(p.to_string())
+                    }
+                })
                 .unwrap_or_else(|| "3".to_string())
         });
+
+        let time_estimated_owned = patch.time_estimated.map(str::to_string).unwrap_or_else(|| {
+            detail
+                .time_estimated
+                .clone()
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| baseline.time_estimated.clone())
+        });
+
+        let name_owned = patch
+            .name
+            .map(str::to_string)
+            .unwrap_or_else(|| detail.name.clone());
+        let description_owned = patch.description.map(str::to_string).unwrap_or_else(|| {
+            detail
+                .description
+                .clone()
+                .unwrap_or_else(|| baseline.description.clone())
+        });
+
         let fields = vec![
             format!("csrfmiddlewaretoken={}", encode(csrf)),
             format!("process_id={}", board_number),
-            format!("name={}", encode(patch.name.unwrap_or(&detail.name))),
-            format!(
-                "description={}",
-                encode(
-                    patch
-                        .description
-                        .unwrap_or(detail.description.as_deref().unwrap_or(""))
-                )
-            ),
-            format!(
-                "time_estimated={}",
-                encode(
-                    patch
-                        .time_estimated
-                        .unwrap_or(detail.time_estimated.as_deref().unwrap_or(""))
-                )
-            ),
+            format!("name={}", encode(&name_owned)),
+            format!("description={}", encode(&description_owned)),
+            format!("time_estimated={}", encode(&time_estimated_owned)),
             format!("start_date={}", encode(&start_date_owned)),
             format!("dependence={}", encode(&dependence_owned)),
             format!("responsible={}", encode(&responsible_owned)),
@@ -2072,6 +2216,39 @@ mod tests {
         );
     }
 
+    #[test]
+    fn parse_task_edit_form_reads_selected_fields() {
+        let html = r#"<html><body><form>
+<input type="hidden" name="csrfmiddlewaretoken" value="abc">
+<input name="name" value="T">
+<textarea name="description">hello</textarea>
+<input name="time_estimated" value="1h 30m">
+<input name="start_date" value="2026-10-13">
+<select name="dependence"><option value="">-</option><option value="8965" selected>X</option></select>
+<select name="responsible"><option value="140" selected>u</option></select>
+<select name="priority"><option value="4" selected>High</option></select>
+</form></body></html>"#;
+        let b = parse_task_edit_form(html);
+        assert_eq!(b.csrf.as_deref(), Some("abc"));
+        assert_eq!(b.time_estimated, "1h 30m");
+        assert_eq!(b.dependence, "8965");
+        assert_eq!(b.responsible, "140");
+        assert_eq!(b.priority, "4");
+        assert_eq!(b.start_date, "2026-10-13");
+        assert_eq!(b.description, "hello");
+    }
+
+    #[test]
+    fn dependence_id_from_detail_ignores_label_string() {
+        assert_eq!(
+            dependence_id_from_detail(&Some(serde_json::json!(8965))).as_deref(),
+            Some("8965")
+        );
+        assert_eq!(
+            dependence_id_from_detail(&Some(serde_json::json!("#5 - Lectura"))),
+            None
+        );
+    }
     #[test]
     fn form_date_yyyy_mm_dd_truncates_iso() {
         assert_eq!(
