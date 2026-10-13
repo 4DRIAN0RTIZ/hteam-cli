@@ -117,6 +117,18 @@ struct CardDatesParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+struct CardTimeParams {
+    #[schemars(description = "ID del card / task")]
+    card_id: u64,
+    #[schemars(description = "Estimado, por ejemplo 1h 30m (opcional; al menos estimate o spent)")]
+    estimate: Option<String>,
+    #[schemars(description = "Tiempo gastado, por ejemplo 45m o +30m para sumar (opcional)")]
+    spent: Option<String>,
+    #[schemars(description = "Número de operación/board (opcional; resuelve board_id interno)")]
+    board: Option<u64>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 struct UpdateDescParams {
     #[schemars(description = "ID del card")]
     card_id: u64,
@@ -379,6 +391,30 @@ impl HteamMcpServer {
             board,
             start.as_deref(),
             due.as_deref(),
+        )
+        .await
+        .map_err(err)?;
+        ok(result)
+    }
+
+    #[tool(
+        description = "Fijar estimado y/o registrar tiempo gastado vía board-card times/. `spent` admite +30m para sumar al acumulado."
+    )]
+    async fn card_time(
+        &self,
+        Parameters(CardTimeParams {
+            card_id,
+            estimate,
+            spent,
+            board,
+        }): Parameters<CardTimeParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let result = operations::cards::set_times(
+            &self.client,
+            card_id,
+            board,
+            estimate.as_deref(),
+            spent.as_deref(),
         )
         .await
         .map_err(err)?;

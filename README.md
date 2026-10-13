@@ -75,6 +75,11 @@ hteam cards dates 12345 --start 2026-10-14
 hteam cards dates 12345 --due 2026-10-20
 hteam cards dates 12345 --start 2026-10-14 --due 2026-10-20
 
+# Estimado y tiempo gastado (usa + para sumar al acumulado)
+hteam cards time 12345 --estimate "1h 30m"
+hteam cards time 12345 --spent 45m
+hteam cards time 12345 --spent +30m
+
 # Actualizar descripción (rápido)
 hteam cards update-desc 12345 --description "Nueva descripción"
 
@@ -149,6 +154,7 @@ Inicia el servidor MCP sobre **stdio**. Se integra con Claude Desktop, Claude Co
 | `card_close` | Cerrar task (API close/, familia operation/project) |
 | `card_reopen` | Reabrir task (API reopen/) |
 | `card_dates` | Editar start/due (YYYY-MM-DD, board-card dates/) |
+| `card_time` | Fijar estimado o registrar tiempo gastado (times/) |
 | `card_detail` | Detalle completo de un card |
 | `card_labels` | Labels disponibles de un card |
 | `card_create` | Crear card |

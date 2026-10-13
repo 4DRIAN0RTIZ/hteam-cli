@@ -27,6 +27,8 @@ pub enum CardsCommands {
     Reopen(LifecycleArgs),
     /// Editar fechas de inicio y/o vencimiento (board-card dates/, YYYY-MM-DD)
     Dates(DatesArgs),
+    /// Fijar estimado y/o registrar tiempo gastado (board-card times/)
+    Time(TimeArgs),
     /// Actualizar descripción
     UpdateDesc(UpdateDescArgs),
     /// Comentar en un card
@@ -142,6 +144,20 @@ pub struct DatesArgs {
 }
 
 #[derive(Args, Debug)]
+pub struct TimeArgs {
+    /// ID de la task / card
+    pub card_id: u64,
+
+    /// Estimado (ej. 1h 30m)
+    #[arg(long)]
+    pub estimate: Option<String>,
+
+    /// Tiempo gastado (ej. 45m; +30m suma al acumulado)
+    #[arg(long)]
+    pub spent: Option<String>,
+}
+
+#[derive(Args, Debug)]
 pub struct UpdateDescArgs {
     /// ID del card
     pub card_id: u64,
@@ -237,6 +253,7 @@ pub async fn execute(cmd: CardsCommands, board: Option<u64>, json: bool) -> Resu
         CardsCommands::Close(args) => close_card(args, json).await,
         CardsCommands::Reopen(args) => reopen_card(args, json).await,
         CardsCommands::Dates(args) => set_dates(args, board, json).await,
+        CardsCommands::Time(args) => set_time(args, board, json).await,
         CardsCommands::UpdateDesc(args) => update_desc(args, json).await,
         CardsCommands::Comment(args) => post_comment(args, board, json).await,
         CardsCommands::Comments(args) => list_comments(args, json).await,
@@ -433,7 +450,7 @@ pub async fn closed_cards(board: Option<u64>, json: bool) -> Result<()> {
 async fn card_detail(args: DetailArgs, json: bool) -> Result<()> {
     let session = Session::open().await?;
 
-    let detail = operations::cards::card_detail(&session.client, args.card_id).await?;
+    let detail = operations::cards::card_detail_enriched(&session.client, args.card_id).await?;
 
     if json {
         println!("{}", serde_json::to_string_pretty(&detail)?);
@@ -453,6 +470,10 @@ async fn card_detail(args: DetailArgs, json: bool) -> Result<()> {
         let labels: Vec<String> = detail.labels.iter().map(|l| l.name.clone()).collect();
         println!("   Labels: {}", labels.join(", "));
     }
+
+    let estimate = detail.time_estimated.as_deref().unwrap_or("-");
+    let spent = detail.time_spend.as_deref().unwrap_or("-");
+    println!("   Tiempo: estimado {estimate} · gastado {spent}");
 
     if let Some(desc) = detail.description {
         println!("\n   Descripción:\n   {}", desc);
@@ -595,6 +616,39 @@ async fn set_dates(args: DatesArgs, board: Option<u64>, json: bool) -> Result<()
     }
     if let Some(d) = &result.due_date {
         println!("   due:   {d}");
+    }
+    println!();
+    Ok(())
+}
+
+async fn set_time(args: TimeArgs, board: Option<u64>, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+    let result = operations::cards::set_times(
+        &session.client,
+        args.card_id,
+        board,
+        args.estimate.as_deref(),
+        args.spent.as_deref(),
+    )
+    .await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&result)?);
+        return Ok(());
+    }
+
+    println!(
+        "\n✅ Tiempo actualizado para task {} (board_id {})",
+        result.card_id, result.board_id
+    );
+    if let Some(value) = &result.estimate {
+        println!("   estimado: {value}");
+    }
+    if let Some(value) = &result.spent {
+        println!("   gastado:  {value}");
+    }
+    for warning in &result.warnings {
+        println!("   ⚠️  {warning}");
     }
     println!();
     Ok(())
