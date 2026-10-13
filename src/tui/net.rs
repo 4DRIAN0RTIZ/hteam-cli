@@ -138,6 +138,7 @@ pub enum JobOutcome {
         id: u64,
         card_id: u64,
         result: Result<CardDetail, String>,
+        dependence_label: Option<String>,
     },
     TaskDetailSaved {
         id: u64,
@@ -145,6 +146,7 @@ pub enum JobOutcome {
         list_id: Option<u64>,
         board_number: u64,
         result: Result<CardDetail, String>,
+        dependence_label: Option<String>,
         cards: Option<Result<Vec<Card>, String>>,
     },
     BoardsLoaded {
@@ -645,6 +647,7 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
             id,
             card_id,
             result,
+            dependence_label,
         } => {
             if app.requests.task_detail != id || app.task_detail_card_id != Some(card_id) {
                 app.end_busy();
@@ -656,11 +659,13 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
                     // Prefer list-card responsible object when detail only has a bare id.
                     let detail = enrich_detail_responsible(app, card_id, detail);
                     app.task_detail = Some(detail);
+                    app.task_detail_dependence_label = dependence_label;
                     app.task_detail_error = None;
                     app.clear_status();
                 }
                 Err(e) => {
                     app.task_detail = None;
+                    app.task_detail_dependence_label = None;
                     app.task_detail_error = Some(e.clone());
                     app.set_status(format!("Error cargando detalle: {}", e));
                 }
@@ -672,6 +677,7 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
             list_id,
             board_number,
             result,
+            dependence_label,
             cards,
         } => {
             if app.requests.task_detail != id {
@@ -684,6 +690,7 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
                     let detail = enrich_detail_responsible(app, card_id, detail);
                     if app.show_task_detail && app.task_detail_card_id == Some(card_id) {
                         app.task_detail = Some(detail);
+                        app.task_detail_dependence_label = dependence_label;
                         app.task_detail_error = None;
                     }
                     if board_number == app.board_number {

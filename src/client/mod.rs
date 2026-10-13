@@ -44,6 +44,9 @@ pub struct UpdateCardPatch<'a> {
     pub description: Option<&'a str>,
     pub priority: Option<&'a str>,
     pub responsible: Option<&'a str>,
+    /// Task id this card depends on (form field `dependence`), or empty to clear.
+    pub dependence: Option<&'a str>,
+    pub time_estimated: Option<&'a str>,
 }
 
 impl HteamClient {
@@ -745,6 +748,8 @@ impl HteamClient {
                 description: Some(description),
                 priority: None,
                 responsible: None,
+                dependence: None,
+                time_estimated: None,
             },
         )
         .await
@@ -1109,7 +1114,11 @@ impl HteamClient {
             ),
             format!(
                 "time_estimated={}",
-                encode(detail.time_estimated.as_deref().unwrap_or(""))
+                encode(
+                    patch
+                        .time_estimated
+                        .unwrap_or(detail.time_estimated.as_deref().unwrap_or(""))
+                )
             ),
             format!(
                 "start_date={}",
@@ -1118,11 +1127,13 @@ impl HteamClient {
             format!(
                 "dependence={}",
                 encode(
-                    &detail
-                        .dependence
-                        .as_ref()
-                        .map(val_to_str)
-                        .unwrap_or_default()
+                    patch.dependence.unwrap_or(
+                        &detail
+                            .dependence
+                            .as_ref()
+                            .map(val_to_str)
+                            .unwrap_or_default()
+                    )
                 )
             ),
             format!(

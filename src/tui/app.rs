@@ -44,6 +44,7 @@ pub enum DetailField {
     Description,
     Responsible,
     Priority,
+    Dependence,
     StartDate,
     DueDate,
     TimeEstimated,
@@ -56,6 +57,7 @@ impl DetailField {
         DetailField::Description,
         DetailField::Responsible,
         DetailField::Priority,
+        DetailField::Dependence,
         DetailField::StartDate,
         DetailField::DueDate,
         DetailField::TimeEstimated,
@@ -68,6 +70,7 @@ impl DetailField {
             DetailField::Description => "Descripción",
             DetailField::Responsible => "Responsable",
             DetailField::Priority => "Prioridad",
+            DetailField::Dependence => "Depende de",
             DetailField::StartDate => "Inicio",
             DetailField::DueDate => "Vencimiento",
             DetailField::TimeEstimated => "Estimado",
@@ -81,6 +84,7 @@ impl DetailField {
             DetailField::Description => "texto (Ctrl+S guarda)",
             DetailField::Responsible => "username",
             DetailField::Priority => "1 alta · 2 media · 3 baja",
+            DetailField::Dependence => "id de task (vacío = sin dependencia)",
             DetailField::StartDate | DetailField::DueDate => "YYYY-MM-DD",
             DetailField::TimeEstimated | DetailField::TimeSpent => "ej. 1h · 45m · +30m",
         }
@@ -126,6 +130,8 @@ pub struct App {
     pub task_detail_card_id: Option<u64>,
     pub task_detail_list_id: Option<u64>,
     pub task_detail_error: Option<String>,
+    /// Human label for depends-on (`#n name`) when resolved.
+    pub task_detail_dependence_label: Option<String>,
     pub task_detail_field_idx: usize,
     pub task_detail_scroll: Scroll,
     /// Editing one field inside the detail popup.
@@ -342,6 +348,7 @@ impl App {
             task_detail_card_id: None,
             task_detail_list_id: None,
             task_detail_error: None,
+            task_detail_dependence_label: None,
             task_detail_field_idx: 0,
             task_detail_scroll: Scroll::default(),
             editing_detail_field: false,

@@ -631,6 +631,7 @@ pub fn open_task_detail(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     app.show_task_detail = true;
     app.task_detail = None;
     app.task_detail_error = None;
+    app.task_detail_dependence_label = None;
     app.task_detail_card_id = Some(card.id);
     app.task_detail_list_id = list_id;
     app.task_detail_field_idx = 0;
@@ -642,15 +643,34 @@ pub fn open_task_detail(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     let card_id = card.id;
     app.begin_busy("Cargando detalle...");
     jobs.spawn(async move {
-        let result = operations::cards::card_detail_enriched(&client, card_id)
-            .await
-            .map_err(|e| e.to_string());
+        let result = match operations::cards::card_detail_enriched(&client, card_id).await {
+            Ok(detail) => {
+                let dependence_label = resolve_dependence_label(&client, &detail.dependence).await;
+                Ok((detail, dependence_label))
+            }
+            Err(e) => Err(e.to_string()),
+        };
+        let (result, dependence_label) = match result {
+            Ok((d, lab)) => (Ok(d), lab),
+            Err(e) => (Err(e), None),
+        };
         JobOutcome::TaskDetailLoaded {
             id,
             card_id,
             result,
+            dependence_label,
         }
     });
+}
+
+async fn resolve_dependence_label(
+    client: &HteamClient,
+    dependence: &Option<serde_json::Value>,
+) -> Option<String> {
+    let dep_id = operations::cards::dependence_task_id(dependence)?;
+    let dep = operations::cards::card_detail(client, dep_id).await.ok()?;
+    let num = dep.number.map(|n| format!("#{n} ")).unwrap_or_default();
+    Some(format!("{num}{} (id {dep_id})", dep.name))
 }
 
 pub fn close_task_detail(app: &mut App) {
@@ -659,6 +679,7 @@ pub fn close_task_detail(app: &mut App) {
     app.task_detail_card_id = None;
     app.task_detail_list_id = None;
     app.task_detail_error = None;
+    app.task_detail_dependence_label = None;
     app.editing_detail_field = false;
     app.detail_edit_input.clear();
     let _ = app.requests.bump_task_detail();
@@ -695,6 +716,9 @@ pub fn start_edit_detail_field(app: &mut App) {
                 serde_json::Value::String(s) => s.clone(),
                 other => other.to_string(),
             })
+            .unwrap_or_default(),
+        DetailField::Dependence => operations::cards::dependence_task_id(&detail.dependence)
+            .map(|id| id.to_string())
             .unwrap_or_default(),
         DetailField::StartDate => detail
             .start_date
@@ -789,6 +813,19 @@ pub fn submit_detail_field(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs)
                     )
                     .await?;
                 }
+                DetailField::Dependence => {
+                    // Full HTML edit form: dependence=<task_id> (empty clears).
+                    operations::cards::update_card_fields(
+                        &client,
+                        card_id,
+                        board_number,
+                        operations::cards::CardFieldUpdates {
+                            dependence: Some(value.as_str()),
+                            ..Default::default()
+                        },
+                    )
+                    .await?;
+                }
                 DetailField::StartDate => {
                     let bid = operations::cards::board_id(&client).await?;
                     operations::cards::set_date(&client, bid, card_id, "start_date", &value)
@@ -846,6 +883,7 @@ pub fn submit_detail_field(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs)
 
         let result = match save.await {
             Ok(detail) => {
+                let dependence_label = resolve_dependence_label(&client, &detail.dependence).await;
                 let cards = if let Some(lid) = list_id {
                     Some(
                         operations::cards::list_cards(&client, lid, Some(board_number))
@@ -856,9 +894,9 @@ pub fn submit_detail_field(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs)
                 } else {
                     None
                 };
-                (Ok(detail), cards)
+                (Ok(detail), dependence_label, cards)
             }
-            Err(e) => (Err(e.to_string()), None),
+            Err(e) => (Err(e.to_string()), None, None),
         };
 
         JobOutcome::TaskDetailSaved {
@@ -867,7 +905,8 @@ pub fn submit_detail_field(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs)
             list_id,
             board_number,
             result: result.0,
-            cards: result.1,
+            dependence_label: result.1,
+            cards: result.2,
         }
     });
 }

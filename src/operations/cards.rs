@@ -575,6 +575,40 @@ pub async fn update_card(
     priority: Option<&str>,
     responsible: Option<&str>,
 ) -> Result<()> {
+    update_card_fields(
+        client,
+        card_id,
+        board,
+        CardFieldUpdates {
+            name,
+            description,
+            priority,
+            responsible,
+            ..Default::default()
+        },
+    )
+    .await
+}
+
+/// Optional overrides for the full HTML task edit form.
+#[derive(Debug, Clone, Default)]
+pub struct CardFieldUpdates<'a> {
+    pub name: Option<&'a str>,
+    pub description: Option<&'a str>,
+    pub priority: Option<&'a str>,
+    pub responsible: Option<&'a str>,
+    /// Depends-on task id (empty string clears).
+    pub dependence: Option<&'a str>,
+    pub time_estimated: Option<&'a str>,
+}
+
+/// Full edit form fields including dependence (depends-on task id) and estimate.
+pub async fn update_card_fields(
+    client: &HteamClient,
+    card_id: u64,
+    board: u64,
+    fields: CardFieldUpdates<'_>,
+) -> Result<()> {
     let detail = client.get_card_detail(card_id).await?;
     client
         .update_card_full(
@@ -582,13 +616,29 @@ pub async fn update_card(
             board,
             UpdateCardPatch {
                 detail: &detail,
-                name,
-                description,
-                priority,
-                responsible,
+                name: fields.name,
+                description: fields.description,
+                priority: fields.priority,
+                responsible: fields.responsible,
+                dependence: fields.dependence,
+                time_estimated: fields.time_estimated,
             },
         )
         .await
+}
+
+/// Parse a dependence JSON value (number, string id, or object) to a task id.
+pub fn dependence_task_id(value: &Option<serde_json::Value>) -> Option<u64> {
+    let v = value.as_ref()?;
+    match v {
+        serde_json::Value::Null => None,
+        serde_json::Value::Number(n) => n.as_u64(),
+        serde_json::Value::String(s) => s.trim().parse().ok(),
+        serde_json::Value::Object(map) => map
+            .get("id")
+            .and_then(|x| x.as_u64().or_else(|| x.as_str()?.parse().ok())),
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -1065,6 +1115,50 @@ mod tests {
             responsible_display(detail.responsible.as_ref().unwrap()).as_deref(),
             Some("adrian.ortiz")
         );
+    }
+
+    #[test]
+    fn dependence_task_id_parses_number_and_string() {
+        assert_eq!(
+            dependence_task_id(&Some(serde_json::json!(8965))),
+            Some(8965)
+        );
+        assert_eq!(
+            dependence_task_id(&Some(serde_json::json!("8965"))),
+            Some(8965)
+        );
+        assert_eq!(dependence_task_id(&None), None);
+        assert_eq!(dependence_task_id(&Some(serde_json::Value::Null)), None);
+    }
+
+    #[tokio::test]
+    async fn update_card_fields_posts_dependence() {
+        let mut server = mockito::Server::new_async().await;
+        let _detail = server
+            .mock("GET", "/operation/care/tasks/11216/")
+            .match_query(mockito::Matcher::UrlEncoded("format".into(), "json".into()))
+            .with_status(200)
+            .with_body(r#"{"id":11216,"name":"GBI","description":"d","labels":[],"priority":3}"#)
+            .create_async()
+            .await;
+        let _edit = server
+            .mock("POST", "/operations/483/tasks/11216/edit/")
+            .match_body(mockito::Matcher::Regex("dependence=8965".into()))
+            .with_status(200)
+            .create_async()
+            .await;
+
+        update_card_fields(
+            &client(&server.url()),
+            11216,
+            483,
+            CardFieldUpdates {
+                dependence: Some("8965"),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("update dependence");
     }
 
     #[tokio::test]
