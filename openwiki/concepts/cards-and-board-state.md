@@ -1,7 +1,7 @@
 ---
 type: domain model
 title: Board, card, and work-tracking domain
-description: Defines the Hteam board, card, work-tracking, reminder, comment, project, and shift records exposed by the client, including identifier boundaries and mutation defaults.
+description: Defines the Hteam board, card, work-tracking, reminder, comment, project, and shift records exposed by the client, including identifier boundaries, mutation defaults, and the HTML edit-form baseline used for safe partial card edits.
 tags: [hteam, board, cards, work-tracking, domain-model]
 verified:
   - by: openwiki/0.4.3
@@ -85,19 +85,25 @@ Moving posts the card ID, source/destination list IDs, card type `0`, and the se
 
 ## Safe card edits are read-modify-write
 
-The Hteam task edit endpoint is form-shaped rather than a partial PATCH. `operations::cards::update_card` therefore fetches `CardDetail` first and passes it as an `UpdateCardPatch` base. The client always submits process ID, ID, name, description, estimate, start date, dependency, responsible, and priority:
+The Hteam task edit endpoint is form-shaped rather than a partial PATCH. `operations::cards::update_card_fields` fetches current detail, then calls `HteamClient::update_card_full`, which GETs the HTML edit form and POSTs the full form body. That HTML form is the source of truth for mutable fields that task JSON does not preserve reliably. The edit URL uses `board_number` as `operation_id`; board-card AJAX times/dates use internal `board_id` and are separate.
 
-- supplied name, description, priority, and responsible override the fetched values;
-- all other values are preserved from the detail response, with absent optional string/value fields encoded as empty;
-- absent priority defaults to `"3"` only when the detail lacks a priority.
+`update_card_full` always submits process ID, ID, name, description, estimate, start date, dependence, responsible, and priority. Values come from a form baseline (`TaskEditFormBaseline`) with only the caller's patch applied:
 
-`update_description` follows the same pattern after resolving the active board number. This pre-read is a mutation precondition: bypassing it risks clearing editable fields the caller did not intend to change. The request needs the configured CSRF token and is rejected on HTTP status 400 or above.
+- supplied name, description, priority, responsible, dependence, and time estimate override the scraped form values;
+- absent fields are preserved from the form baseline or the current detail when the form does not carry a usable value;
+- `start_date` is truncated to `YYYY-MM-DD` before posting (`form_date_yyyy_mm_dd`);
+- dependence writes must be a bare task id or `""` to clear — never the JSON display label `#N - Title…`;
+- absent priority defaults to `"3"` only when neither the detail nor the form supplies one (scale: 1 very low … 5 very high).
+
+`merge_edit_form_into_detail` exists for display consistency after a save or detail refresh. It copies the web-form priority and time estimate back into `CardDetail` when the JSON view omits them, and `priority_label` turns the stored select value into `1 · Muy baja` … `5 · Muy alta`.
+
+See [Hteam HTTP integration](/openwiki/integrations/hteam-api.md) and [card mutations](/openwiki/workflows/card-mutations-and-comments.md) for the full GET-scrape-POST sequence, anti-patterns, and new-field checklist. Building the body from task JSON alone risks wiping sibling fields that only the HTML form knows about.
 
 ## Comments, mentions, and reminders
 
 A comment belongs to a card and captures author name, text, submission date, nesting (`level` and optional `parent_id`), removal status, and optional permalink. Reading comments returns the remote `results` array.
 
-Posting is not a simple API JSON operation. Before posting, the client fetches the board-number-specific card page and extracts the current `timestamp`, `security_hash`, and CSRF form fields; missing any of them fails the operation. It submits those fields plus `content_type=processes.task`, the card ID as `object_pk`, text, `reply_to=0`, and a locally formatted date. `follow` is omitted by default and only sent as `follow=on` when true. Dates supplied to the operation must be `%Y-%m-%d %H:%M`; blank or omitted values default to local current time, while malformed values fail before network I/O.
+Posting is not a simple API JSON operation. Before posting, the client fetches the board-number-specific card page and extracts the current `timestamp`, `security_hash`, and CSRF form fields; missing any of them fails the operation. It submits those fields plus `content_type=processes.task`, the card as `object_pk`, `reply_to=0`, an empty honeypot, the comment text, and a `date`; the POST also sets the page as `Referer` and the site as `Origin`. `follow` is omitted by default and only sent as `follow=on` when true. Dates supplied to the operation must be `%Y-%m-%d %H:%M`; blank or omitted values default to local current time, while malformed values fail before network I/O.
 
 Mention autocomplete returns `UserSuggestion` entries. Their IDs are strings (not numeric user IDs); `selected_text` is the username suitable for insertion and `text` is the preformatted display label. An unfinished whitespace-delimited `@token`, including bare `@`, is eligible for lookup.
 
@@ -126,6 +132,6 @@ Selecting a project for TUI use calls `remember_project`, which deduplicates its
 
 All delivery surfaces should use `operations::{boards,cards,comments,projects,reminders,working,checkin}` rather than reproduce HTTP workflow. The MCP server follows this boundary, exposing card reads/mutations, comments, reminders, working status, project data, and check-in as tools; it maps any operation error to an MCP internal error.
 
-Mutations and reads consistently fail on non-success HTTP status (with response text when available), except for the explicitly tolerant empty/null variants documented above. The focused mock tests cover the highest-risk contracts: card-list extraction of API `board_id`, move defaulting to Open, fetch-before-edit field submission, comment date validation, wrapped reminder responses and creation body, start/stop working's distinct IDs, project payload shapes, and check-in/resume payloads.
+Mutations and reads consistently fail on non-success HTTP status (with response text when available), except for the explicitly tolerant empty/null variants documented above. The focused mock tests cover the highest-risk contracts: card-list extraction of API `board_id`, move defaulting to Open, full update's detail GET followed by a form POST, comment date validation, wrapped reminder responses and creation body, start/stop working's distinct IDs, project payload shapes, and check-in/resume payloads.
 
 See also: [session configuration](/openwiki/concepts/session-configuration.md), [Hteam API integration](/openwiki/integrations/hteam-api.md), [MCP server](/openwiki/integrations/mcp-server.md), [terminal experiences](/openwiki/operations/terminal-experiences.md), and [card mutations and comments](/openwiki/workflows/card-mutations-and-comments.md).
