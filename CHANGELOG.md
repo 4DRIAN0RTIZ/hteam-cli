@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(tui)* Debounce mention user search while typing
 - *(tui)* Load board lists in parallel without dropping failed data
 - *(tui)* Show changelog and update-available popups on startup
+- *(operations)* Add shared card search and filter layer
 
 ## [0.9.0] - 2026-09-11
 
