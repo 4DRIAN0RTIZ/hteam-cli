@@ -30,6 +30,37 @@ fn truncate_for_error(s: &str, max_chars: usize) -> String {
     s.chars().take(max_chars).collect()
 }
 
+/// HTML task edit form expects `YYYY-MM-DD`; detail JSON often has full ISO.
+fn form_date_yyyy_mm_dd(raw: Option<&str>) -> String {
+    let s = raw.unwrap_or("").trim();
+    if s.len() >= 10 && s.as_bytes().get(4) == Some(&b'-') && s.as_bytes().get(7) == Some(&b'-') {
+        s.chars().take(10).collect()
+    } else {
+        s.to_string()
+    }
+}
+
+/// Form `responsible` is a bare user id; some JSON payloads use `{id, username}`.
+fn form_user_id(value: Option<&serde_json::Value>) -> String {
+    match value {
+        Some(serde_json::Value::Number(n)) => n.to_string(),
+        Some(serde_json::Value::String(s))
+            if !s.is_empty() && s.chars().all(|c| c.is_ascii_digit()) =>
+        {
+            s.clone()
+        }
+        Some(serde_json::Value::Object(map)) => map
+            .get("id")
+            .map(|v| match v {
+                serde_json::Value::Number(n) => n.to_string(),
+                serde_json::Value::String(s) => s.clone(),
+                other => other.to_string(),
+            })
+            .unwrap_or_default(),
+        _ => String::new(),
+    }
+}
+
 #[derive(Clone)]
 pub struct HteamClient {
     client: Client,
@@ -1123,6 +1154,22 @@ impl HteamClient {
                 _ => String::new(),
             }
         };
+        // Detail JSON uses ISO datetimes; the HTML form only accepts YYYY-MM-DD.
+        // Posting the full ISO returns HTTP 200 with the edit page and does not save.
+        let start_date_owned = form_date_yyyy_mm_dd(detail.start_date.as_deref());
+        // responsible may be a bare id or an object `{id, username}` from some payloads.
+        let responsible_owned = patch
+            .responsible
+            .map(str::to_string)
+            .unwrap_or_else(|| form_user_id(detail.responsible.as_ref()));
+        let priority_owned = patch.priority.map(str::to_string).unwrap_or_else(|| {
+            detail
+                .priority
+                .as_ref()
+                .map(val_to_str)
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| "3".to_string())
+        });
         let fields = vec![
             format!("csrfmiddlewaretoken={}", encode(csrf)),
             format!("process_id={}", board_number),
@@ -1143,35 +1190,10 @@ impl HteamClient {
                         .unwrap_or(detail.time_estimated.as_deref().unwrap_or(""))
                 )
             ),
-            format!(
-                "start_date={}",
-                encode(detail.start_date.as_deref().unwrap_or(""))
-            ),
+            format!("start_date={}", encode(&start_date_owned)),
             format!("dependence={}", encode(&dependence_owned)),
-            format!(
-                "responsible={}",
-                encode(
-                    patch.responsible.unwrap_or(
-                        &detail
-                            .responsible
-                            .as_ref()
-                            .map(val_to_str)
-                            .unwrap_or_default()
-                    )
-                )
-            ),
-            format!(
-                "priority={}",
-                encode(
-                    patch.priority.unwrap_or(
-                        &detail
-                            .priority
-                            .as_ref()
-                            .map(val_to_str)
-                            .unwrap_or_else(|| "3".to_string())
-                    )
-                )
-            ),
+            format!("responsible={}", encode(&responsible_owned)),
+            format!("priority={}", encode(&priority_owned)),
             format!("id={}", card_id),
         ];
         let body = fields.join("&");
@@ -1189,8 +1211,19 @@ impl HteamClient {
             .context("Error al actualizar card")?;
 
         let code = response.status().as_u16();
+        let text = response.text().await.unwrap_or_default();
         if code >= 400 {
-            anyhow::bail!("Error HTTP {}: {}", code, response.text().await?);
+            anyhow::bail!("Error HTTP {}: {}", code, text);
+        }
+        // Django often returns 200 with the edit form again when validation fails
+        // (e.g. full ISO start_date). Success redirects to the task view (no Edit title).
+        if text.contains("errorlist")
+            || text.contains("<title>Edit task</title>")
+            || text.contains("value=Update")
+        {
+            anyhow::bail!(
+                "El servidor no aplicó el cambio del task (formulario rechazado). Revisa fechas/campos."
+            );
         }
 
         Ok(())
@@ -2037,5 +2070,25 @@ mod tests {
             client.extract_comment_tokens("<input name=\"timestamp\" value=\"123\">"),
             None
         );
+    }
+
+    #[test]
+    fn form_date_yyyy_mm_dd_truncates_iso() {
+        assert_eq!(
+            form_date_yyyy_mm_dd(Some("2026-10-13T00:00:00-06:00")),
+            "2026-10-13"
+        );
+        assert_eq!(form_date_yyyy_mm_dd(Some("2026-10-13")), "2026-10-13");
+        assert_eq!(form_date_yyyy_mm_dd(None), "");
+    }
+
+    #[test]
+    fn form_user_id_from_number_or_object() {
+        assert_eq!(form_user_id(Some(&serde_json::json!(140))), "140");
+        assert_eq!(
+            form_user_id(Some(&serde_json::json!({"id": 140, "username": "a"}))),
+            "140"
+        );
+        assert_eq!(form_user_id(None), "");
     }
 }
