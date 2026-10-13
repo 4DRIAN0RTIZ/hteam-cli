@@ -213,6 +213,8 @@ async fn run_loop(
             net::apply_outcome(app, outcome);
         }
 
+        events::poll_mention_debounce(client.clone(), app, &jobs);
+
         app.expire_status(STATUS_TTL);
         terminal.draw(|f| ui::draw(f, app))?;
 
@@ -281,9 +283,9 @@ async fn run_loop(
             if app.composing_comment {
                 match key.code {
                     KeyCode::Esc => {
-                        if !app.mention_suggestions.is_empty() {
-                            app.mention_suggestions.clear();
-                            app.requests.bump_mentions();
+                        if !app.mention_suggestions.is_empty() || app.mention_debounce_at.is_some()
+                        {
+                            events::clear_mention_state(app);
                         } else {
                             events::cancel_composing_comment(app);
                         }
@@ -302,7 +304,7 @@ async fn run_loop(
                         if app.comment_date_focused {
                             events::comment_date_input_backspace(app);
                         } else {
-                            events::comment_input_backspace(client.clone(), app, &jobs);
+                            events::comment_input_backspace(app);
                         }
                     }
                     KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
@@ -315,7 +317,7 @@ async fn run_loop(
                         if app.comment_date_focused {
                             events::comment_date_input_push(app, c);
                         } else {
-                            events::comment_input_push(client.clone(), app, &jobs, c);
+                            events::comment_input_push(app, c);
                         }
                     }
                     _ => {}

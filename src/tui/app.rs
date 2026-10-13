@@ -75,6 +75,8 @@ pub struct App {
     pub comment_date_focused: bool,
     pub mention_suggestions: Vec<UserSuggestion>,
     pub mention_selected: usize,
+    /// When set, a mention search will fire after this instant (debounce).
+    pub mention_debounce_at: Option<Instant>,
     /// Project ids looked up before, most-recently-used first — mirrors
     /// `config.toml`'s `[tui] known_projects`.
     pub known_projects: Vec<u64>,
@@ -255,6 +257,7 @@ impl App {
             comment_date_focused: false,
             mention_suggestions: Vec::new(),
             mention_selected: 0,
+            mention_debounce_at: None,
             known_projects,
             selected_project_idx: 0,
             active_project: None,

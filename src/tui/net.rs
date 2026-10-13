@@ -88,6 +88,9 @@ pub enum JobOutcome {
     },
     Mentions {
         id: u64,
+        /// Query that was searched — applied only if it still matches the
+        /// trailing `@token` in the comment input.
+        query: String,
         result: Result<Vec<UserSuggestion>, String>,
     },
     CommentPosted {
@@ -390,8 +393,14 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
                 }
             }
         }
-        JobOutcome::Mentions { id, result } => {
+        JobOutcome::Mentions { id, query, result } => {
             if app.requests.mentions != id || !app.composing_comment {
+                return;
+            }
+            // Drop results that no longer match what the user is typing, even
+            // if the request id somehow lined up (e.g. race after accept).
+            let current = operations::comments::mention_query(app.comment_input.as_str());
+            if current != Some(query.as_str()) {
                 return;
             }
             match result {
@@ -745,5 +754,56 @@ mod tests {
         assert_eq!(app.footer_message().as_deref(), Some("Cargando..."));
         app.end_busy();
         assert_eq!(app.footer_message().as_deref(), Some("listo"));
+    }
+
+    #[test]
+    fn mentions_with_stale_query_are_ignored() {
+        use crate::models::UserSuggestion;
+
+        let mut app = test_app(1);
+        app.composing_comment = true;
+        app.comment_input.set("@ab");
+        let id = app.requests.bump_mentions();
+
+        apply_outcome(
+            &mut app,
+            JobOutcome::Mentions {
+                id,
+                query: "a".into(), // no longer matches "@ab"
+                result: Ok(vec![UserSuggestion {
+                    id: "1".into(),
+                    text: "ana".into(),
+                    selected_text: "ana".into(),
+                }]),
+            },
+        );
+
+        assert!(app.mention_suggestions.is_empty());
+    }
+
+    #[test]
+    fn mentions_with_matching_query_apply() {
+        use crate::models::UserSuggestion;
+
+        let mut app = test_app(1);
+        app.composing_comment = true;
+        app.comment_input.set("hola @an");
+        let id = app.requests.bump_mentions();
+
+        apply_outcome(
+            &mut app,
+            JobOutcome::Mentions {
+                id,
+                query: "an".into(),
+                result: Ok(vec![UserSuggestion {
+                    id: "1".into(),
+                    text: "ana".into(),
+                    selected_text: "ana".into(),
+                }]),
+            },
+        );
+
+        assert_eq!(app.mention_suggestions.len(), 1);
+        assert_eq!(app.mention_suggestions[0].selected_text, "ana");
     }
 }
