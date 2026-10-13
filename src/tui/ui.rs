@@ -609,6 +609,7 @@ fn task_detail_lines<'a>(app: &'a App, detail: &'a crate::models::CardDetail) ->
         DetailField::Description,
         DetailField::Responsible,
         DetailField::Priority,
+        DetailField::Dependence,
     ] {
         lines.push(detail_field_line(app, detail, f, selected));
     }
@@ -685,7 +686,7 @@ fn detail_field_line<'a>(
     let raw = if is_edit {
         format!("{}▌", app.detail_edit_input.as_str())
     } else {
-        detail_field_value(detail, field)
+        detail_field_value(app, detail, field)
     };
 
     let empty = raw == "-" && !is_edit;
@@ -750,7 +751,7 @@ fn parse_hex_color(s: &str) -> Option<ratatui::style::Color> {
     Some(ratatui::style::Color::Rgb(r, g, b))
 }
 
-fn detail_field_value(detail: &crate::models::CardDetail, field: DetailField) -> String {
+fn detail_field_value(app: &App, detail: &crate::models::CardDetail, field: DetailField) -> String {
     match field {
         DetailField::Name => detail.name.clone(),
         DetailField::Description => detail
@@ -780,6 +781,16 @@ fn detail_field_value(detail: &crate::models::CardDetail, field: DetailField) ->
                 Some("3") => "3  baja".into(),
                 Some(s) => s.to_string(),
                 None => "-".into(),
+            }
+        }
+        DetailField::Dependence => {
+            // Prefer resolved label from load; fall back to bare id.
+            if let Some(label) = app.task_detail_dependence_label.clone() {
+                label
+            } else if let Some(id) = operations::cards::dependence_task_id(&detail.dependence) {
+                format!("id {id}")
+            } else {
+                "-".into()
             }
         }
         DetailField::StartDate => detail
