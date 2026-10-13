@@ -5,8 +5,8 @@ use std::time::{Duration, Instant};
 
 use crate::config::WorkingHoursConfig;
 use crate::models::{
-    BoardEntry, Card, Comment, FollowUp, List, ProjectMilestone, ProjectSummary, ProjectTask,
-    Reminder, UserSuggestion, WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
+    BoardEntry, Card, CardDetail, Comment, FollowUp, List, ProjectMilestone, ProjectSummary,
+    ProjectTask, Reminder, UserSuggestion, WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
 };
 use crate::operations::cards::CardSearchFilters;
 
@@ -34,6 +34,57 @@ pub enum HelpContext {
     Comments,
     Projects,
     BoardSwitch,
+    TaskDetail,
+}
+
+/// Editable rows in the task-detail popup (`d` / `e`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DetailField {
+    Name,
+    Description,
+    Responsible,
+    Priority,
+    StartDate,
+    DueDate,
+    TimeEstimated,
+    TimeSpent,
+}
+
+impl DetailField {
+    pub const ALL: &'static [DetailField] = &[
+        DetailField::Name,
+        DetailField::Description,
+        DetailField::Responsible,
+        DetailField::Priority,
+        DetailField::StartDate,
+        DetailField::DueDate,
+        DetailField::TimeEstimated,
+        DetailField::TimeSpent,
+    ];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            DetailField::Name => "Nombre",
+            DetailField::Description => "Descripción",
+            DetailField::Responsible => "Responsable",
+            DetailField::Priority => "Prioridad",
+            DetailField::StartDate => "Inicio",
+            DetailField::DueDate => "Vencimiento",
+            DetailField::TimeEstimated => "Estimado",
+            DetailField::TimeSpent => "Gastado",
+        }
+    }
+
+    pub fn hint(self) -> &'static str {
+        match self {
+            DetailField::Name => "texto",
+            DetailField::Description => "texto (Ctrl+S guarda)",
+            DetailField::Responsible => "username",
+            DetailField::Priority => "1 alta · 2 media · 3 baja",
+            DetailField::StartDate | DetailField::DueDate => "YYYY-MM-DD",
+            DetailField::TimeEstimated | DetailField::TimeSpent => "ej. 1h · 45m · +30m",
+        }
+    }
 }
 
 pub struct App {
@@ -69,6 +120,17 @@ pub struct App {
     /// currently selected card's description inline.
     pub show_description: bool,
     pub description_input: TextInput,
+    /// Task detail popup (`d`) — full card sheet with field edit (`e`).
+    pub show_task_detail: bool,
+    pub task_detail: Option<CardDetail>,
+    pub task_detail_card_id: Option<u64>,
+    pub task_detail_list_id: Option<u64>,
+    pub task_detail_error: Option<String>,
+    pub task_detail_field_idx: usize,
+    pub task_detail_scroll: Scroll,
+    /// Editing one field inside the detail popup.
+    pub editing_detail_field: bool,
+    pub detail_edit_input: TextInput,
     /// Comments of the card that was selected when 'C' was pressed.
     pub comments: Vec<Comment>,
     pub show_comments: bool,
@@ -186,6 +248,7 @@ pub struct RequestIds {
     pub comment_post: u64,
     pub follow_up: u64,
     pub card_link: u64,
+    pub task_detail: u64,
 }
 
 impl RequestIds {
@@ -239,6 +302,9 @@ impl RequestIds {
     pub fn bump_card_link(&mut self) -> u64 {
         Self::bump(&mut self.card_link)
     }
+    pub fn bump_task_detail(&mut self) -> u64 {
+        Self::bump(&mut self.task_detail)
+    }
 
     pub fn is_current_board_refresh(&self, id: u64, job_board: u64, app_board: u64) -> bool {
         self.board_refresh == id && job_board == app_board
@@ -271,6 +337,15 @@ impl App {
             show_reminders: false,
             show_description: false,
             description_input: TextInput::default(),
+            show_task_detail: false,
+            task_detail: None,
+            task_detail_card_id: None,
+            task_detail_list_id: None,
+            task_detail_error: None,
+            task_detail_field_idx: 0,
+            task_detail_scroll: Scroll::default(),
+            editing_detail_field: false,
+            detail_edit_input: TextInput::default(),
             comments: Vec::new(),
             show_comments: false,
             current_follow_up: None,

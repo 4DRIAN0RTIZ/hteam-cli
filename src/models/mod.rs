@@ -149,20 +149,47 @@ pub struct CardDetail {
     #[serde(deserialize_with = "deserialize_labels")]
     pub labels: Vec<Label>,
     pub list: Option<List>,
+    /// Visible task number on the web (e.g. 303), distinct from `id`.
+    #[serde(default)]
+    pub number: Option<u64>,
     #[serde(default)]
     pub created_at: Option<String>,
     #[serde(default)]
     pub updated_at: Option<String>,
     #[serde(default)]
     pub time_estimated: Option<String>,
+    /// Present on some board-card payloads after a times POST; not always on detail.
+    #[serde(default)]
+    pub time_spend: Option<String>,
     #[serde(default)]
     pub start_date: Option<String>,
+    #[serde(default)]
+    pub due_date: Option<String>,
     #[serde(default)]
     pub dependence: Option<serde_json::Value>,
     #[serde(default)]
     pub responsible: Option<serde_json::Value>,
     #[serde(default)]
     pub priority: Option<serde_json::Value>,
+    #[serde(default)]
+    pub closed: Option<bool>,
+}
+
+/// Response from `POST .../card/{id}/times/`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CardTimesResult {
+    #[serde(default)]
+    pub detail: Option<String>,
+    #[serde(default)]
+    pub warnings: Vec<String>,
+    #[serde(default)]
+    pub start_date: Option<String>,
+    #[serde(default)]
+    pub due_date: Option<String>,
+    #[serde(default)]
+    pub estimated_time: Option<String>,
+    #[serde(default)]
+    pub time_spend: Option<String>,
 }
 
 fn deserialize_labels<'de, D>(deserializer: D) -> Result<Vec<Label>, D::Error>

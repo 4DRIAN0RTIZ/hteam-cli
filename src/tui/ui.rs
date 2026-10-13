@@ -8,7 +8,7 @@ use ratatui::{
 
 use crate::operations;
 
-use super::app::{App, HelpContext};
+use super::app::{App, DetailField, HelpContext};
 use super::widgets::{centered_rect, draw_frame};
 
 pub fn draw(frame: &mut Frame, app: &App) {
@@ -61,6 +61,8 @@ pub fn draw(frame: &mut Frame, app: &App) {
         draw_reminders_popup(frame, app);
     } else if app.show_weekly_objectives {
         draw_weekly_objectives_popup(frame, app);
+    } else if app.show_task_detail {
+        draw_task_detail_popup(frame, app);
     } else if app.show_description {
         draw_description_popup(frame, app);
     } else if app.show_comments {
@@ -180,6 +182,7 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
                 "  h/l, ←/→        cambiar de lista",
                 "  H / L           mover card a la lista anterior/siguiente",
                 "  Enter           editar descripción de la card",
+                "  d               detalle de la card (e edita el campo)",
                 "  /               buscar / filtrar cards (texto, @user, #label)",
                 "  X               limpiar filtro activo",
                 "  n               crear card nueva en la lista activa",
@@ -264,6 +267,17 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
                 "  Enter           elegir y cargar",
                 "  c               copiar el link del resaltado",
                 "  Esc, L          volver a guardados",
+            ],
+        ),
+        HelpContext::TaskDetail => (
+            " Ayuda: Detalle — Esc/q/? cerrar ",
+            &[
+                "Detalle de task",
+                "  j/k             cambiar campo",
+                "  e               editar el campo resaltado",
+                "  Enter / Ctrl+S  guardar (en modo edición)",
+                "  Esc             cancelar edición o cerrar",
+                "  q               cerrar",
             ],
         ),
         HelpContext::BoardSwitch => (
@@ -490,6 +504,130 @@ fn draw_description_popup(frame: &mut Frame, app: &App) {
         .wrap(Wrap { trim: true })
         .scroll((scroll_y, 0));
     frame.render_widget(p, inner);
+}
+
+fn draw_task_detail_popup(frame: &mut Frame, app: &App) {
+    let area = centered_rect(72, 80, frame.area());
+    let title = if app.editing_detail_field {
+        let field = DetailField::ALL[app.task_detail_field_idx.min(DetailField::ALL.len() - 1)];
+        format!(
+            " Editar {} — {} · Enter/Ctrl+S guardar · Esc cancelar ",
+            field.label(),
+            field.hint()
+        )
+    } else {
+        " Detalle — j/k campo · e editar · '?' ayuda · Esc cerrar ".to_string()
+    };
+    let inner = draw_frame(
+        frame,
+        area,
+        title,
+        app.theme.border_description,
+        app.theme.background,
+        app.theme.foreground,
+    );
+
+    let text = if let Some(err) = &app.task_detail_error {
+        format!("No se pudo cargar el detalle.\n\n{}", err)
+    } else if let Some(detail) = &app.task_detail {
+        let num = detail
+            .number
+            .map(|n| format!("#{} ", n))
+            .unwrap_or_default();
+        let mut lines = vec![
+            format!("{}{}  (id {})", num, detail.name, detail.id),
+            String::new(),
+        ];
+
+        let field = DetailField::ALL[app.task_detail_field_idx.min(DetailField::ALL.len() - 1)];
+        for f in DetailField::ALL {
+            let marker = if *f == field { ">" } else { " " };
+            let value = detail_field_value(detail, *f);
+            if app.editing_detail_field && *f == field {
+                lines.push(format!(
+                    "{} {}: {}_",
+                    marker,
+                    f.label(),
+                    app.detail_edit_input.as_str()
+                ));
+            } else {
+                lines.push(format!("{} {}: {}", marker, f.label(), value));
+            }
+        }
+
+        lines.push(String::new());
+        let labels = if detail.labels.is_empty() {
+            "-".into()
+        } else {
+            detail
+                .labels
+                .iter()
+                .map(|l| l.name.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
+        lines.push(format!("Labels: {}", labels));
+        if let Some(list) = &detail.list {
+            lines.push(format!("Lista: {}", list.name));
+        }
+        lines.join("\n")
+    } else {
+        "Cargando detalle...".to_string()
+    };
+
+    let p = Paragraph::new(text)
+        .wrap(Wrap { trim: false })
+        .scroll((app.task_detail_scroll.offset(), 0));
+    frame.render_widget(p, inner);
+}
+
+fn detail_field_value(detail: &crate::models::CardDetail, field: DetailField) -> String {
+    match field {
+        DetailField::Name => detail.name.clone(),
+        DetailField::Description => detail
+            .description
+            .clone()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "-".into()),
+        DetailField::Responsible => operations::cards::responsible_display(
+            detail
+                .responsible
+                .as_ref()
+                .unwrap_or(&serde_json::Value::Null),
+        )
+        .unwrap_or_else(|| "-".into()),
+        DetailField::Priority => detail
+            .priority
+            .as_ref()
+            .map(|v| match v {
+                serde_json::Value::String(s) => s.clone(),
+                other => other.to_string(),
+            })
+            .filter(|s| !s.is_empty() && s != "null")
+            .unwrap_or_else(|| "-".into()),
+        DetailField::StartDate => detail
+            .start_date
+            .as_deref()
+            .map(|s| s.chars().take(10).collect::<String>())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "-".into()),
+        DetailField::DueDate => detail
+            .due_date
+            .as_deref()
+            .map(|s| s.chars().take(10).collect::<String>())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "-".into()),
+        DetailField::TimeEstimated => detail
+            .time_estimated
+            .clone()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "-".into()),
+        DetailField::TimeSpent => detail
+            .time_spend
+            .clone()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "-".into()),
+    }
 }
 
 fn draw_comments_popup(frame: &mut Frame, app: &App) {

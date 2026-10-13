@@ -74,6 +74,35 @@ pub async fn card_detail(client: &HteamClient, card_id: u64) -> Result<CardDetai
     client.get_card_detail(card_id).await
 }
 
+/// Internal board id used by board-card AJAX routes (times/dates/labels).
+pub async fn board_id(client: &HteamClient) -> Result<u64> {
+    client.get_board_id().await
+}
+
+/// `type_time`: `estimate` or `time_spend` (AJAX form, not legacy `spend`).
+pub async fn set_time(
+    client: &HteamClient,
+    board_id: u64,
+    card_id: u64,
+    type_time: &str,
+    time: &str,
+) -> Result<crate::models::CardTimesResult> {
+    client
+        .set_card_time(board_id, card_id, type_time, time)
+        .await
+}
+
+/// `field`: `start_date` or `due_date`; `value`: `YYYY-MM-DD`.
+pub async fn set_date(
+    client: &HteamClient,
+    board_id: u64,
+    card_id: u64,
+    field: &str,
+    value: &str,
+) -> Result<()> {
+    client.set_card_date(board_id, card_id, field, value).await
+}
+
 /// URL pública de la página de detalle de una card (`/operations/{board}/tasks/{id}/`).
 pub async fn card_url(client: &HteamClient, card_id: u64, board: Option<u64>) -> Result<String> {
     client.card_url(card_id, board).await
@@ -892,6 +921,29 @@ mod tests {
                 .and_then(|v| v.as_str()),
             Some("ana")
         );
+    }
+
+    #[tokio::test]
+    async fn set_time_posts_time_spend_form() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("POST", "/boards/care/boards/483/card/11215/times/")
+            .match_body(mockito::Matcher::AllOf(vec![
+                mockito::Matcher::Regex("type_time=time_spend".into()),
+                mockito::Matcher::Regex("time=45m".into()),
+            ]))
+            .with_status(200)
+            .with_body(
+                r#"{"detail":"Time spent updated","warnings":[],"estimated_time":"1h","time_spend":"45m"}"#,
+            )
+            .create_async()
+            .await;
+
+        let result = set_time(&client(&server.url()), 483, 11215, "time_spend", "45m")
+            .await
+            .expect("times");
+        assert_eq!(result.time_spend.as_deref(), Some("45m"));
+        assert_eq!(result.estimated_time.as_deref(), Some("1h"));
     }
 
     #[tokio::test]

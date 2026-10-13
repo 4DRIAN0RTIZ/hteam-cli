@@ -9,9 +9,10 @@ pub mod update;
 
 use crate::config::Config;
 use crate::models::{
-    BoardEntry, BoardsResponse, Card, CardDetail, CheckInResult, Comment, CommentsResponse,
-    DailyWorkEntry, FollowUp, Label, List, ProjectMilestone, ProjectSummary, ProjectTasksResponse,
-    ProjectsResponse, Reminder, UserSuggestion, WorkShiftResume, WorkingOnStatus,
+    BoardEntry, BoardsResponse, Card, CardDetail, CardTimesResult, CheckInResult, Comment,
+    CommentsResponse, DailyWorkEntry, FollowUp, Label, List, ProjectMilestone, ProjectSummary,
+    ProjectTasksResponse, ProjectsResponse, Reminder, UserSuggestion, WorkShiftResume,
+    WorkingOnStatus,
 };
 
 const BASE_URL: &str = "https://hteam.mx/api";
@@ -1134,6 +1135,99 @@ impl HteamClient {
         let code = response.status().as_u16();
         if code >= 400 {
             anyhow::bail!("Error HTTP {}: {}", code, response.text().await?);
+        }
+
+        Ok(())
+    }
+
+    /// POST board-card times API (`type_time=estimate|time_spend`, `time=45m`).
+    /// `board_id` is the internal board id from list payloads, not the operation id.
+    pub async fn set_card_time(
+        &self,
+        board_id: u64,
+        card_id: u64,
+        type_time: &str,
+        time: &str,
+    ) -> Result<CardTimesResult> {
+        let (url, headers) = {
+            let config = self.config.lock().await;
+            let url = format!(
+                "{}/boards/care/boards/{}/card/{}/times/",
+                self.api_base_url, board_id, card_id
+            );
+            let headers = self.build_headers(&config)?;
+            (url, headers)
+        };
+
+        let body = format!(
+            "type_time={}&time={}",
+            urlencoding::encode(type_time),
+            urlencoding::encode(time)
+        );
+
+        let response = self
+            .client
+            .post(&url)
+            .headers(headers)
+            .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header("Origin", self.site_base_url.as_str())
+            .body(body)
+            .send()
+            .await
+            .context("Error al actualizar tiempos de la card")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+
+        Ok(response.json().await?)
+    }
+
+    /// POST board-card dates API (`start_date` or `due_date` as YYYY-MM-DD).
+    pub async fn set_card_date(
+        &self,
+        board_id: u64,
+        card_id: u64,
+        field: &str,
+        value: &str,
+    ) -> Result<()> {
+        let (url, headers) = {
+            let config = self.config.lock().await;
+            let url = format!(
+                "{}/boards/care/boards/{}/card/{}/dates/",
+                self.api_base_url, board_id, card_id
+            );
+            let headers = self.build_headers(&config)?;
+            (url, headers)
+        };
+
+        let body = format!(
+            "{}={}",
+            urlencoding::encode(field),
+            urlencoding::encode(value)
+        );
+
+        let response = self
+            .client
+            .post(&url)
+            .headers(headers)
+            .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header("Origin", self.site_base_url.as_str())
+            .body(body)
+            .send()
+            .await
+            .context("Error al actualizar fechas de la card")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
         }
 
         Ok(())

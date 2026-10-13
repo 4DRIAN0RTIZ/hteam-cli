@@ -21,7 +21,7 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 use crate::client::HteamClient;
 use crate::operations::{self, Session};
 
-use app::{App, HelpContext};
+use app::{App, HelpContext}; // DetailField used via events
 use theme::Theme;
 
 struct TerminalGuard {
@@ -299,6 +299,31 @@ async fn run_loop(
             continue;
         }
 
+        if app.show_task_detail {
+            if app.editing_detail_field {
+                match key.code {
+                    KeyCode::Esc => events::cancel_edit_detail_field(app),
+                    KeyCode::Enter => events::submit_detail_field(client.clone(), app, &jobs),
+                    KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        events::submit_detail_field(client.clone(), app, &jobs)
+                    }
+                    KeyCode::Backspace => events::detail_edit_backspace(app),
+                    KeyCode::Char(c) => events::detail_edit_push(app, c),
+                    _ => {}
+                }
+            } else {
+                match key.code {
+                    KeyCode::Esc | KeyCode::Char('q') => events::close_task_detail(app),
+                    KeyCode::Char('j') | KeyCode::Down => events::detail_move_field(app, 1),
+                    KeyCode::Char('k') | KeyCode::Up => events::detail_move_field(app, -1),
+                    KeyCode::Char('e') => events::start_edit_detail_field(app),
+                    KeyCode::Char('?') => events::open_help(app, HelpContext::TaskDetail),
+                    _ => {}
+                }
+            }
+            continue;
+        }
+
         if app.show_description {
             match key.code {
                 KeyCode::Esc => events::close_description(app),
@@ -494,6 +519,7 @@ async fn run_loop(
             KeyCode::Char('B') => events::open_board_switch(client.clone(), app, &jobs),
             KeyCode::Char('/') => events::open_card_search(app),
             KeyCode::Char('X') => events::clear_card_search(app),
+            KeyCode::Char('d') => events::open_task_detail(client.clone(), app, &jobs),
             KeyCode::Char('?') => events::open_help(app, HelpContext::Board),
             KeyCode::Enter => events::open_description(app),
             _ => {}
