@@ -8,7 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Bug Fixes
-- *(tui)* Size board cards by wrapped title lines
 - *(client)* Fetch all cards when list exceeds default page size
 - *(i18n)* Use neutral Spanish in update prompts
 - *(tui)* Load times and labels from board-card into detail
@@ -20,7 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ### Documentation
-- *(openwiki)* Refresh architecture and quickstart pages
 - *(client)* Translate cards pagination comment to English
 - *(openwiki)* Document HTML task edit form contract
 
@@ -41,6 +39,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(cards)* Edit start and due dates
 - *(cards)* Record estimates and spent time
 - *(cards)* Record estimates and spent time
+
+## [0.9.1] - 2026-10-01
+
+### Bug Fixes
+- *(tui)* Size board cards by wrapped title lines
+
+
+### Documentation
+- *(openwiki)* Refresh architecture and quickstart pages
 
 ## [0.9.0] - 2026-09-11
 
