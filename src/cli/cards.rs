@@ -11,6 +11,8 @@ pub enum CardsCommands {
     Lists,
     /// Ver cards de una lista
     List(ListCardsArgs),
+    /// Buscar y filtrar cards del board (texto, responsable, prioridad, labels)
+    Search(SearchArgs),
     /// Ver detalle de un card
     Detail(DetailArgs),
     /// Copiar el link de un card al portapapeles
@@ -19,6 +21,14 @@ pub enum CardsCommands {
     Create(CreateArgs),
     /// Mover un card
     Move(MoveArgs),
+    /// Cerrar una task (POST close/ de la familia operation o project)
+    Close(LifecycleArgs),
+    /// Reabrir una task (POST reopen/ de la familia operation o project)
+    Reopen(LifecycleArgs),
+    /// Editar fechas de inicio y/o vencimiento (board-card dates/, YYYY-MM-DD)
+    Dates(DatesArgs),
+    /// Fijar estimado y/o registrar tiempo gastado (board-card times/)
+    Time(TimeArgs),
     /// Actualizar descripción
     UpdateDesc(UpdateDescArgs),
     /// Comentar en un card
@@ -43,6 +53,29 @@ pub enum CardsCommands {
 pub struct ListCardsArgs {
     /// ID de la lista
     pub list_id: u64,
+}
+
+#[derive(Args, Debug)]
+pub struct SearchArgs {
+    /// Texto libre (nombre o descripción, case-insensitive)
+    #[arg(short = 'q', long)]
+    pub query: Option<String>,
+
+    /// Filtrar por responsable (username/email o id numérico)
+    #[arg(long)]
+    pub responsible: Option<String>,
+
+    /// Filtrar por prioridad (1=alta, 2=media, 3=baja u otro valor del API)
+    #[arg(long)]
+    pub priority: Option<String>,
+
+    /// Label requerida (repetible; AND entre labels)
+    #[arg(long = "label")]
+    pub labels: Vec<String>,
+
+    /// Limitar a una lista del board
+    #[arg(long)]
+    pub list_id: Option<u64>,
 }
 
 #[derive(Args, Debug)]
@@ -84,6 +117,44 @@ pub struct MoveArgs {
     /// Lista origen (opcional)
     #[arg(short, long)]
     pub from: Option<u64>,
+}
+
+#[derive(Args, Debug)]
+pub struct LifecycleArgs {
+    /// ID de la task / card
+    pub card_id: u64,
+
+    /// Familia API: `operation` o `project`. Si se omite, se infiere del `title_url` de la task.
+    #[arg(long)]
+    pub family: Option<String>,
+}
+
+#[derive(Args, Debug)]
+pub struct DatesArgs {
+    /// ID de la task / card
+    pub card_id: u64,
+
+    /// Fecha de inicio (YYYY-MM-DD)
+    #[arg(long)]
+    pub start: Option<String>,
+
+    /// Fecha de vencimiento (YYYY-MM-DD)
+    #[arg(long)]
+    pub due: Option<String>,
+}
+
+#[derive(Args, Debug)]
+pub struct TimeArgs {
+    /// ID de la task / card
+    pub card_id: u64,
+
+    /// Estimado (ej. 1h 30m)
+    #[arg(long)]
+    pub estimate: Option<String>,
+
+    /// Tiempo gastado (ej. 45m; +30m suma al acumulado)
+    #[arg(long)]
+    pub spent: Option<String>,
 }
 
 #[derive(Args, Debug)]
@@ -174,10 +245,15 @@ pub async fn execute(cmd: CardsCommands, board: Option<u64>, json: bool) -> Resu
     match cmd {
         CardsCommands::Lists => lists(board, json).await,
         CardsCommands::List(args) => list_cards(args, board, json).await,
+        CardsCommands::Search(args) => search_cards(args, board, json).await,
         CardsCommands::Detail(args) => card_detail(args, json).await,
         CardsCommands::Link(args) => card_link(args, board, json).await,
         CardsCommands::Create(args) => create_card(args, json).await,
         CardsCommands::Move(args) => move_card(args, board, json).await,
+        CardsCommands::Close(args) => close_card(args, json).await,
+        CardsCommands::Reopen(args) => reopen_card(args, json).await,
+        CardsCommands::Dates(args) => set_dates(args, board, json).await,
+        CardsCommands::Time(args) => set_time(args, board, json).await,
         CardsCommands::UpdateDesc(args) => update_desc(args, json).await,
         CardsCommands::Comment(args) => post_comment(args, board, json).await,
         CardsCommands::Comments(args) => list_comments(args, json).await,
@@ -240,6 +316,87 @@ async fn list_cards(args: ListCardsArgs, board: Option<u64>, json: bool) -> Resu
     Ok(())
 }
 
+async fn search_cards(args: SearchArgs, board: Option<u64>, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+
+    let filters = operations::cards::CardSearchFilters {
+        text: args.query,
+        responsible: args.responsible,
+        priority: args.priority,
+        labels: args.labels,
+    };
+    if filters.is_empty() && args.list_id.is_none() && !json {
+        eprintln!(
+            "{} Sin filtros: se listarán todas las cards del board (puede tardar).",
+            "ℹ".blue()
+        );
+    }
+    let scope = operations::cards::CardSearchScope {
+        board,
+        list_id: args.list_id,
+    };
+
+    let hits = operations::cards::search(&session.client, scope, filters).await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&hits)?);
+        return Ok(());
+    }
+
+    if hits.is_empty() {
+        println!("⚠️  Ninguna card coincide con los filtros.");
+        return Ok(());
+    }
+
+    #[derive(tabled::Tabled)]
+    struct Row {
+        #[tabled(rename = "Lista")]
+        list: String,
+        #[tabled(rename = "List ID")]
+        list_id: u64,
+        #[tabled(rename = "ID")]
+        id: u64,
+        #[tabled(rename = "Nombre")]
+        name: String,
+        #[tabled(rename = "Responsable")]
+        responsible: String,
+        #[tabled(rename = "Labels")]
+        labels: String,
+    }
+
+    let rows: Vec<Row> = hits
+        .iter()
+        .map(|h| Row {
+            list: h.list_name.clone(),
+            list_id: h.list_id,
+            id: h.card.id,
+            name: h.card.name.clone(),
+            responsible: h
+                .card
+                .responsible
+                .as_ref()
+                .and_then(operations::cards::responsible_display)
+                .unwrap_or_else(|| "-".into()),
+            labels: h
+                .card
+                .labels
+                .iter()
+                .map(|l| l.name.as_str())
+                .collect::<Vec<_>>()
+                .join(", "),
+        })
+        .collect();
+
+    let mut table = Table::new(&rows);
+    table.with(Style::rounded());
+
+    println!("\n🔍 {} card(s):\n", rows.len());
+    println!("{}", table);
+    println!();
+
+    Ok(())
+}
+
 pub async fn open_cards(board: Option<u64>, json: bool) -> Result<()> {
     let session = Session::open().await?;
 
@@ -293,7 +450,7 @@ pub async fn closed_cards(board: Option<u64>, json: bool) -> Result<()> {
 async fn card_detail(args: DetailArgs, json: bool) -> Result<()> {
     let session = Session::open().await?;
 
-    let detail = operations::cards::card_detail(&session.client, args.card_id).await?;
+    let detail = operations::cards::card_detail_enriched(&session.client, args.card_id).await?;
 
     if json {
         println!("{}", serde_json::to_string_pretty(&detail)?);
@@ -313,6 +470,10 @@ async fn card_detail(args: DetailArgs, json: bool) -> Result<()> {
         let labels: Vec<String> = detail.labels.iter().map(|l| l.name.clone()).collect();
         println!("   Labels: {}", labels.join(", "));
     }
+
+    let estimate = detail.time_estimated.as_deref().unwrap_or("-");
+    let spent = detail.time_spend.as_deref().unwrap_or("-");
+    println!("   Tiempo: estimado {estimate} · gastado {spent}");
 
     if let Some(desc) = detail.description {
         println!("\n   Descripción:\n   {}", desc);
@@ -391,6 +552,105 @@ async fn move_card(args: MoveArgs, board: Option<u64>, json: bool) -> Result<()>
     );
     println!();
 
+    Ok(())
+}
+
+async fn close_card(args: LifecycleArgs, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+    let result =
+        operations::cards::close_card(&session.client, args.card_id, args.family.as_deref())
+            .await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&result)?);
+        return Ok(());
+    }
+
+    println!(
+        "\n✅ Task {} cerrada (familia {})\n   {}\n",
+        result.card_id, result.family, result.status
+    );
+    Ok(())
+}
+
+async fn reopen_card(args: LifecycleArgs, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+    let result =
+        operations::cards::reopen_card(&session.client, args.card_id, args.family.as_deref())
+            .await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&result)?);
+        return Ok(());
+    }
+
+    println!(
+        "\n✅ Task {} reabierta (familia {})\n   {}\n",
+        result.card_id, result.family, result.status
+    );
+    Ok(())
+}
+
+async fn set_dates(args: DatesArgs, board: Option<u64>, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+    let result = operations::cards::set_dates(
+        &session.client,
+        args.card_id,
+        board,
+        args.start.as_deref(),
+        args.due.as_deref(),
+    )
+    .await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&result)?);
+        return Ok(());
+    }
+
+    println!(
+        "\n✅ Fechas actualizadas para task {} (board_id {})",
+        result.card_id, result.board_id
+    );
+    if let Some(d) = &result.start_date {
+        println!("   start: {d}");
+    }
+    if let Some(d) = &result.due_date {
+        println!("   due:   {d}");
+    }
+    println!();
+    Ok(())
+}
+
+async fn set_time(args: TimeArgs, board: Option<u64>, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+    let result = operations::cards::set_times(
+        &session.client,
+        args.card_id,
+        board,
+        args.estimate.as_deref(),
+        args.spent.as_deref(),
+    )
+    .await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&result)?);
+        return Ok(());
+    }
+
+    println!(
+        "\n✅ Tiempo actualizado para task {} (board_id {})",
+        result.card_id, result.board_id
+    );
+    if let Some(value) = &result.estimate {
+        println!("   estimado: {value}");
+    }
+    if let Some(value) = &result.spent {
+        println!("   gastado:  {value}");
+    }
+    for warning in &result.warnings {
+        println!("   ⚠️  {warning}");
+    }
+    println!();
     Ok(())
 }
 

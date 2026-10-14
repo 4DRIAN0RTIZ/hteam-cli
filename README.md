@@ -63,12 +63,29 @@ hteam cards create --name "Fix login bug" --list-id 3
 hteam cards move 12345 --to 2
 hteam cards move 12345 --to 2 --from 1
 
+# Cerrar / reabrir task (POST close|reopen de la familia operation o project;
+# no asume IDs de lista. --family es opcional y se infiere del title_url)
+hteam cards close 12345
+hteam cards close 12345 --family operation
+hteam cards reopen 12345
+hteam cards reopen 6005 --family project
+
+# Fechas de inicio / vencimiento (YYYY-MM-DD; usa board_id interno, no el de la operación)
+hteam cards dates 12345 --start 2026-10-14
+hteam cards dates 12345 --due 2026-10-20
+hteam cards dates 12345 --start 2026-10-14 --due 2026-10-20
+
+# Estimado y tiempo gastado (usa + para sumar al acumulado)
+hteam cards time 12345 --estimate "1h 30m"
+hteam cards time 12345 --spent 45m
+hteam cards time 12345 --spent +30m
+
 # Actualizar descripción (rápido)
 hteam cards update-desc 12345 --description "Nueva descripción"
 
 # Actualizar campos completos (uno o más)
 hteam cards update 12345 --name "Nuevo nombre"
-hteam cards update 12345 --priority 1          # 1=alta 2=media 3=baja
+hteam cards update 12345 --priority 4          # 1=muy baja … 5=muy alta (form Hteam)
 hteam cards update 12345 --responsible usuario
 hteam cards update 12345 --name "X" --description "Y" --priority 2
 
@@ -134,6 +151,10 @@ Inicia el servidor MCP sobre **stdio**. Se integra con Claude Desktop, Claude Co
 | `cards_list` | Cards de una lista |
 | `cards_open` | Cards abiertos |
 | `cards_closed` | Cards cerrados |
+| `card_close` | Cerrar task (API close/, familia operation/project) |
+| `card_reopen` | Reabrir task (API reopen/) |
+| `card_dates` | Editar start/due (YYYY-MM-DD, board-card dates/) |
+| `card_time` | Fijar estimado o registrar tiempo gastado (times/) |
 | `card_detail` | Detalle completo de un card |
 | `card_labels` | Labels disponibles de un card |
 | `card_create` | Crear card |

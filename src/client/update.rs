@@ -101,7 +101,7 @@ fn gh_auth_token() -> Option<String> {
 /// autenticar" (401/403/404 sin haber mandado token).
 fn auth_hint(token: &Option<String>, status: StatusCode) -> &'static str {
     if token.is_none() && matches!(status.as_u16(), 401 | 403 | 404) {
-        " (¿hteam-cli es un repo privado? corré 'gh auth login' para autenticar)"
+        " (¿hteam-cli es un repo privado? ejecuta 'gh auth login' para autenticar)"
     } else {
         ""
     }

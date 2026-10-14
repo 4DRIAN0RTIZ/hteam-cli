@@ -5,6 +5,41 @@ All notable changes to hteam-cli will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Bug Fixes
+- *(client)* Fetch all cards when list exceeds default page size
+- *(i18n)* Use neutral Spanish in update prompts
+- *(tui)* Load times and labels from board-card into detail
+- *(tui)* Scroll list columns so the selected card stays visible
+- *(tui)* Show depends-on display string from task detail API
+- *(client)* Truncate start_date on task edit form
+- *(client)* Preserve form fields on partial task edit
+- *(tui)* Show and refresh priority from HTML edit form
+
+
+### Documentation
+- *(client)* Translate cards pagination comment to English
+- *(openwiki)* Document HTML task edit form contract
+
+
+### Features
+- *(tui)* Keep board interactive during network waits
+- *(tui)* Debounce mention user search while typing
+- *(tui)* Load board lists in parallel without dropping failed data
+- *(tui)* Show changelog and update-available popups on startup
+- *(operations)* Add shared card search and filter layer
+- *(cards)* Expose shared search on CLI and MCP
+- *(tui)* Filter board cards with / search
+- *(tui)* Task detail popup with field edit
+- *(tui)* Show and edit task dependence in detail
+- *(tui)* Dependence task picker and correct empty clear
+- *(cards)* Add close and reopen via task API families
+- *(cards)* Edit start and due dates
+- *(cards)* Edit start and due dates
+- *(cards)* Record estimates and spent time
+- *(cards)* Record estimates and spent time
+
 ## [0.9.1] - 2026-10-01
 
 ### Bug Fixes

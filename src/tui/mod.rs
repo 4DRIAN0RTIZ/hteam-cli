@@ -1,5 +1,6 @@
 mod app;
 mod events;
+mod net;
 pub mod theme;
 mod ui;
 mod widgets;
@@ -20,7 +21,7 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 use crate::client::HteamClient;
 use crate::operations::{self, Session};
 
-use app::{App, HelpContext};
+use app::{App, HelpContext}; // DetailField used via events
 use theme::Theme;
 
 struct TerminalGuard {
@@ -123,14 +124,18 @@ pub async fn run(board: Option<u64>) -> Result<()> {
         working_hours,
         theme,
     );
-    if let Some(status) = update_notice().await {
-        app.set_status(status);
+    let notice = update_notice().await;
+    net::refresh_all_blocking(&client, &mut app).await;
+    // Después del refresh a propósito: limpia el status al terminar si todo
+    // cargó bien, así que cualquier mensaje puesto antes se pierde. Reaplicar
+    // avisos de arranque acá. Un tema personalizado roto gana sobre el footer
+    // de "nueva versión"; el changelog va en popup, no al footer.
+    if let Some(text) = notice.changelog {
+        events::open_startup_changelog(&mut app, text);
     }
-    events::refresh_all(&client, &mut app).await;
-    // Después de refresh_all a propósito: refresh_all limpia el status al
-    // terminar si todo cargó bien, así que cualquier mensaje puesto antes
-    // (incluido el de update_notice, arriba) se pierde. Un tema personalizado
-    // roto es más importante que eso — que sobreviva.
+    if let Some(info) = notice.update {
+        events::open_update_available(&mut app, info);
+    }
     if let Some(warning) = theme_warning {
         app.set_status(warning);
     }
@@ -140,37 +145,47 @@ pub async fn run(board: Option<u64>) -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
     terminal.clear()?;
 
-    let result = run_loop(&mut terminal, &client, &mut app).await;
+    let result = run_loop(&mut terminal, client, &mut app).await;
 
     drop(guard);
     result
 }
 
+/// Result of the silent startup update check: full changelog and/or a newer
+/// release notice for dedicated TUI popups.
+struct StartupUpdateNotice {
+    changelog: Option<String>,
+    update: Option<app::UpdateAvailableInfo>,
+}
+
 /// Chequea (con el mismo cache TTL que `hteam` usa en CLI) si hay una
 /// versión nueva publicada en GitHub y si corresponde mostrar el changelog
-/// post-actualización, devolviendo un mensaje corto para el footer del TUI
-/// (`app.set_status`) en vez del changelog completo — no hay espacio para
-/// volcarlo entero en una línea de estado. Usa su propio `Config::load()`/
-/// `save()`, independiente de `session.config`, mismo patrón que el popup
-/// de objetivos semanales. Cualquier error (config corrupta, sin red) se
-/// ignora en silencio: nunca debe impedir que el TUI arranque.
-async fn update_notice() -> Option<String> {
+/// post-actualización. Ambos van a popups de la TUI (changelog primero;
+/// Update Available al cerrarlo o solo). Usa su propio `Config::load()`/
+/// `save()`. Cualquier error se ignora en silencio: nunca debe impedir que
+/// el TUI arranque.
+async fn update_notice() -> StartupUpdateNotice {
     use crate::config::Config;
 
-    let mut config = Config::load().ok()?;
+    let empty = StartupUpdateNotice {
+        changelog: None,
+        update: None,
+    };
+    let mut config = match Config::load() {
+        Ok(c) => c,
+        Err(_) => return empty,
+    };
     let mut dirty = false;
-    let mut parts: Vec<String> = Vec::new();
 
-    if operations::update::resolve_startup_changelog(
+    let changelog = operations::update::resolve_startup_changelog(
         &mut config,
         operations::update::EMBEDDED_CHANGELOG,
-    )
-    .is_some()
-    {
-        parts.push("hteam se actualizó, ver CHANGELOG.md".to_string());
+    );
+    if changelog.is_some() {
         dirty = true;
     }
 
+    let mut update = None;
     if let Ok(result) =
         operations::update::check_for_update(&mut config, crate::client::update::GITHUB_API_BASE)
             .await
@@ -178,10 +193,10 @@ async fn update_notice() -> Option<String> {
         dirty = dirty || !result.from_cache;
 
         if result.update_available {
-            parts.push(format!(
-                "nueva versión {} disponible, corré `hteam update`",
-                result.latest_version
-            ));
+            update = Some(app::UpdateAvailableInfo {
+                current_version: result.current_version,
+                latest_version: result.latest_version,
+            });
         }
     }
 
@@ -189,11 +204,7 @@ async fn update_notice() -> Option<String> {
         let _ = config.save();
     }
 
-    if parts.is_empty() {
-        None
-    } else {
-        Some(parts.join(" · "))
-    }
+    StartupUpdateNotice { changelog, update }
 }
 
 /// How long a footer confirmation/error message (e.g. "Descripción
@@ -202,14 +213,22 @@ const STATUS_TTL: Duration = Duration::from_secs(3);
 
 async fn run_loop(
     terminal: &mut Terminal<CrosstermBackend<Stdout>>,
-    client: &Arc<HteamClient>,
+    client: Arc<HteamClient>,
     app: &mut App,
 ) -> Result<()> {
+    let (jobs, mut job_rx) = net::Jobs::channel();
+
     loop {
+        while let Ok(outcome) = job_rx.try_recv() {
+            net::apply_outcome(app, outcome);
+        }
+
+        events::poll_mention_debounce(client.clone(), app, &jobs);
+
         app.expire_status(STATUS_TTL);
         terminal.draw(|f| ui::draw(f, app))?;
 
-        if !event::poll(Duration::from_millis(200))? {
+        if !event::poll(Duration::from_millis(50))? {
             continue;
         }
 
@@ -230,10 +249,36 @@ async fn run_loop(
             continue;
         }
 
+        if app.show_changelog {
+            match key.code {
+                KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter => {
+                    events::close_startup_changelog(app)
+                }
+                KeyCode::Char('c') => events::copy_changelog_link(app),
+                KeyCode::Char('j') | KeyCode::Down => app.changelog_scroll.by(1),
+                KeyCode::Char('k') | KeyCode::Up => app.changelog_scroll.by(-1),
+                _ => {}
+            }
+            continue;
+        }
+
+        if app.show_update_available {
+            match key.code {
+                KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter => {
+                    events::close_update_available(app)
+                }
+                KeyCode::Char('c') => events::copy_releases_link(app),
+                _ => {}
+            }
+            continue;
+        }
+
         if app.show_reminders {
             match key.code {
                 KeyCode::Esc | KeyCode::Char('q') => events::close_reminders(app),
-                KeyCode::Char('a') => events::add_reminder_for_current_card(client, app).await,
+                KeyCode::Char('a') => {
+                    events::add_reminder_for_current_card(client.clone(), app, &jobs)
+                }
                 KeyCode::Char('j') | KeyCode::Down => app.reminders_scroll.by(1),
                 KeyCode::Char('k') | KeyCode::Up => app.reminders_scroll.by(-1),
                 KeyCode::Char('?') => events::open_help(app, HelpContext::Reminders),
@@ -245,11 +290,67 @@ async fn run_loop(
         if app.show_weekly_objectives {
             match key.code {
                 KeyCode::Esc | KeyCode::Char('q') => events::close_weekly_objectives(app),
-                KeyCode::Char('f') => events::open_weekly_objectives(app, true).await,
+                KeyCode::Char('f') => events::open_weekly_objectives(app, &jobs, true),
                 KeyCode::Char('j') | KeyCode::Down => app.weekly_objectives_scroll.by(1),
                 KeyCode::Char('k') | KeyCode::Up => app.weekly_objectives_scroll.by(-1),
                 KeyCode::Char('?') => events::open_help(app, HelpContext::WeeklyObjectives),
                 _ => {}
+            }
+            continue;
+        }
+
+        if app.show_task_detail {
+            if app.picking_dependence {
+                match key.code {
+                    KeyCode::Esc => events::cancel_edit_detail_field(app),
+                    KeyCode::Enter => events::confirm_dependence_picker(client.clone(), app, &jobs),
+                    KeyCode::Char('j') | KeyCode::Down => events::dependence_picker_move(app, 1),
+                    KeyCode::Char('k') | KeyCode::Up => events::dependence_picker_move(app, -1),
+                    KeyCode::Char('x') => events::clear_dependence(client.clone(), app, &jobs),
+                    KeyCode::Backspace => {
+                        app.dependence_picker_filter.backspace();
+                        let idxs = events::filtered_dependence_picker_indices(app);
+                        if !idxs.is_empty() && !idxs.contains(&app.dependence_picker_idx) {
+                            app.dependence_picker_idx = idxs[0];
+                        }
+                    }
+                    KeyCode::Char(c) if !c.is_control() => {
+                        app.dependence_picker_filter.push(c);
+                        let idxs = events::filtered_dependence_picker_indices(app);
+                        if !idxs.is_empty() {
+                            app.dependence_picker_idx = idxs[0];
+                        }
+                    }
+                    _ => {}
+                }
+            } else if app.editing_detail_field {
+                match key.code {
+                    KeyCode::Esc => events::cancel_edit_detail_field(app),
+                    KeyCode::Enter => events::submit_detail_field(client.clone(), app, &jobs),
+                    KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        events::submit_detail_field(client.clone(), app, &jobs)
+                    }
+                    KeyCode::Backspace => events::detail_edit_backspace(app),
+                    KeyCode::Char(c) => events::detail_edit_push(app, c),
+                    _ => {}
+                }
+            } else {
+                match key.code {
+                    KeyCode::Esc | KeyCode::Char('q') => events::close_task_detail(app),
+                    KeyCode::Char('j') | KeyCode::Down => events::detail_move_field(app, 1),
+                    KeyCode::Char('k') | KeyCode::Up => events::detail_move_field(app, -1),
+                    KeyCode::Char('e') => events::start_edit_detail_field(app),
+                    KeyCode::Enter => {
+                        use app::DetailField;
+                        let field = DetailField::ALL
+                            [app.task_detail_field_idx.min(DetailField::ALL.len() - 1)];
+                        if field == DetailField::Dependence {
+                            events::jump_to_dependence(client.clone(), app, &jobs);
+                        }
+                    }
+                    KeyCode::Char('?') => events::open_help(app, HelpContext::TaskDetail),
+                    _ => {}
+                }
             }
             continue;
         }
@@ -260,7 +361,7 @@ async fn run_loop(
                 KeyCode::Enter => app.description_input.push('\n'),
                 KeyCode::Backspace => events::description_input_backspace(app),
                 KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                    events::submit_description(client, app).await;
+                    events::submit_description(client.clone(), app, &jobs);
                 }
                 KeyCode::Char(c) => events::description_input_push(app, c),
                 _ => {}
@@ -272,8 +373,9 @@ async fn run_loop(
             if app.composing_comment {
                 match key.code {
                     KeyCode::Esc => {
-                        if !app.mention_suggestions.is_empty() {
-                            app.mention_suggestions.clear();
+                        if !app.mention_suggestions.is_empty() || app.mention_debounce_at.is_some()
+                        {
+                            events::clear_mention_state(app);
                         } else {
                             events::cancel_composing_comment(app);
                         }
@@ -292,11 +394,11 @@ async fn run_loop(
                         if app.comment_date_focused {
                             events::comment_date_input_backspace(app);
                         } else {
-                            events::comment_input_backspace(client, app).await;
+                            events::comment_input_backspace(app);
                         }
                     }
                     KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                        events::submit_comment(client, app).await;
+                        events::submit_comment(client.clone(), app, &jobs);
                     }
                     KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         events::toggle_comment_follow(app);
@@ -305,7 +407,7 @@ async fn run_loop(
                         if app.comment_date_focused {
                             events::comment_date_input_push(app, c);
                         } else {
-                            events::comment_input_push(client, app, c).await;
+                            events::comment_input_push(app, c);
                         }
                     }
                     _ => {}
@@ -317,10 +419,10 @@ async fn run_loop(
                     KeyCode::Char('j') | KeyCode::Down => app.comments_scroll.by(1),
                     KeyCode::Char('k') | KeyCode::Up => app.comments_scroll.by(-1),
                     KeyCode::Char('v') if app.current_follow_up.is_some() => {
-                        events::complete_current_follow_up(client, app).await;
+                        events::complete_current_follow_up(client.clone(), app, &jobs);
                     }
                     KeyCode::Char('x') if app.current_follow_up.is_some() => {
-                        events::cancel_current_follow_up(client, app).await;
+                        events::cancel_current_follow_up(client.clone(), app, &jobs);
                     }
                     KeyCode::Char('?') => events::open_help(app, HelpContext::Comments),
                     _ => {}
@@ -333,7 +435,7 @@ async fn run_loop(
             if app.composing_project {
                 match key.code {
                     KeyCode::Esc => events::cancel_composing_project(app),
-                    KeyCode::Enter => events::submit_project_input(client, app).await,
+                    KeyCode::Enter => events::submit_project_input(client.clone(), app, &jobs),
                     KeyCode::Backspace => events::project_input_backspace(app),
                     KeyCode::Char(c) => events::project_input_push(app, c),
                     _ => {}
@@ -341,7 +443,7 @@ async fn run_loop(
             } else if app.show_live_projects {
                 match key.code {
                     KeyCode::Esc | KeyCode::Char('L') => {
-                        events::toggle_live_projects(client, app).await;
+                        events::toggle_live_projects(client.clone(), app, &jobs);
                     }
                     KeyCode::Char('q') => events::close_projects(app),
                     KeyCode::Char('j') | KeyCode::Down => {
@@ -351,13 +453,13 @@ async fn run_loop(
                         events::move_live_project_selection(app, -1);
                     }
                     KeyCode::Char('h') | KeyCode::Left => {
-                        events::cycle_live_projects_status(client, app, -1).await;
+                        events::cycle_live_projects_status(client.clone(), app, &jobs, -1);
                     }
                     KeyCode::Char('l') | KeyCode::Right => {
-                        events::cycle_live_projects_status(client, app, 1).await;
+                        events::cycle_live_projects_status(client.clone(), app, &jobs, 1);
                     }
-                    KeyCode::Enter => events::select_live_project(client, app).await,
-                    KeyCode::Char('c') => events::copy_project_link(client, app),
+                    KeyCode::Enter => events::select_live_project(client.clone(), app, &jobs),
+                    KeyCode::Char('c') => events::copy_project_link(&client, app),
                     KeyCode::Char('?') => events::open_help(app, HelpContext::Projects),
                     _ => {}
                 }
@@ -365,7 +467,7 @@ async fn run_loop(
                 match key.code {
                     KeyCode::Esc | KeyCode::Char('q') => events::close_projects(app),
                     KeyCode::Char('a') => events::start_composing_project(app),
-                    KeyCode::Char('L') => events::toggle_live_projects(client, app).await,
+                    KeyCode::Char('L') => events::toggle_live_projects(client.clone(), app, &jobs),
                     KeyCode::Tab => events::toggle_projects_focus(app),
                     KeyCode::Char('j') | KeyCode::Down => {
                         if app.projects_detail_focused {
@@ -382,9 +484,9 @@ async fn run_loop(
                         }
                     }
                     KeyCode::Enter if !app.projects_detail_focused => {
-                        events::select_known_project(client, app).await;
+                        events::select_known_project(client.clone(), app, &jobs);
                     }
-                    KeyCode::Char('c') => events::copy_project_link(client, app),
+                    KeyCode::Char('c') => events::copy_project_link(&client, app),
                     KeyCode::Char('?') => events::open_help(app, HelpContext::Projects),
                     _ => {}
                 }
@@ -397,8 +499,8 @@ async fn run_loop(
                 KeyCode::Esc | KeyCode::Char('q') => events::close_board_switch(app),
                 KeyCode::Char('j') | KeyCode::Down => events::move_board_selection(app, 1),
                 KeyCode::Char('k') | KeyCode::Up => events::move_board_selection(app, -1),
-                KeyCode::Enter => events::select_current_board(client, app).await,
-                KeyCode::Char('r') => events::open_board_switch(client, app).await,
+                KeyCode::Enter => events::select_current_board(client.clone(), app, &jobs),
+                KeyCode::Char('r') => events::open_board_switch(client.clone(), app, &jobs),
                 KeyCode::Char('?') => events::open_help(app, HelpContext::BoardSwitch),
                 _ => {}
             }
@@ -408,9 +510,20 @@ async fn run_loop(
         if app.composing_card {
             match key.code {
                 KeyCode::Esc => events::cancel_composing_card(app),
-                KeyCode::Enter => events::submit_new_card(client, app).await,
+                KeyCode::Enter => events::submit_new_card(client.clone(), app, &jobs),
                 KeyCode::Backspace => events::new_card_input_backspace(app),
                 KeyCode::Char(c) => events::new_card_input_push(app, c),
+                _ => {}
+            }
+            continue;
+        }
+
+        if app.composing_search {
+            match key.code {
+                KeyCode::Esc => events::cancel_card_search(app),
+                KeyCode::Enter => events::confirm_card_search(app),
+                KeyCode::Backspace => events::search_input_backspace(app),
+                KeyCode::Char(c) => events::search_input_push(app, c),
                 _ => {}
             }
             continue;
@@ -422,19 +535,22 @@ async fn run_loop(
             KeyCode::Char('k') | KeyCode::Up => app.move_selection(-1),
             KeyCode::Char('h') | KeyCode::Left => app.move_list(-1),
             KeyCode::Char('l') | KeyCode::Right => app.move_list(1),
-            KeyCode::Char('H') => events::move_active_card(client, app, -1).await,
-            KeyCode::Char('L') => events::move_active_card(client, app, 1).await,
+            KeyCode::Char('H') => events::move_active_card(client.clone(), app, &jobs, -1),
+            KeyCode::Char('L') => events::move_active_card(client.clone(), app, &jobs, 1),
             KeyCode::Char('v') => events::toggle_hide_current_list(app),
             KeyCode::Char('V') => events::show_all_lists(app),
-            KeyCode::Char('R') => events::open_reminders(client, app).await,
-            KeyCode::Char('O') => events::open_weekly_objectives(app, false).await,
-            KeyCode::Char('C') => events::open_comments(client, app).await,
-            KeyCode::Char('c') => events::copy_card_link(client, app).await,
-            KeyCode::Char('P') => events::open_projects(client, app).await,
+            KeyCode::Char('R') => events::open_reminders(client.clone(), app, &jobs),
+            KeyCode::Char('O') => events::open_weekly_objectives(app, &jobs, false),
+            KeyCode::Char('C') => events::open_comments(client.clone(), app, &jobs),
+            KeyCode::Char('c') => events::copy_card_link(client.clone(), app, &jobs),
+            KeyCode::Char('P') => events::open_projects(client.clone(), app, &jobs),
             KeyCode::Char('n') => events::start_composing_card(app),
-            KeyCode::Char('w') => events::toggle_working_on(client, app).await,
-            KeyCode::Char('r') => events::refresh_all(client, app).await,
-            KeyCode::Char('B') => events::open_board_switch(client, app).await,
+            KeyCode::Char('w') => events::toggle_working_on(client.clone(), app, &jobs),
+            KeyCode::Char('r') => events::request_refresh_all(client.clone(), app, &jobs),
+            KeyCode::Char('B') => events::open_board_switch(client.clone(), app, &jobs),
+            KeyCode::Char('/') => events::open_card_search(app),
+            KeyCode::Char('X') => events::clear_card_search(app),
+            KeyCode::Char('d') => events::open_task_detail(client.clone(), app, &jobs),
             KeyCode::Char('?') => events::open_help(app, HelpContext::Board),
             KeyCode::Enter => events::open_description(app),
             _ => {}

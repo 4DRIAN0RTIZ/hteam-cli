@@ -5,12 +5,20 @@ use std::time::{Duration, Instant};
 
 use crate::config::WorkingHoursConfig;
 use crate::models::{
-    BoardEntry, Card, Comment, FollowUp, List, ProjectMilestone, ProjectSummary, ProjectTask,
-    Reminder, UserSuggestion, WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
+    BoardEntry, Card, CardDetail, Comment, FollowUp, List, ProjectMilestone, ProjectSummary,
+    ProjectTask, Reminder, UserSuggestion, WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
 };
+use crate::operations::cards::CardSearchFilters;
 
 use super::theme::Theme;
 use super::widgets::{Scroll, TextInput};
+
+/// Current vs latest version for the startup "Update Available" popup.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UpdateAvailableInfo {
+    pub current_version: String,
+    pub latest_version: String,
+}
 
 /// Qué sección muestra el popup de ayuda ('?') — cada popup con muchos
 /// keybindings propios (que ya no entran en una sola línea de título sin
@@ -26,6 +34,62 @@ pub enum HelpContext {
     Comments,
     Projects,
     BoardSwitch,
+    TaskDetail,
+}
+
+/// Editable rows in the task-detail popup (`d` / `e`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DetailField {
+    Name,
+    Description,
+    Responsible,
+    Priority,
+    Dependence,
+    StartDate,
+    DueDate,
+    TimeEstimated,
+    TimeSpent,
+}
+
+impl DetailField {
+    pub const ALL: &'static [DetailField] = &[
+        DetailField::Name,
+        DetailField::Description,
+        DetailField::Responsible,
+        DetailField::Priority,
+        DetailField::Dependence,
+        DetailField::StartDate,
+        DetailField::DueDate,
+        DetailField::TimeEstimated,
+        DetailField::TimeSpent,
+    ];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            DetailField::Name => "Nombre",
+            DetailField::Description => "Descripción",
+            DetailField::Responsible => "Responsable",
+            DetailField::Priority => "Prioridad",
+            DetailField::Dependence => "Depende de",
+            DetailField::StartDate => "Inicio",
+            DetailField::DueDate => "Vencimiento",
+            DetailField::TimeEstimated => "Estimado",
+            DetailField::TimeSpent => "Gastado",
+        }
+    }
+
+    pub fn hint(self) -> &'static str {
+        match self {
+            DetailField::Name => "texto",
+            DetailField::Description => "texto (Ctrl+S guarda)",
+            DetailField::Responsible => "username",
+            DetailField::Priority => "1 muy baja … 5 muy alta",
+            DetailField::Dependence => "j/k elegir · Enter confirmar · / filtrar · Esc",
+
+            DetailField::StartDate | DetailField::DueDate => "YYYY-MM-DD",
+            DetailField::TimeEstimated | DetailField::TimeSpent => "ej. 1h · 45m · +30m",
+        }
+    }
 }
 
 pub struct App {
@@ -41,6 +105,11 @@ pub struct App {
     /// config.toml's `[tui] hidden_lists`).
     pub hidden_lists: HashSet<String>,
     pub cards_by_list: HashMap<u64, Vec<Card>>,
+    /// Active board card filters (`/` search). Empty = show all cards.
+    pub card_filters: CardSearchFilters,
+    /// True while typing a `/` search query in the footer bar.
+    pub composing_search: bool,
+    pub search_input: TextInput,
     /// The current user's active "working on it" records — keeps the record
     /// id around (not just the card id) since `stop_working` needs it, not
     /// the card id.
@@ -56,6 +125,27 @@ pub struct App {
     /// currently selected card's description inline.
     pub show_description: bool,
     pub description_input: TextInput,
+    /// Task detail popup (`d`) — full card sheet with field edit (`e`).
+    pub show_task_detail: bool,
+    pub task_detail: Option<CardDetail>,
+    pub task_detail_card_id: Option<u64>,
+    pub task_detail_list_id: Option<u64>,
+    pub task_detail_error: Option<String>,
+    /// Human label for depends-on (`#n name`) when resolved.
+    pub task_detail_dependence_label: Option<String>,
+    /// Internal task id for depends-on (jump), when known.
+    pub task_detail_dependence_id: Option<u64>,
+    pub task_detail_field_idx: usize,
+    /// Picker of board tasks while editing Depende de.
+    pub picking_dependence: bool,
+    pub dependence_picker_idx: usize,
+    pub dependence_picker_filter: TextInput,
+    /// Cached board tasks for the picker: (id, number, name).
+    pub dependence_picker_items: Vec<(u64, Option<u64>, String)>,
+    pub task_detail_scroll: Scroll,
+    /// Editing one field inside the detail popup.
+    pub editing_detail_field: bool,
+    pub detail_edit_input: TextInput,
     /// Comments of the card that was selected when 'C' was pressed.
     pub comments: Vec<Comment>,
     pub show_comments: bool,
@@ -75,6 +165,8 @@ pub struct App {
     pub comment_date_focused: bool,
     pub mention_suggestions: Vec<UserSuggestion>,
     pub mention_selected: usize,
+    /// When set, a mention search will fire after this instant (debounce).
+    pub mention_debounce_at: Option<Instant>,
     /// Project ids looked up before, most-recently-used first — mirrors
     /// `config.toml`'s `[tui] known_projects`.
     pub known_projects: Vec<u64>,
@@ -101,6 +193,12 @@ pub struct App {
     pub weekly_objectives_synced_at: Option<chrono::DateTime<chrono::Utc>>,
     pub weekly_objectives_error: Option<String>,
     pub show_weekly_objectives: bool,
+    /// Changelog text shown once after a binary update (startup popup).
+    pub startup_changelog: Option<String>,
+    pub show_changelog: bool,
+    /// Newer GitHub release noticed at startup (popup, not only footer).
+    pub update_available: Option<UpdateAvailableInfo>,
+    pub show_update_available: bool,
     /// True while typing a new project id inside the projects popup.
     pub composing_project: bool,
     pub project_input: TextInput,
@@ -123,6 +221,8 @@ pub struct App {
     pub reminders_scroll: Scroll,
     /// Scroll offset para el popup de objetivos semanales.
     pub weekly_objectives_scroll: Scroll,
+    /// Scroll offset for the post-update changelog popup.
+    pub changelog_scroll: Scroll,
     /// Scroll offset para la lista de comentarios (solo en modo lectura, no al componer).
     pub comments_scroll: Scroll,
     /// True cuando el foco del popup de proyectos está en el panel de detalle (derecha).
@@ -136,6 +236,94 @@ pub struct App {
     /// al iniciar el TUI. Todo el renderizado en `ui.rs` resuelve sus colores
     /// desde acá en vez de literales `Color::` sueltos.
     pub theme: Theme,
+    /// Monotonic ids so a late HTTP response cannot clobber a newer board or
+    /// popup request (see `tui::net`).
+    pub requests: RequestIds,
+    /// Non-expiring loading label, nested by concurrent background jobs.
+    pub busy_message: Option<String>,
+    pub busy_depth: u32,
+}
+
+/// Per-surface request tokens. Each bump invalidates in-flight responses for
+/// that surface when `net::apply_outcome` checks the id.
+#[derive(Debug, Default, Clone)]
+pub struct RequestIds {
+    pub board_refresh: u64,
+    pub comments: u64,
+    pub mentions: u64,
+    pub reminders: u64,
+    pub objectives: u64,
+    pub projects: u64,
+    pub live_projects: u64,
+    pub boards_popup: u64,
+    pub move_card: u64,
+    pub working: u64,
+    pub description: u64,
+    pub new_card: u64,
+    pub comment_post: u64,
+    pub follow_up: u64,
+    pub card_link: u64,
+    pub task_detail: u64,
+}
+
+impl RequestIds {
+    fn bump(slot: &mut u64) -> u64 {
+        *slot = slot.wrapping_add(1);
+        *slot
+    }
+
+    pub fn bump_board_refresh(&mut self) -> u64 {
+        Self::bump(&mut self.board_refresh)
+    }
+    pub fn bump_comments(&mut self) -> u64 {
+        Self::bump(&mut self.comments)
+    }
+    pub fn bump_mentions(&mut self) -> u64 {
+        Self::bump(&mut self.mentions)
+    }
+    pub fn bump_reminders(&mut self) -> u64 {
+        Self::bump(&mut self.reminders)
+    }
+    pub fn bump_objectives(&mut self) -> u64 {
+        Self::bump(&mut self.objectives)
+    }
+    pub fn bump_projects(&mut self) -> u64 {
+        Self::bump(&mut self.projects)
+    }
+    pub fn bump_live_projects(&mut self) -> u64 {
+        Self::bump(&mut self.live_projects)
+    }
+    pub fn bump_boards_popup(&mut self) -> u64 {
+        Self::bump(&mut self.boards_popup)
+    }
+    pub fn bump_move_card(&mut self) -> u64 {
+        Self::bump(&mut self.move_card)
+    }
+    pub fn bump_working(&mut self) -> u64 {
+        Self::bump(&mut self.working)
+    }
+    pub fn bump_description(&mut self) -> u64 {
+        Self::bump(&mut self.description)
+    }
+    pub fn bump_new_card(&mut self) -> u64 {
+        Self::bump(&mut self.new_card)
+    }
+    pub fn bump_comment_post(&mut self) -> u64 {
+        Self::bump(&mut self.comment_post)
+    }
+    pub fn bump_follow_up(&mut self) -> u64 {
+        Self::bump(&mut self.follow_up)
+    }
+    pub fn bump_card_link(&mut self) -> u64 {
+        Self::bump(&mut self.card_link)
+    }
+    pub fn bump_task_detail(&mut self) -> u64 {
+        Self::bump(&mut self.task_detail)
+    }
+
+    pub fn is_current_board_refresh(&self, id: u64, job_board: u64, app_board: u64) -> bool {
+        self.board_refresh == id && job_board == app_board
+    }
 }
 
 impl App {
@@ -152,6 +340,9 @@ impl App {
             all_lists: Vec::new(),
             hidden_lists,
             cards_by_list: HashMap::new(),
+            card_filters: CardSearchFilters::default(),
+            composing_search: false,
+            search_input: TextInput::default(),
             working_on: Vec::new(),
             selected_list: 0,
             selected_card: HashMap::new(),
@@ -161,6 +352,21 @@ impl App {
             show_reminders: false,
             show_description: false,
             description_input: TextInput::default(),
+            show_task_detail: false,
+            task_detail: None,
+            task_detail_card_id: None,
+            task_detail_list_id: None,
+            task_detail_error: None,
+            task_detail_dependence_label: None,
+            task_detail_dependence_id: None,
+            task_detail_field_idx: 0,
+            picking_dependence: false,
+            dependence_picker_idx: 0,
+            dependence_picker_filter: TextInput::default(),
+            dependence_picker_items: Vec::new(),
+            task_detail_scroll: Scroll::default(),
+            editing_detail_field: false,
+            detail_edit_input: TextInput::default(),
             comments: Vec::new(),
             show_comments: false,
             current_follow_up: None,
@@ -171,6 +377,7 @@ impl App {
             comment_date_focused: false,
             mention_suggestions: Vec::new(),
             mention_selected: 0,
+            mention_debounce_at: None,
             known_projects,
             selected_project_idx: 0,
             active_project: None,
@@ -189,6 +396,10 @@ impl App {
             weekly_objectives_synced_at: None,
             weekly_objectives_error: None,
             show_weekly_objectives: false,
+            startup_changelog: None,
+            show_changelog: false,
+            update_available: None,
+            show_update_available: false,
             composing_project: false,
             project_input: TextInput::default(),
             composing_card: false,
@@ -202,12 +413,46 @@ impl App {
             help_scroll: Scroll::default(),
             reminders_scroll: Scroll::default(),
             weekly_objectives_scroll: Scroll::default(),
+            changelog_scroll: Scroll::default(),
             comments_scroll: Scroll::default(),
             projects_detail_focused: false,
             projects_scroll: Scroll::default(),
             working_hours,
             theme,
+            requests: RequestIds::default(),
+            busy_message: None,
+            busy_depth: 0,
         }
+    }
+
+    pub fn begin_busy(&mut self, msg: impl Into<String>) {
+        self.busy_depth = self.busy_depth.saturating_add(1);
+        self.busy_message = Some(msg.into());
+    }
+
+    pub fn end_busy(&mut self) {
+        self.busy_depth = self.busy_depth.saturating_sub(1);
+        if self.busy_depth == 0 {
+            self.busy_message = None;
+        }
+    }
+
+    /// Footer text: non-expiring busy label wins over transient status.
+    pub fn footer_message(&self) -> Option<String> {
+        self.busy_message.clone().or_else(|| self.status.clone())
+    }
+
+    /// True while a board-list load is in flight (board-switch empty state).
+    pub fn is_loading_boards(&self) -> bool {
+        self.busy_message
+            .as_deref()
+            .map(|s| s.contains("Cargando"))
+            .unwrap_or(false)
+            || self
+                .status
+                .as_deref()
+                .map(|s| s.contains("Cargando"))
+                .unwrap_or(false)
     }
 
     /// Tiempo restante de la jornada, evaluado contra la hora local actual.
@@ -260,11 +505,24 @@ impl App {
         }
     }
 
+    /// Cards of `list_id` after applying [`Self::card_filters`].
+    pub fn view_cards(&self, list_id: u64) -> Vec<&Card> {
+        let Some(cards) = self.cards_by_list.get(&list_id) else {
+            return Vec::new();
+        };
+        if self.card_filters.is_empty() {
+            return cards.iter().collect();
+        }
+        cards
+            .iter()
+            .filter(|c| crate::operations::cards::matches_filters(c, &self.card_filters, &[]))
+            .collect()
+    }
+
     pub fn current_card(&self) -> Option<&Card> {
         let list = self.current_list()?;
-        self.cards_by_list
-            .get(&list.id)?
-            .get(self.current_card_index())
+        let cards = self.view_cards(list.id);
+        cards.get(self.current_card_index()).copied()
     }
 
     pub fn is_working_on(&self, card_id: u64) -> bool {
@@ -282,11 +540,7 @@ impl App {
             return;
         };
         let list_id = list.id;
-        let len = self
-            .cards_by_list
-            .get(&list_id)
-            .map(|c| c.len())
-            .unwrap_or(0);
+        let len = self.view_cards(list_id).len();
         if len == 0 {
             return;
         }
@@ -302,6 +556,71 @@ impl App {
         }
         let next = (self.selected_list as i32 + delta).clamp(0, len as i32 - 1);
         self.selected_list = next as usize;
+        self.clamp_card_selection();
+    }
+
+    /// Keep selected card indices inside the filtered view for every list.
+    pub fn clamp_card_selection(&mut self) {
+        let list_ids: Vec<u64> = self.all_lists.iter().map(|l| l.id).collect();
+        for list_id in list_ids {
+            let len = self.view_cards(list_id).len();
+            if len == 0 {
+                self.selected_card.insert(list_id, 0);
+                continue;
+            }
+            let idx = self.selected_card.get(&list_id).copied().unwrap_or(0);
+            if idx >= len {
+                self.selected_card.insert(list_id, len - 1);
+            }
+        }
+        let visible_len = self.visible_lists().len();
+        if visible_len == 0 {
+            self.selected_list = 0;
+        } else if self.selected_list >= visible_len {
+            self.selected_list = visible_len - 1;
+        }
+    }
+
+    /// Short label for the footer when filters are active.
+    pub fn card_filters_summary(&self) -> Option<String> {
+        if self.card_filters.is_empty() {
+            return None;
+        }
+        let mut parts = Vec::new();
+        if let Some(t) = self
+            .card_filters
+            .text
+            .as_ref()
+            .filter(|s| !s.trim().is_empty())
+        {
+            parts.push(format!("q:{}", t));
+        }
+        if let Some(r) = self
+            .card_filters
+            .responsible
+            .as_ref()
+            .filter(|s| !s.trim().is_empty())
+        {
+            parts.push(format!("@{}", r));
+        }
+        if let Some(p) = self
+            .card_filters
+            .priority
+            .as_ref()
+            .filter(|s| !s.trim().is_empty())
+        {
+            parts.push(format!("p:{}", p));
+        }
+        for lab in &self.card_filters.labels {
+            if !lab.trim().is_empty() {
+                parts.push(format!("#{}", lab));
+            }
+        }
+        if parts.is_empty() {
+            None
+        } else {
+            Some(parts.join(" "))
+        }
     }
 }
 

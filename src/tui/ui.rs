@@ -8,7 +8,7 @@ use ratatui::{
 
 use crate::operations;
 
-use super::app::{App, HelpContext};
+use super::app::{App, DetailField, HelpContext};
 use super::widgets::{centered_rect, draw_frame};
 
 pub fn draw(frame: &mut Frame, app: &App) {
@@ -25,25 +25,44 @@ pub fn draw(frame: &mut Frame, app: &App) {
         ),
         area,
     );
-    let rows = Layout::vertical([
-        Constraint::Length(1),
-        Constraint::Min(0),
-        Constraint::Length(1),
-    ])
-    .split(area);
+    let rows = if app.composing_search {
+        Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Min(0),
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ])
+        .split(area)
+    } else {
+        Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Min(0),
+            Constraint::Length(1),
+        ])
+        .split(area)
+    };
 
     draw_title_bar(frame, app, rows[0]);
-
     draw_board(frame, app, rows[1]);
-
-    draw_status_bar(frame, app, rows[2]);
+    if app.composing_search {
+        draw_search_bar(frame, app, rows[2]);
+        draw_status_bar(frame, app, rows[3]);
+    } else {
+        draw_status_bar(frame, app, rows[2]);
+    }
 
     if app.show_help {
         draw_help_popup(frame, app);
+    } else if app.show_changelog {
+        draw_changelog_popup(frame, app);
+    } else if app.show_update_available {
+        draw_update_available_popup(frame, app);
     } else if app.show_reminders {
         draw_reminders_popup(frame, app);
     } else if app.show_weekly_objectives {
         draw_weekly_objectives_popup(frame, app);
+    } else if app.show_task_detail {
+        draw_task_detail_popup(frame, app);
     } else if app.show_description {
         draw_description_popup(frame, app);
     } else if app.show_comments {
@@ -115,11 +134,24 @@ fn draw_title_bar(frame: &mut Frame, app: &App, area: Rect) {
 
 /// Barra de estado inferior: mensaje de estado a la izquierda, versión (ej.
 /// "v0.4.0") pegada a la orilla derecha.
+fn draw_search_bar(frame: &mut Frame, app: &App, area: Rect) {
+    let text = format!(" / {}_", app.search_input.as_str());
+    let p = Paragraph::new(text).style(
+        Style::default()
+            .fg(app.theme.highlight)
+            .add_modifier(Modifier::BOLD),
+    );
+    frame.render_widget(p, area);
+}
+
 fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
-    let status = app
-        .status
-        .clone()
-        .unwrap_or_else(|| " '?' ayuda · q salir".to_string());
+    let status = app.footer_message().unwrap_or_else(|| {
+        if let Some(summary) = app.card_filters_summary() {
+            format!(" Filtro: {} · X limpiar · / editar · q salir", summary)
+        } else {
+            " / buscar · '?' ayuda · q salir".to_string()
+        }
+    });
 
     let version = format!("v{} ", env!("CARGO_PKG_VERSION"));
     let version_width = version.chars().count() as u16;
@@ -143,13 +175,16 @@ fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
 fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
     match ctx {
         HelpContext::Board => (
-            " Ayuda — j/k scroll · Esc/q/? cerrar ",
+            " Ayuda ",
             &[
                 "Board",
                 "  j/k, ↓/↑        mover selección",
                 "  h/l, ←/→        cambiar de lista",
                 "  H / L           mover card a la lista anterior/siguiente",
                 "  Enter           editar descripción de la card",
+                "  d               detalle de la card (e edita el campo)",
+                "  /               buscar / filtrar cards (texto, @user, #label)",
+                "  X               limpiar filtro activo",
                 "  n               crear card nueva en la lista activa",
                 "  w               marcar/desmarcar la card activa como 'working on'",
                 "  c               copiar el link de la card activa al portapapeles",
@@ -171,7 +206,7 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
             ],
         ),
         HelpContext::Reminders => (
-            " Ayuda: Reminders — Esc/q/? cerrar ",
+            " Ayuda · Reminders ",
             &[
                 "Reminders",
                 "  j/k, ↓/↑        scroll",
@@ -180,7 +215,7 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
             ],
         ),
         HelpContext::WeeklyObjectives => (
-            " Ayuda: Objetivos semanales — Esc/q/? cerrar ",
+            " Ayuda · Objetivos semanales ",
             &[
                 "Objetivos semanales",
                 "  j/k, ↓/↑        scroll",
@@ -189,7 +224,7 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
             ],
         ),
         HelpContext::Comments => (
-            " Ayuda: Comentarios — Esc/q/? cerrar ",
+            " Ayuda · Comentarios ",
             &[
                 "Comentarios",
                 "  j/k, ↓/↑        scroll",
@@ -211,7 +246,7 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
             ],
         ),
         HelpContext::Projects => (
-            " Ayuda: Proyectos — Esc/q/? cerrar ",
+            " Ayuda · Proyectos ",
             &[
                 "Proyectos guardados",
                 "  a               agregar uno nuevo por ID",
@@ -234,8 +269,19 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
                 "  Esc, L          volver a guardados",
             ],
         ),
+        HelpContext::TaskDetail => (
+            " Ayuda · Detalle ",
+            &[
+                "Detalle de task",
+                "  j/k             cambiar campo",
+                "  e               editar el campo resaltado",
+                "  Enter / Ctrl+S  guardar (en modo edición)",
+                "  Esc             cancelar edición o cerrar",
+                "  q               cerrar",
+            ],
+        ),
         HelpContext::BoardSwitch => (
-            " Ayuda: Cambiar de board — Esc/q/? cerrar ",
+            " Ayuda · Cambiar de board ",
             &[
                 "Cambiar de board",
                 "  j/k, ↓/↑        mover selección",
@@ -265,6 +311,64 @@ fn draw_help_popup(frame: &mut Frame, app: &App) {
     frame.render_widget(p, inner);
 }
 
+fn draw_changelog_popup(frame: &mut Frame, app: &App) {
+    let area = centered_rect(70, 80, frame.area());
+    let inner = draw_frame(
+        frame,
+        area,
+        " CHANGELOG ",
+        app.theme.border_help,
+        app.theme.background,
+        app.theme.foreground,
+    );
+
+    let body = app
+        .startup_changelog
+        .as_deref()
+        .unwrap_or("(sin changelog)")
+        .trim_end();
+    let mut lines: Vec<Line> = body.lines().map(|l| Line::from(l.to_string())).collect();
+    lines.push(Line::from(""));
+    lines.push(muted_hint(app, "j/k scroll · c copiar link · Enter/Esc"));
+
+    let p = Paragraph::new(Text::from(lines))
+        .wrap(Wrap { trim: false })
+        .scroll((app.changelog_scroll.offset(), 0));
+    frame.render_widget(p, inner);
+}
+
+fn draw_update_available_popup(frame: &mut Frame, app: &App) {
+    let area = centered_rect(55, 28, frame.area());
+    let inner = draw_frame(
+        frame,
+        area,
+        " Update Available ",
+        app.theme.border_help,
+        app.theme.background,
+        app.theme.foreground,
+    );
+
+    let (current, latest) = match &app.update_available {
+        Some(info) => (info.current_version.as_str(), info.latest_version.as_str()),
+        None => ("?", "?"),
+    };
+
+    let mut lines = vec![
+        Line::from("Hay una versión nueva de hteam."),
+        Line::from(""),
+        Line::from(format!("  actual:  {current}")),
+        Line::from(format!("  última:  {latest}")),
+        Line::from(""),
+        Line::from("Ejecuta `hteam update` para instalarla."),
+        Line::from(""),
+        muted_hint(app, "c copiar releases · Enter/Esc"),
+    ];
+    let _ = &mut lines;
+
+    let p = Paragraph::new(Text::from(lines)).wrap(Wrap { trim: false });
+    frame.render_widget(p, inner);
+}
+
 fn draw_new_card_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(50, 20, frame.area());
 
@@ -274,7 +378,7 @@ fn draw_new_card_popup(frame: &mut Frame, app: &App) {
         .map(|l| l.name.as_str())
         .unwrap_or("?");
 
-    let title = format!(" Nueva card en {} — Enter crear · Esc cancelar ", list_name);
+    let title = format!(" Nueva card · {} ", list_name);
     let inner = draw_frame(
         frame,
         area,
@@ -284,40 +388,91 @@ fn draw_new_card_popup(frame: &mut Frame, app: &App) {
         app.theme.foreground,
     );
 
+    let chunks = Layout::vertical([Constraint::Min(1), Constraint::Length(1)]).split(inner);
     let p = Paragraph::new(app.new_card_input.as_str()).wrap(Wrap { trim: true });
-    frame.render_widget(p, inner);
+    frame.render_widget(p, chunks[0]);
+    frame.render_widget(
+        Paragraph::new(muted_hint(app, "Enter crear · Esc")),
+        chunks[1],
+    );
 }
 
 fn draw_reminders_popup(frame: &mut Frame, app: &App) {
-    let area = centered_rect(60, 60, frame.area());
+    let area = centered_rect(68, 70, frame.area());
+    let n = app.reminders.len();
+    let title = if n == 0 {
+        " Reminders ".to_string()
+    } else {
+        format!(" Reminders ({n}) ")
+    };
     let inner = draw_frame(
         frame,
         area,
-        " Reminders — 'a' agregar · '?' ayuda · Esc cerrar ",
+        title,
         app.theme.border_reminders,
         app.theme.background,
         app.theme.foreground,
     );
 
-    let lines: Vec<String> = if app.reminders.is_empty() {
-        vec!["Sin reminders pendientes.".to_string()]
-    } else {
-        app.reminders
-            .iter()
-            .map(|r| {
-                let title = r
-                    .content_object
-                    .as_ref()
-                    .map(|c| c.title.as_str())
-                    .unwrap_or("(sin título)");
-                let date = r.reminder_date.as_deref().unwrap_or("sin fecha");
-                format!("• {} — {}", title, date)
-            })
-            .collect()
-    };
+    let mut lines: Vec<Line> = Vec::new();
+    lines.push(section_header(
+        app,
+        if n == 1 { "1 pendiente" } else { "Pendientes" },
+    ));
+    if n > 0 {
+        lines.push(muted_hint(app, format!("{n} en total")));
+    }
+    lines.push(Line::from(""));
 
-    let p = Paragraph::new(lines.join("\n"))
-        .wrap(Wrap { trim: true })
+    if app.reminders.is_empty() {
+        lines.push(empty_state_line(app, "Sin reminders pendientes."));
+        lines.push(Line::from(""));
+        lines.push(muted_hint(app, "Selecciona una card y pulsa a · ? · Esc"));
+    } else {
+        for (i, r) in app.reminders.iter().enumerate() {
+            if i > 0 {
+                lines.push(Line::from(Span::styled(
+                    "  · · ·",
+                    Style::default().fg(app.theme.muted),
+                )));
+            }
+            let title = r
+                .content_object
+                .as_ref()
+                .map(|c| c.title.as_str())
+                .unwrap_or("(sin título)");
+            let date_raw = r.reminder_date.as_deref().unwrap_or("");
+            let date = if date_raw.is_empty() {
+                "sin fecha".to_string()
+            } else {
+                // Show YYYY-MM-DD when the API includes a time suffix.
+                date_raw.chars().take(10).collect()
+            };
+            lines.push(Line::from(vec![
+                Span::styled("› ", Style::default().fg(app.theme.border_reminders)),
+                Span::styled(
+                    title.to_string(),
+                    Style::default()
+                        .fg(app.theme.highlight)
+                        .add_modifier(Modifier::BOLD),
+                ),
+            ]));
+            lines.push(Line::from(vec![
+                Span::raw("  "),
+                Span::styled("fecha  ", Style::default().fg(app.theme.muted)),
+                Span::styled(date, Style::default().fg(app.theme.foreground)),
+                Span::styled(
+                    format!("  · card {}", r.object_id),
+                    Style::default().fg(app.theme.muted),
+                ),
+            ]));
+        }
+        lines.push(Line::from(""));
+        lines.push(muted_hint(app, "a nuevo · j/k scroll · ? · Esc"));
+    }
+
+    let p = Paragraph::new(Text::from(lines))
+        .wrap(Wrap { trim: false })
         .scroll((app.reminders_scroll.offset(), 0));
     frame.render_widget(p, inner);
 }
@@ -327,41 +482,55 @@ fn draw_weekly_objectives_popup(frame: &mut Frame, app: &App) {
     let inner = draw_frame(
         frame,
         area,
-        " Objetivos semanales — 'f' refetch · '?' ayuda · Esc cerrar ",
+        " Objetivos semanales ",
         app.theme.border_objectives,
         app.theme.background,
         app.theme.foreground,
     );
 
-    let text = if let Some(error) = &app.weekly_objectives_error {
-        format!("No se pudieron cargar los objetivos semanales.\n\n{}\n\nPresiona 'f' para reintentar ignorando el cache.", error)
+    let mut lines: Vec<Line> = if let Some(error) = &app.weekly_objectives_error {
+        vec![
+            Line::from("No se pudieron cargar los objetivos semanales."),
+            Line::from(""),
+            Line::from(error.clone()),
+        ]
     } else if let Some(set) = &app.weekly_objectives {
         let source = if app.weekly_objectives_from_cache {
             "cache"
         } else {
             "red"
         };
-        let mut lines = vec![format!("🎯 {}", set.title), String::new()];
+        let mut lines = vec![Line::from(format!("🎯 {}", set.title)), Line::from("")];
 
         for objective in &set.objectives {
-            lines.push(format!("## {}", objective.name));
+            lines.push(Line::from(format!("## {}", objective.name)));
             for task in &objective.tasks {
                 let mark = if task.done { "x" } else { " " };
-                lines.push(format!("   [{}] {}", mark, task.description));
+                lines.push(Line::from(format!("   [{}] {}", mark, task.description)));
             }
-            lines.push(String::new());
+            lines.push(Line::from(""));
         }
 
         if let Some(synced_at) = app.weekly_objectives_synced_at {
-            lines.push(format!("{}, {}", source, relative_time(synced_at)));
+            lines.push(Line::from(format!(
+                "{}, {}",
+                source,
+                relative_time(synced_at)
+            )));
         }
-
-        lines.join("\n")
+        lines
     } else {
-        "Cargando objetivos semanales...".to_string()
+        vec![Line::from(Span::styled(
+            "Cargando objetivos semanales…",
+            Style::default()
+                .fg(app.theme.muted)
+                .add_modifier(Modifier::ITALIC),
+        ))]
     };
+    lines.push(Line::from(""));
+    lines.push(muted_hint(app, "f refetch · j/k scroll · ? · Esc"));
 
-    let p = Paragraph::new(text)
+    let p = Paragraph::new(Text::from(lines))
         .wrap(Wrap { trim: true })
         .scroll((app.weekly_objectives_scroll.offset(), 0));
     frame.render_widget(p, inner);
@@ -387,10 +556,7 @@ fn draw_description_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(70, 70, frame.area());
 
     let card_name = app.current_card().map(|c| c.name.as_str()).unwrap_or("?");
-    let title = format!(
-        " Descripción de \"{}\" — Enter salto de línea · Ctrl+S guardar · Esc cancelar ",
-        card_name
-    );
+    let title = format!(" Descripción · {} ", card_name);
     let inner = draw_frame(
         frame,
         area,
@@ -400,22 +566,396 @@ fn draw_description_popup(frame: &mut Frame, app: &App) {
         app.theme.foreground,
     );
 
-    let text_width = inner.width.saturating_sub(2).max(1);
+    let chunks = Layout::vertical([Constraint::Min(1), Constraint::Length(1)]).split(inner);
+    let text_width = chunks[0].width.saturating_sub(2).max(1);
     let content_rows = wrapped_line_count(app.description_input.as_str(), text_width);
-    let scroll_y = content_rows.saturating_sub(inner.height);
+    let scroll_y = content_rows.saturating_sub(chunks[0].height);
     let p = Paragraph::new(app.description_input.as_str())
         .wrap(Wrap { trim: true })
         .scroll((scroll_y, 0));
+    frame.render_widget(p, chunks[0]);
+    frame.render_widget(
+        Paragraph::new(muted_hint(app, "Enter salto · Ctrl+S guardar · Esc")),
+        chunks[1],
+    );
+}
+
+fn draw_task_detail_popup(frame: &mut Frame, app: &App) {
+    let area = centered_rect(74, 82, frame.area());
+    let title = if app.picking_dependence {
+        let f = app.dependence_picker_filter.as_str();
+        if f.is_empty() {
+            " Depende de ".to_string()
+        } else {
+            format!(" Depende de · filtro: {f}_ ")
+        }
+    } else if app.editing_detail_field {
+        let field = DetailField::ALL[app.task_detail_field_idx.min(DetailField::ALL.len() - 1)];
+        format!(" ✎ {} ", field.label())
+    } else {
+        " Detalle ".to_string()
+    };
+    let inner = draw_frame(
+        frame,
+        area,
+        title,
+        app.theme.border_description,
+        app.theme.background,
+        app.theme.foreground,
+    );
+
+    let lines: Vec<Line> = if app.picking_dependence {
+        dependence_picker_lines(app)
+    } else if let Some(err) = &app.task_detail_error {
+        vec![
+            Line::from(Span::styled(
+                "No se pudo cargar el detalle",
+                Style::default()
+                    .fg(app.theme.danger)
+                    .add_modifier(Modifier::BOLD),
+            )),
+            Line::from(""),
+            Line::from(Span::styled(
+                err.clone(),
+                Style::default().fg(app.theme.muted),
+            )),
+        ]
+    } else if let Some(detail) = &app.task_detail {
+        task_detail_lines(app, detail)
+    } else {
+        vec![Line::from(Span::styled(
+            "Cargando detalle…",
+            Style::default()
+                .fg(app.theme.muted)
+                .add_modifier(Modifier::ITALIC),
+        ))]
+    };
+
+    let p = Paragraph::new(Text::from(lines))
+        .wrap(Wrap { trim: false })
+        .scroll((app.task_detail_scroll.offset(), 0));
     frame.render_widget(p, inner);
 }
 
+fn dependence_picker_lines(app: &App) -> Vec<Line<'static>> {
+    use super::events::filtered_dependence_picker_indices;
+    let mut lines = vec![
+        section_header(app, "Elegir task dependencia"),
+        Line::from(""),
+    ];
+    let idxs = filtered_dependence_picker_indices(app);
+    if idxs.is_empty() {
+        lines.push(empty_state_line(
+            app,
+            if app.dependence_picker_items.is_empty() {
+                "No hay otras tasks cargadas en el board."
+            } else {
+                "Ninguna task coincide con el filtro."
+            },
+        ));
+        lines.push(Line::from(""));
+        lines.push(muted_hint(app, "escribe para filtrar · Esc"));
+        return lines;
+    }
+    // Keep selection near middle of a window of ~12 rows.
+    let sel_pos = idxs
+        .iter()
+        .position(|i| *i == app.dependence_picker_idx)
+        .unwrap_or(0);
+    let window = 14usize;
+    let start = sel_pos.saturating_sub(window / 2);
+    let end = (start + window).min(idxs.len());
+    let start = end.saturating_sub(window);
+    if start > 0 {
+        lines.push(muted_hint(app, format!("▲ {} más arriba", start)));
+    }
+    for &item_i in &idxs[start..end] {
+        let (id, num, name) = &app.dependence_picker_items[item_i];
+        let sel = item_i == app.dependence_picker_idx;
+        let style = if sel {
+            selected_row_style(app)
+        } else {
+            Style::default().fg(app.theme.foreground)
+        };
+        let marker = if sel { "› " } else { "  " };
+        let num_s = num
+            .map(|n| format!("#{n}"))
+            .unwrap_or_else(|| format!("id {id}"));
+        lines.push(Line::from(vec![
+            Span::styled(marker, style),
+            Span::styled(format!("{num_s:<8} "), style),
+            Span::styled(name.clone(), style),
+            Span::styled(format!("  ({id})"), Style::default().fg(app.theme.muted)),
+        ]));
+    }
+    if end < idxs.len() {
+        lines.push(muted_hint(app, format!("▼ {} más abajo", idxs.len() - end)));
+    }
+    lines.push(Line::from(""));
+    lines.push(muted_hint(
+        app,
+        "j/k · Enter confirma · x quita · escribe para filtrar · Esc",
+    ));
+    lines
+}
+
+fn task_detail_lines<'a>(app: &'a App, detail: &'a crate::models::CardDetail) -> Vec<Line<'a>> {
+    let mut lines: Vec<Line> = Vec::new();
+    let selected = DetailField::ALL[app.task_detail_field_idx.min(DetailField::ALL.len() - 1)];
+
+    // Header
+    let mut title_spans = Vec::new();
+    if let Some(n) = detail.number {
+        title_spans.push(Span::styled(
+            format!("#{n} "),
+            Style::default()
+                .fg(app.theme.highlight)
+                .add_modifier(Modifier::BOLD),
+        ));
+    }
+    title_spans.push(Span::styled(
+        detail.name.clone(),
+        Style::default()
+            .fg(app.theme.foreground)
+            .add_modifier(Modifier::BOLD),
+    ));
+    lines.push(Line::from(title_spans));
+    lines.push(Line::from(Span::styled(
+        format!("id {} · task detail", detail.id),
+        Style::default().fg(app.theme.muted),
+    )));
+
+    if let Some(list) = &detail.list {
+        lines.push(Line::from(vec![
+            Span::styled("lista  ", Style::default().fg(app.theme.muted)),
+            Span::styled(
+                list.name.clone(),
+                Style::default().fg(app.theme.border_active),
+            ),
+        ]));
+    }
+    if detail.closed == Some(true) {
+        lines.push(Line::from(Span::styled(
+            "cerrada",
+            Style::default()
+                .fg(app.theme.danger)
+                .add_modifier(Modifier::BOLD),
+        )));
+    }
+
+    lines.push(Line::from(""));
+    lines.push(section_header(app, "Información"));
+    for f in [
+        DetailField::Name,
+        DetailField::Description,
+        DetailField::Responsible,
+        DetailField::Priority,
+        DetailField::Dependence,
+    ] {
+        lines.push(detail_field_line(app, detail, f, selected));
+    }
+
+    lines.push(Line::from(""));
+    lines.push(section_header(app, "Fechas"));
+    for f in [DetailField::StartDate, DetailField::DueDate] {
+        lines.push(detail_field_line(app, detail, f, selected));
+    }
+
+    lines.push(Line::from(""));
+    lines.push(section_header(app, "Tiempo"));
+    for f in [DetailField::TimeEstimated, DetailField::TimeSpent] {
+        lines.push(detail_field_line(app, detail, f, selected));
+    }
+
+    lines.push(Line::from(""));
+    lines.push(section_header(app, "Labels"));
+    lines.push(detail_labels_line(app, detail));
+
+    lines.push(Line::from(""));
+    if app.editing_detail_field {
+        let field = DetailField::ALL[app.task_detail_field_idx.min(DetailField::ALL.len() - 1)];
+        lines.push(muted_hint(
+            app,
+            format!("{} · Enter/Ctrl+S guardar · Esc cancelar", field.hint()),
+        ));
+    } else {
+        lines.push(muted_hint(
+            app,
+            "j/k campo · e editar · Enter en Depende de = saltar · ? · Esc",
+        ));
+    }
+
+    lines
+}
+
+/// Shared popup chrome: section divider used by detail, comments, etc.
+fn section_header<'a>(app: &App, title: &'a str) -> Line<'a> {
+    Line::from(Span::styled(
+        format!("── {title} ──"),
+        Style::default()
+            .fg(app.theme.border_active)
+            .add_modifier(Modifier::BOLD),
+    ))
+}
+
+fn muted_hint(app: &App, text: impl Into<String>) -> Line<'static> {
+    Line::from(Span::styled(
+        text.into(),
+        Style::default().fg(app.theme.muted),
+    ))
+}
+
+fn empty_state_line<'a>(app: &App, text: &'a str) -> Line<'a> {
+    Line::from(Span::styled(
+        text,
+        Style::default()
+            .fg(app.theme.muted)
+            .add_modifier(Modifier::ITALIC),
+    ))
+}
+
+fn selected_row_style(app: &App) -> Style {
+    Style::default()
+        .bg(app.theme.selection_bg)
+        .fg(app.theme.selection_fg)
+        .add_modifier(Modifier::BOLD)
+}
+
+fn detail_field_line<'a>(
+    app: &'a App,
+    detail: &'a crate::models::CardDetail,
+    field: DetailField,
+    selected: DetailField,
+) -> Line<'a> {
+    let is_sel = field == selected;
+    let is_edit = is_sel && app.editing_detail_field;
+    let label = format!("{:<12}", field.label());
+    let raw = if is_edit {
+        format!("{}▌", app.detail_edit_input.as_str())
+    } else {
+        detail_field_value(app, detail, field)
+    };
+
+    let empty = raw == "-" && !is_edit;
+    let row_style = if is_sel {
+        selected_row_style(app)
+    } else {
+        Style::default()
+    };
+    let label_style = if is_sel {
+        row_style
+    } else {
+        Style::default().fg(app.theme.muted)
+    };
+    let value_style = if is_sel {
+        row_style
+    } else if empty {
+        Style::default().fg(app.theme.muted)
+    } else if field == DetailField::Responsible {
+        Style::default().fg(app.theme.highlight)
+    } else {
+        Style::default().fg(app.theme.foreground)
+    };
+
+    let marker = if is_sel { "› " } else { "  " };
+    Line::from(vec![
+        Span::styled(marker, row_style),
+        Span::styled(label, label_style),
+        Span::styled(" ", row_style),
+        Span::styled(raw, value_style),
+    ])
+}
+
+fn detail_labels_line<'a>(app: &'a App, detail: &'a crate::models::CardDetail) -> Line<'a> {
+    if detail.labels.is_empty() {
+        return Line::from(Span::styled(
+            "  (sin labels)",
+            Style::default().fg(app.theme.muted),
+        ));
+    }
+    let mut spans = vec![Span::raw("  ")];
+    for (i, lab) in detail.labels.iter().enumerate() {
+        if i > 0 {
+            spans.push(Span::raw(" "));
+        }
+        let fg = parse_hex_color(&lab.color).unwrap_or(app.theme.highlight);
+        spans.push(Span::styled(
+            format!("[{}]", lab.name),
+            Style::default().fg(fg).add_modifier(Modifier::BOLD),
+        ));
+    }
+    Line::from(spans)
+}
+
+fn parse_hex_color(s: &str) -> Option<ratatui::style::Color> {
+    let s = s.trim().trim_start_matches('#');
+    if s.len() != 6 {
+        return None;
+    }
+    let r = u8::from_str_radix(&s[0..2], 16).ok()?;
+    let g = u8::from_str_radix(&s[2..4], 16).ok()?;
+    let b = u8::from_str_radix(&s[4..6], 16).ok()?;
+    Some(ratatui::style::Color::Rgb(r, g, b))
+}
+
+fn detail_field_value(app: &App, detail: &crate::models::CardDetail, field: DetailField) -> String {
+    match field {
+        DetailField::Name => detail.name.clone(),
+        DetailField::Description => detail
+            .description
+            .clone()
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or_else(|| "-".into()),
+        DetailField::Responsible => operations::cards::responsible_display(
+            detail
+                .responsible
+                .as_ref()
+                .unwrap_or(&serde_json::Value::Null),
+        )
+        .unwrap_or_else(|| "-".into()),
+        DetailField::Priority => detail
+            .priority
+            .as_ref()
+            .map(operations::cards::priority_label)
+            .filter(|s| !s.is_empty() && s != "null" && s != "-")
+            .unwrap_or_else(|| "-".into()),
+        DetailField::Dependence => app
+            .task_detail_dependence_label
+            .clone()
+            .or_else(|| operations::cards::dependence_display(&detail.dependence))
+            .unwrap_or_else(|| "-".into()),
+        DetailField::StartDate => detail
+            .start_date
+            .as_deref()
+            .map(|s| s.chars().take(10).collect::<String>())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "-".into()),
+        DetailField::DueDate => detail
+            .due_date
+            .as_deref()
+            .map(|s| s.chars().take(10).collect::<String>())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "-".into()),
+        DetailField::TimeEstimated => detail
+            .time_estimated
+            .clone()
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or_else(|| "-".into()),
+        DetailField::TimeSpent => detail
+            .time_spend
+            .clone()
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or_else(|| "-".into()),
+    }
+}
+
 fn draw_comments_popup(frame: &mut Frame, app: &App) {
-    let area = centered_rect(70, 70, frame.area());
+    let area = centered_rect(72, 75, frame.area());
 
     let title = if app.composing_comment {
-        " Nuevo comentario — Ctrl+S enviar · Esc cancelar "
+        " Comentario nuevo "
     } else {
-        " Comentarios — 'a' agregar · '?' ayuda · Esc cerrar "
+        " Comentarios "
     };
     let inner = draw_frame(
         frame,
@@ -431,8 +971,7 @@ fn draw_comments_popup(frame: &mut Frame, app: &App) {
         return;
     }
 
-    // De acá en adelante app.composing_comment es siempre true — las otras
-    // dos ramas ya retornaron arriba.
+    // composing_comment is true below — list-only path returned above.
     let text_width = inner.width.saturating_sub(2).max(1);
     let content_rows = wrapped_line_count(app.comment_input.as_str(), text_width);
     let suggestion_rows = app.mention_suggestions.len().min(5) as u16;
@@ -454,33 +993,86 @@ fn draw_comments_popup(frame: &mut Frame, app: &App) {
 const DATE_FIELD_HEIGHT: u16 = 3;
 
 fn draw_comment_list(frame: &mut Frame, app: &App, area: Rect) {
-    let text = if app.comments.is_empty() {
-        Text::from("Sin comentarios todavía.")
+    let mut lines: Vec<Line> = Vec::new();
+
+    if !app.composing_comment {
+        let n = app.comments.len();
+        lines.push(section_header(
+            app,
+            if n == 1 {
+                "1 comentario"
+            } else {
+                // lifetime: section_header needs 'a str — use static for empty/count via leak-free owned
+                "Comentarios"
+            },
+        ));
+        if n > 0 {
+            lines.push(muted_hint(app, format!("{n} en total")));
+        }
+        lines.push(Line::from(""));
+    }
+
+    if app.comments.is_empty() {
+        lines.push(empty_state_line(app, "Sin comentarios todavía."));
+        if !app.composing_comment {
+            lines.push(Line::from(""));
+            lines.push(muted_hint(app, "a escribir · j/k · ? · Esc"));
+        }
     } else {
-        let mut lines: Vec<Line> = Vec::new();
-        for c in &app.comments {
-            lines.push(Line::from(format!("{} ({}):", c.user_name, c.submit_date)));
-            lines.push(Line::from(c.comment.as_str()));
-            // El seguimiento se cuelga del comentario específico al que está
-            // atado (mismo id) — como en la web, no como un aviso genérico
-            // arriba de toda la lista.
+        for (i, c) in app.comments.iter().enumerate() {
+            if i > 0 {
+                lines.push(Line::from(Span::styled(
+                    "  · · ·",
+                    Style::default().fg(app.theme.muted),
+                )));
+            }
+            lines.push(Line::from(vec![
+                Span::styled("› ", Style::default().fg(app.theme.border_comments)),
+                Span::styled(
+                    c.user_name.as_str(),
+                    Style::default()
+                        .fg(app.theme.highlight)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!("  {}", c.submit_date),
+                    Style::default().fg(app.theme.muted),
+                ),
+            ]));
+            // Indent body under author
+            for body_line in c.comment.lines() {
+                lines.push(Line::from(vec![
+                    Span::raw("  "),
+                    Span::styled(body_line, Style::default().fg(app.theme.foreground)),
+                ]));
+            }
+            // Follow-up hangs off the specific comment (same id), like the web.
             if let Some(follow_up) = &app.current_follow_up {
                 if follow_up.comment_id == c.id {
-                    lines.push(Line::from(Span::styled(
-                        format!(
-                            "  Seguimiento: {} — 'v' completar · 'x' cancelar",
-                            follow_up.date
+                    lines.push(Line::from(vec![
+                        Span::raw("  "),
+                        Span::styled(
+                            format!("⏱ seguimiento {}", follow_up.date),
+                            Style::default()
+                                .fg(app.theme.warning)
+                                .add_modifier(Modifier::BOLD),
                         ),
-                        Style::default().fg(app.theme.warning),
-                    )));
+                        Span::styled(
+                            "  · v completar · x cancelar",
+                            Style::default().fg(app.theme.muted),
+                        ),
+                    ]));
                 }
             }
             lines.push(Line::from(""));
         }
-        Text::from(lines)
-    };
-    let p = Paragraph::new(text)
-        .wrap(Wrap { trim: true })
+        if !app.composing_comment {
+            lines.push(muted_hint(app, "a nuevo · j/k scroll · ? · Esc"));
+        }
+    }
+
+    let p = Paragraph::new(Text::from(lines))
+        .wrap(Wrap { trim: false })
         .scroll((app.comments_scroll.offset(), 0));
     frame.render_widget(p, area);
 }
@@ -493,41 +1085,52 @@ fn draw_comment_input(frame: &mut Frame, app: &App, area: Rect, text_width: u16)
 }
 
 fn draw_comment_date_field(frame: &mut Frame, app: &App, area: Rect) {
-    let border_color = if app.comment_date_focused {
-        app.theme.highlight
+    let focused = app.comment_date_focused;
+    let border_color = if focused {
+        app.theme.selection_bg
     } else {
         app.theme.muted
     };
     let block = Block::default()
-        .title(" Fecha (YYYY-MM-DD HH:MM) — Tab enfoca ")
+        .title(if focused { " › Fecha " } else { " Fecha " })
         .borders(Borders::ALL)
         .border_style(Style::default().fg(border_color));
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
-    let text = if app.comment_date_input.as_str().is_empty() {
+    let empty = app.comment_date_input.as_str().is_empty();
+    let text = if empty {
         "ahora (hora local)".to_string()
     } else {
-        app.comment_date_input.as_str().to_string()
+        format!("{}▌", app.comment_date_input.as_str())
     };
-    let style = if app.comment_date_input.as_str().is_empty() {
+    let style = if focused {
+        selected_row_style(app)
+    } else if empty {
         Style::default().fg(app.theme.muted)
     } else {
-        Style::default()
+        Style::default().fg(app.theme.foreground)
     };
     frame.render_widget(Paragraph::new(text).style(style), inner);
 }
 
 fn draw_comment_text_field(frame: &mut Frame, app: &App, area: Rect, text_width: u16) {
-    let border_color = if app.comment_date_focused {
+    let focused = !app.comment_date_focused;
+    let border_color = if focused {
+        app.theme.selection_bg
+    } else {
         app.theme.muted
-    } else {
-        app.theme.highlight
     };
-    let title = if app.comment_follow {
-        " Comentario (@ para mencionar) · 🔔 seguimiento ON "
+    let title = if focused {
+        if app.comment_follow {
+            " › Comentario · seguimiento ON "
+        } else {
+            " › Comentario "
+        }
+    } else if app.comment_follow {
+        " Comentario · seguimiento ON "
     } else {
-        " Comentario (@ para mencionar) "
+        " Comentario "
     };
     let block = Block::default()
         .title(title)
@@ -537,23 +1140,43 @@ fn draw_comment_text_field(frame: &mut Frame, app: &App, area: Rect, text_width:
     frame.render_widget(block, area);
 
     let content_rows = wrapped_line_count(app.comment_input.as_str(), text_width);
-    let mut text = app.comment_input.as_str().to_string();
+    let mut lines: Vec<Line> = vec![Line::from(Span::styled(
+        format!("{}▌", app.comment_input.as_str()),
+        if focused {
+            Style::default().fg(app.theme.foreground)
+        } else {
+            Style::default().fg(app.theme.muted)
+        },
+    ))];
+
     if !app.mention_suggestions.is_empty() {
+        lines.push(Line::from(""));
+        lines.push(section_header(app, "Menciones"));
         for (i, user) in app.mention_suggestions.iter().take(5).enumerate() {
-            let marker = if i == app.mention_selected {
-                "▶"
+            let sel = i == app.mention_selected;
+            let style = if sel {
+                selected_row_style(app)
             } else {
-                " "
+                Style::default().fg(app.theme.foreground)
             };
-            text.push_str(&format!("\n{} {}", marker, user.text));
+            let marker = if sel { "› " } else { "  " };
+            lines.push(Line::from(vec![
+                Span::styled(marker, style),
+                Span::styled(user.text.as_str(), style),
+            ]));
         }
     }
 
-    // Once the box has hit its cap, scroll so the lines you just typed stay
-    // in view instead of silently clipping off the bottom.
+    lines.push(Line::from(""));
+    lines.push(muted_hint(
+        app,
+        "@ mención · Tab fecha · f seguimiento · Ctrl+S enviar · Esc",
+    ));
+
+    // Keep the cursor line visible when the box is height-capped.
     let scroll_y = content_rows.saturating_sub(inner.height);
-    let p = Paragraph::new(text)
-        .wrap(Wrap { trim: true })
+    let p = Paragraph::new(Text::from(lines))
+        .wrap(Wrap { trim: false })
         .scroll((scroll_y, 0));
     frame.render_widget(p, inner);
 }
@@ -598,14 +1221,14 @@ fn draw_projects_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(80, 75, frame.area());
 
     let title = if app.composing_project {
-        " Nuevo project id — dígitos + Enter · Esc cancelar ".to_string()
+        " Nuevo project id ".to_string()
     } else if app.show_live_projects {
         format!(
-            " Proyectos en vivo ({}) — Enter elegir · '?' ayuda · Esc/L volver ",
+            " Proyectos en vivo ({}) ",
             operations::projects::PROJECT_STATUSES[app.live_projects_status_idx]
         )
     } else {
-        " Proyectos — 'a' agregar · 'L' en vivo · '?' ayuda · Esc cerrar ".to_string()
+        " Proyectos ".to_string()
     };
     let inner = draw_frame(
         frame,
@@ -778,19 +1401,14 @@ fn draw_board_switch_popup(frame: &mut Frame, app: &App) {
     let inner = draw_frame(
         frame,
         area,
-        " Cambiar board — Enter seleccionar · '?' ayuda · Esc cerrar ",
+        " Cambiar board ",
         app.theme.border_board_switch,
         app.theme.background,
         app.theme.foreground,
     );
 
     if app.available_boards.is_empty() {
-        let msg = if app
-            .status
-            .as_deref()
-            .map(|s| s.contains("Cargando"))
-            .unwrap_or(false)
-        {
+        let msg = if app.is_loading_boards() {
             "Cargando boards..."
         } else {
             "No se pudieron cargar los boards. Presiona 'r' para reintentar."
@@ -798,13 +1416,6 @@ fn draw_board_switch_popup(frame: &mut Frame, app: &App) {
         frame.render_widget(Paragraph::new(msg), inner);
         return;
     }
-
-    // Scroll automático para mantener el ítem seleccionado en pantalla
-    let scroll_y = if app.selected_board_idx + 1 > inner.height as usize {
-        (app.selected_board_idx + 1 - inner.height as usize) as u16
-    } else {
-        0
-    };
 
     let lines: Vec<Line> = app
         .available_boards
@@ -849,11 +1460,20 @@ fn draw_board_switch_popup(frame: &mut Frame, app: &App) {
         })
         .collect();
 
+    let chunks = Layout::vertical([Constraint::Min(1), Constraint::Length(1)]).split(inner);
+    let scroll_y = if app.selected_board_idx + 1 > chunks[0].height as usize {
+        (app.selected_board_idx + 1 - chunks[0].height as usize) as u16
+    } else {
+        0
+    };
     let p = Paragraph::new(Text::from(lines)).scroll((scroll_y, 0));
-    frame.render_widget(p, inner);
+    frame.render_widget(p, chunks[0]);
+    frame.render_widget(
+        Paragraph::new(muted_hint(app, "j/k · Enter seleccionar · ? · Esc")),
+        chunks[1],
+    );
 }
 
-/// Trunca `s` a `max` caracteres y rellena con espacios si es más corto.
 fn trunc_str(s: &str, max: usize) -> String {
     let chars: String = s.chars().take(max).collect();
     format!("{:<width$}", chars, width = max)
@@ -884,8 +1504,47 @@ fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
 
     for (i, list) in visible.into_iter().enumerate() {
         let is_active_list = i == app.selected_list;
+        let cards = app.view_cards(list.id);
+        let selected_idx = if is_active_list && !cards.is_empty() {
+            Some(app.current_card_index().min(cards.len() - 1))
+        } else {
+            None
+        };
+
+        // Measure with the inner width of a bordered column.
+        let probe = Block::default().borders(Borders::ALL);
+        let inner_w = probe.inner(columns[i]).width;
+        let inner_h = probe.inner(columns[i]).height;
+        let title_width = inner_w.saturating_sub(2);
+        let heights: Vec<u16> = cards
+            .iter()
+            .map(|c| wrapped_line_count(&c.name, title_width) + 1 + 2)
+            .collect();
+
+        let scroll_start =
+            column_scroll_start(inner_h, &heights, selected_idx.filter(|_| is_active_list));
+
+        // How many cards fit from scroll_start for the title cue.
+        let mut used = 0u16;
+        let mut last_drawn = scroll_start.saturating_sub(1);
+        for (ci, h) in heights.iter().enumerate().skip(scroll_start) {
+            if used.saturating_add(*h) > inner_h {
+                break;
+            }
+            used = used.saturating_add(*h);
+            last_drawn = ci;
+        }
+        let hidden_above = scroll_start;
+        let hidden_below = cards.len().saturating_sub(last_drawn.saturating_add(1));
+        let title = match (hidden_above > 0, hidden_below > 0) {
+            (true, true) => format!(" {} ▲{} ▼{} ", list.name, hidden_above, hidden_below),
+            (true, false) => format!(" {} ▲{} ", list.name, hidden_above),
+            (false, true) => format!(" {} ▼{} ", list.name, hidden_below),
+            _ => format!(" {} ", list.name),
+        };
+
         let block = Block::default()
-            .title(format!(" {} ", list.name))
+            .title(title)
             .borders(Borders::ALL)
             .border_style(if is_active_list {
                 Style::default().fg(app.theme.border_active)
@@ -895,26 +1554,9 @@ fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
         let inner = block.inner(columns[i]);
         frame.render_widget(block, columns[i]);
 
-        let cards = app.cards_by_list.get(&list.id);
-        let selected_idx = if is_active_list {
-            Some(app.current_card_index())
-        } else {
-            None
-        };
-
-        // Altura mínima: 2 de borde + 2 de contenido (nombre, labels/reloj de
-        // seguimiento) — con 3 la segunda línea de texto nunca se pintaba
-        // (Borders::ALL ya consume 2 de las 3 filas), así que las labels y el
-        // reloj de seguimiento quedaban invisibles incluso antes de esta
-        // feature. Cuando el nombre envuelve a más de 1 línea (título largo),
-        // esas líneas extra se restan del espacio de la línea de labels/reloj
-        // si la altura se queda fija en 4 — por eso se calcula por card según
-        // cuántas líneas ocupa el nombre al envolver.
-        let title_width = inner.width.saturating_sub(2);
         let mut y = inner.y;
-        for (ci, card) in cards.into_iter().flatten().enumerate() {
-            let title_rows = wrapped_line_count(&card.name, title_width);
-            let card_h: u16 = title_rows + 1 + 2;
+        for (ci, card) in cards.iter().enumerate().skip(scroll_start) {
+            let card_h = heights[ci];
             if y + card_h > inner.y + inner.height {
                 break;
             }
@@ -925,9 +1567,7 @@ fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
                 height: card_h,
             };
 
-            // La lista actual (ej. "DOING") ya se ve en el título de la columna,
-            // y "Follow-up" ya se comunica con el ícono de reloj — repetirlas
-            // como texto sería ruido.
+            // List name / Follow-up label are already shown elsewhere — skip noise.
             let labels = card
                 .labels
                 .iter()
@@ -980,6 +1620,40 @@ fn draw_board(frame: &mut Frame, app: &App, area: Rect) {
     }
 }
 
+/// First card index to draw so `selected` stays inside `viewport_h`.
+fn column_scroll_start(viewport_h: u16, heights: &[u16], selected: Option<usize>) -> usize {
+    if heights.is_empty() {
+        return 0;
+    }
+    let Some(sel) = selected else {
+        return 0;
+    };
+    let sel = sel.min(heights.len() - 1);
+
+    // If everything from 0..=sel fits, no scroll.
+    let mut top_to_sel = 0u16;
+    for h in heights.iter().take(sel + 1) {
+        top_to_sel = top_to_sel.saturating_add(*h);
+    }
+    if top_to_sel <= viewport_h {
+        return 0;
+    }
+
+    // Scroll so the selection sits on the bottom edge of the viewport
+    // (vim-style: grow upward from sel until we fill the column).
+    let mut used = heights[sel];
+    let mut start = sel;
+    while start > 0 {
+        let prev = heights[start - 1];
+        if used.saturating_add(prev) > viewport_h {
+            break;
+        }
+        used = used.saturating_add(prev);
+        start -= 1;
+    }
+    start
+}
+
 /// Texto del estado de turno mostrado a la derecha del header, p.ej.
 /// "adrian.ortiz · trabajando desde 07:55 " o "adrian.ortiz · salió a las 17:01 ".
 fn user_status_line(app: &App) -> Option<String> {
@@ -1001,4 +1675,32 @@ fn format_time(iso: &str) -> String {
     chrono::DateTime::parse_from_rfc3339(iso)
         .map(|dt| dt.format("%H:%M").to_string())
         .unwrap_or_else(|_| iso.to_string())
+}
+
+#[cfg(test)]
+mod board_scroll_tests {
+    use super::column_scroll_start;
+
+    #[test]
+    fn no_selection_starts_at_zero() {
+        assert_eq!(column_scroll_start(20, &[4, 4, 4, 4, 4], None), 0);
+    }
+
+    #[test]
+    fn selection_in_view_stays_at_zero() {
+        assert_eq!(column_scroll_start(20, &[4, 4, 4, 4], Some(2)), 0);
+    }
+
+    #[test]
+    fn selection_past_viewport_scrolls() {
+        // 6 cards x 4h = 24 > 10 viewport; select last → start near end
+        let heights = vec![4u16; 6];
+        let start = column_scroll_start(10, &heights, Some(5));
+        assert!(start > 0, "must scroll down, got {start}");
+        // from start..=5 must fit in 10
+        let used: u16 = heights[start..=5].iter().sum();
+        assert!(used <= 10, "window too tall: {used}");
+        assert!(heights[start..=5].contains(&4));
+        assert_eq!(start, 4); // sel=5: grow up → start=4 (8h), start=3 would be 12h > 10
+    }
 }

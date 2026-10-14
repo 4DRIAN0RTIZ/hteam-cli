@@ -9,13 +9,53 @@ pub mod update;
 
 use crate::config::Config;
 use crate::models::{
-    BoardEntry, BoardsResponse, Card, CardDetail, CheckInResult, Comment, CommentsResponse,
-    DailyWorkEntry, FollowUp, Label, List, ProjectMilestone, ProjectSummary, ProjectTasksResponse,
-    ProjectsResponse, Reminder, UserSuggestion, WorkShiftResume, WorkingOnStatus,
+    BoardEntry, BoardsResponse, Card, CardDetail, CardTimesResult, CheckInResult, Comment,
+    CommentsResponse, DailyWorkEntry, FollowUp, Label, List, ProjectMilestone, ProjectSummary,
+    ProjectTasksResponse, ProjectsResponse, Reminder, UserSuggestion, WorkShiftResume,
+    WorkingOnStatus,
 };
 
 const BASE_URL: &str = "https://hteam.mx/api";
 const SITE_URL: &str = "https://hteam.mx";
+
+/// Hteam keeps operation tasks and project tasks on separate API trees.
+/// Close/reopen must hit the matching family (both POSTs may succeed on the
+/// wrong tree today, but the web always uses the URL family from `title_url`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskFamily {
+    Operation,
+    Project,
+}
+
+impl TaskFamily {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Operation => "operation",
+            Self::Project => "project",
+        }
+    }
+
+    pub fn parse(s: &str) -> Result<Self> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "operation" | "operations" | "op" => Ok(Self::Operation),
+            "project" | "projects" | "proj" => Ok(Self::Project),
+            other => {
+                anyhow::bail!("familia de task desconocida '{other}' (usa operation o project)")
+            }
+        }
+    }
+
+    /// Infer family from a task `title_url` (`/operations/…` vs `/projects/…`).
+    pub fn from_title_url(title_url: &str) -> Option<Self> {
+        if title_url.contains("/projects/") {
+            Some(Self::Project)
+        } else if title_url.contains("/operations/") {
+            Some(Self::Operation)
+        } else {
+            None
+        }
+    }
+}
 
 /// Format the site's own hidden `date` comment field uses — server-local
 /// time, not UTC. `operations::comments` re-exposes this as the format
@@ -29,6 +69,140 @@ fn truncate_for_error(s: &str, max_chars: usize) -> String {
     s.chars().take(max_chars).collect()
 }
 
+/// Values scraped from GET `/operations/{board}/tasks/{id}/edit/`.
+/// Task JSON often omits or mangles these (dependence label string, null priority,
+/// missing time_estimated); the form is the source of truth for preserve-on-patch.
+#[derive(Debug, Clone, Default)]
+pub struct TaskEditFormBaseline {
+    pub csrf: Option<String>,
+    pub name: String,
+    pub description: String,
+    pub time_estimated: String,
+    pub start_date: String,
+    /// Bare depends-on task id, or empty if none.
+    pub dependence: String,
+    pub responsible: String,
+    /// Priority select value `1`..=`5` (web: 1 very low … 5 very high).
+    pub priority: String,
+}
+
+fn parse_task_edit_form(html: &str) -> TaskEditFormBaseline {
+    use scraper::{Html, Selector};
+
+    let doc = Html::parse_document(html);
+    let mut out = TaskEditFormBaseline::default();
+
+    let input_value = |name: &str| -> String {
+        let sel = match Selector::parse(&format!(r#"input[name="{name}"]"#)) {
+            Ok(s) => s,
+            Err(_) => return String::new(),
+        };
+        doc.select(&sel)
+            .next()
+            .and_then(|el| el.value().attr("value"))
+            .unwrap_or("")
+            .to_string()
+    };
+
+    let textarea_value = |name: &str| -> String {
+        let sel = match Selector::parse(&format!(r#"textarea[name="{name}"]"#)) {
+            Ok(s) => s,
+            Err(_) => return String::new(),
+        };
+        doc.select(&sel)
+            .next()
+            .map(|el| el.text().collect::<String>())
+            .unwrap_or_default()
+            .trim()
+            .to_string()
+    };
+
+    let select_selected = |name: &str| -> String {
+        let sel = match Selector::parse(&format!(r#"select[name="{name}"] option[selected]"#)) {
+            Ok(s) => s,
+            Err(_) => return String::new(),
+        };
+        if let Some(el) = doc.select(&sel).next() {
+            return el.value().attr("value").unwrap_or("").to_string();
+        }
+        // Fallback: first option with a value attribute if nothing marked selected.
+        let all = match Selector::parse(&format!(r#"select[name="{name}"] option"#)) {
+            Ok(s) => s,
+            Err(_) => return String::new(),
+        };
+        for el in doc.select(&all) {
+            if el.value().attr("selected").is_some() {
+                return el.value().attr("value").unwrap_or("").to_string();
+            }
+        }
+        String::new()
+    };
+
+    let csrf = input_value("csrfmiddlewaretoken");
+    out.csrf = if csrf.is_empty() { None } else { Some(csrf) };
+    out.name = input_value("name");
+    out.description = textarea_value("description");
+    out.time_estimated = input_value("time_estimated");
+    out.start_date = input_value("start_date");
+    out.dependence = select_selected("dependence");
+    out.responsible = select_selected("responsible");
+    out.priority = select_selected("priority");
+    out
+}
+
+fn dependence_id_from_detail(value: &Option<serde_json::Value>) -> Option<String> {
+    match value.as_ref() {
+        Some(serde_json::Value::Number(n)) => Some(n.to_string()),
+        Some(serde_json::Value::String(s))
+            if !s.is_empty() && s.chars().all(|c| c.is_ascii_digit()) =>
+        {
+            Some(s.clone())
+        }
+        Some(serde_json::Value::Object(map)) => map.get("id").and_then(|v| match v {
+            serde_json::Value::Number(n) => Some(n.to_string()),
+            serde_json::Value::String(s)
+                if !s.is_empty() && s.chars().all(|c| c.is_ascii_digit()) =>
+            {
+                Some(s.clone())
+            }
+            _ => None,
+        }),
+        _ => None,
+    }
+}
+
+/// HTML task edit form expects `YYYY-MM-DD`; detail JSON often has full ISO.
+fn form_date_yyyy_mm_dd(raw: Option<&str>) -> String {
+    let s = raw.unwrap_or("").trim();
+    if s.len() >= 10 && s.as_bytes().get(4) == Some(&b'-') && s.as_bytes().get(7) == Some(&b'-') {
+        s.chars().take(10).collect()
+    } else {
+        s.to_string()
+    }
+}
+
+/// Form `responsible` is a bare user id; some JSON payloads use `{id, username}`.
+fn form_user_id(value: Option<&serde_json::Value>) -> String {
+    match value {
+        Some(serde_json::Value::Number(n)) => n.to_string(),
+        Some(serde_json::Value::String(s))
+            if !s.is_empty() && s.chars().all(|c| c.is_ascii_digit()) =>
+        {
+            s.clone()
+        }
+        Some(serde_json::Value::Object(map)) => map
+            .get("id")
+            .map(|v| match v {
+                serde_json::Value::Number(n) => n.to_string(),
+                serde_json::Value::String(s) => s.clone(),
+                other => other.to_string(),
+            })
+            .unwrap_or_default(),
+        _ => String::new(),
+    }
+}
+
+#[derive(Clone)]
 pub struct HteamClient {
     client: Client,
     config: Arc<Mutex<Config>>,
@@ -42,6 +216,9 @@ pub struct UpdateCardPatch<'a> {
     pub description: Option<&'a str>,
     pub priority: Option<&'a str>,
     pub responsible: Option<&'a str>,
+    /// Task id this card depends on (form field `dependence`), or empty to clear.
+    pub dependence: Option<&'a str>,
+    pub time_estimated: Option<&'a str>,
 }
 
 impl HteamClient {
@@ -143,12 +320,17 @@ impl HteamClient {
             None => self.get_board_number().await?,
         };
 
-        let config = self.config.lock().await;
-        let url = format!(
-            "{}/operation/care/operations/{}/lists/?format=json",
-            self.api_base_url, board
-        );
-        let headers = self.build_headers(&config)?;
+        // Build URL/headers under the config lock, then drop it before HTTP so
+        // parallel list/card fetches are not serialized on this mutex.
+        let (url, headers) = {
+            let config = self.config.lock().await;
+            let url = format!(
+                "{}/operation/care/operations/{}/lists/?format=json",
+                self.api_base_url, board
+            );
+            let headers = self.build_headers(&config)?;
+            (url, headers)
+        };
 
         let response = self
             .client
@@ -180,30 +362,15 @@ impl HteamClient {
             None => self.get_board_number().await?,
         };
 
-        let config = self.config.lock().await;
-        let url = format!(
-            "{}/operation/care/operations/{}/lists/{}/cards/?format=json",
-            self.api_base_url, board, list_id
-        );
-        let headers = self.build_headers(&config)?;
-
-        let response = self
-            .client
-            .get(&url)
-            .headers(headers)
-            .send()
-            .await
-            .context("Error al obtener cards")?;
-
-        if !response.status().is_success() {
-            anyhow::bail!(
-                "Error HTTP {}: {}",
-                response.status(),
-                response.text().await?
-            );
+        // Hteam returns only 10 cards by default and ignores page/offset/limit.
+        // If the list holds more (`total_board_cards`), request it again asking
+        // for all of them with `items_per_page`, as the Hteam web client does.
+        let mut card_response = self.fetch_card_list(board, list_id, None).await?;
+        if let Some(total) = card_response.total_board_cards {
+            if total > card_response.cardlist_list.len() {
+                card_response = self.fetch_card_list(board, list_id, Some(total)).await?;
+            }
         }
-
-        let card_response: crate::models::CardListResponse = response.json().await?;
 
         // Extract board_id from first entry if available
         let board_id = card_response
@@ -224,6 +391,45 @@ impl HteamClient {
             .collect();
 
         Ok((cards, board_id))
+    }
+
+    async fn fetch_card_list(
+        &self,
+        board: u64,
+        list_id: u64,
+        items_per_page: Option<usize>,
+    ) -> Result<crate::models::CardListResponse> {
+        // Same pattern as get_lists: hold config only while copying headers.
+        let (url, headers) = {
+            let config = self.config.lock().await;
+            let mut url = format!(
+                "{}/operation/care/operations/{}/lists/{}/cards/?format=json",
+                self.api_base_url, board, list_id
+            );
+            if let Some(n) = items_per_page {
+                url.push_str(&format!("&items_per_page={}", n));
+            }
+            let headers = self.build_headers(&config)?;
+            (url, headers)
+        };
+
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers)
+            .send()
+            .await
+            .context("Error al obtener cards")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+
+        Ok(response.json().await?)
     }
 
     pub async fn get_open_cards(&self, board_number: Option<u64>) -> Result<Vec<Card>> {
@@ -262,6 +468,116 @@ impl HteamClient {
 
         let detail: CardDetail = response.json().await?;
         Ok(detail)
+    }
+
+    /// Resolve whether `task_id` is an operation or project task.
+    /// Prefers `title_url` from the operation-task detail payload (works for both).
+    pub async fn resolve_task_family(&self, task_id: u64) -> Result<TaskFamily> {
+        let detail = self.get_card_detail(task_id).await?;
+        if let Some(url) = detail.title_url.as_deref() {
+            if let Some(family) = TaskFamily::from_title_url(url) {
+                return Ok(family);
+            }
+        }
+        // Board/operation tasks are the CLI default when the URL is missing.
+        Ok(TaskFamily::Operation)
+    }
+
+    /// POST `/operation|project-new/care/tasks/{id}/close/`.
+    pub async fn close_task(&self, task_id: u64, family: TaskFamily) -> Result<String> {
+        self.post_task_lifecycle(task_id, family, "close").await
+    }
+
+    /// POST `/operation|project-new/care/tasks/{id}/reopen/`.
+    pub async fn reopen_task(&self, task_id: u64, family: TaskFamily) -> Result<String> {
+        self.post_task_lifecycle(task_id, family, "reopen").await
+    }
+
+    async fn post_task_lifecycle(
+        &self,
+        task_id: u64,
+        family: TaskFamily,
+        action: &str,
+    ) -> Result<String> {
+        let (url, headers) = {
+            let config = self.config.lock().await;
+            let path = match family {
+                TaskFamily::Operation => format!(
+                    "{}/operation/care/tasks/{}/{}/",
+                    self.api_base_url, task_id, action
+                ),
+                TaskFamily::Project => format!(
+                    "{}/project-new/care/tasks/{}/{}/",
+                    self.api_base_url, task_id, action
+                ),
+            };
+            let headers = self.build_headers(&config)?;
+            (path, headers)
+        };
+
+        let response = self
+            .client
+            .post(&url)
+            .headers(headers)
+            .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header("Origin", self.site_base_url.as_str())
+            .body("")
+            .send()
+            .await
+            .with_context(|| format!("Error al {action} la task {task_id}"))?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+
+        let text = response.text().await.unwrap_or_default();
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) {
+            if let Some(status) = v.get("status").and_then(|s| s.as_str()) {
+                return Ok(status.to_string());
+            }
+        }
+        if text.trim().is_empty() {
+            Ok(format!("task {action}d"))
+        } else {
+            Ok(text.trim().chars().take(200).collect())
+        }
+    }
+
+    /// Board-card JSON used by the web sidebar: has `estimated_time`,
+    /// `time_spent`, `labels_list`, object `responsible` — fields the task
+    /// detail endpoint often omits or only exposes as bare ids.
+    pub async fn get_board_card(&self, board_id: u64, card_id: u64) -> Result<serde_json::Value> {
+        let (url, headers) = {
+            let config = self.config.lock().await;
+            let url = format!(
+                "{}/boards/care/boards/{}/card/{}/?format=json",
+                self.api_base_url, board_id, card_id
+            );
+            let headers = self.build_headers(&config)?;
+            (url, headers)
+        };
+
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers)
+            .send()
+            .await
+            .context("Error al obtener board card")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+
+        Ok(response.json().await?)
     }
 
     pub async fn get_card_comments(&self, card_id: u64) -> Result<Vec<Comment>> {
@@ -460,6 +776,11 @@ impl HteamClient {
         config.auth.board_id = None;
     }
 
+    /// Operation / process id used in `/operations/{board}/…` URLs (`board_number` in config).
+    pub async fn operation_board_number(&self) -> Result<u64> {
+        self.get_board_number().await
+    }
+
     pub async fn get_board_id(&self) -> Result<u64> {
         {
             let config = self.config.lock().await;
@@ -607,6 +928,7 @@ impl HteamClient {
                 title_url: None,
                 subtitle_url: None,
                 responsible: None,
+                priority: None,
                 worker: None,
                 time_status: None,
             });
@@ -680,6 +1002,8 @@ impl HteamClient {
                 description: Some(description),
                 priority: None,
                 responsible: None,
+                dependence: None,
+                time_estimated: None,
             },
         )
         .await
@@ -992,19 +1316,78 @@ impl HteamClient {
         Ok(resp)
     }
 
+    /// Load current HTML edit-form values (priority, dependence id, estimate, …).
+    /// Task JSON often leaves these null or as display labels only.
+    pub async fn get_task_edit_form(
+        &self,
+        board_number: u64,
+        card_id: u64,
+    ) -> Result<TaskEditFormBaseline> {
+        let url = format!(
+            "{}/operations/{}/tasks/{}/edit/",
+            self.site_base_url, board_number, card_id
+        );
+        let headers = {
+            let config = self.config.lock().await;
+            self.build_headers(&config)?
+        };
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers)
+            .send()
+            .await
+            .context("Error al cargar formulario de edit")?;
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await.unwrap_or_default()
+            );
+        }
+        let html = response.text().await.unwrap_or_default();
+        Ok(parse_task_edit_form(&html))
+    }
+
     pub async fn update_card_full(
         &self,
         card_id: u64,
         board_number: u64,
         patch: UpdateCardPatch<'_>,
     ) -> Result<()> {
-        let config = self.config.lock().await;
         let url = format!(
             "{}/operations/{}/tasks/{}/edit/",
             self.site_base_url, board_number, card_id
         );
-        let headers = self.build_headers(&config)?;
-        let csrf = config.auth.csrf_token.as_deref().unwrap_or("");
+        let (headers, csrf_config) = {
+            let config = self.config.lock().await;
+            let headers = self.build_headers(&config)?;
+            let csrf = config.auth.csrf_token.clone().unwrap_or_default();
+            (headers, csrf)
+        };
+
+        // Task JSON omits / mangles fields the HTML form has (dependence id,
+        // priority select). Load the edit form so we preserve current values
+        // when the patch only touches one field (e.g. priority must not wipe
+        // dependence).
+        let form_html = {
+            let response = self
+                .client
+                .get(&url)
+                .headers(headers.clone())
+                .send()
+                .await
+                .context("Error al cargar formulario de edit")?;
+            if !response.status().is_success() {
+                anyhow::bail!(
+                    "Error HTTP {}: {}",
+                    response.status(),
+                    response.text().await.unwrap_or_default()
+                );
+            }
+            response.text().await.unwrap_or_default()
+        };
+        let baseline = parse_task_edit_form(&form_html);
 
         let encode = |s: &str| {
             let mut out = String::new();
@@ -1030,60 +1413,87 @@ impl HteamClient {
         };
 
         let detail = patch.detail;
+        let csrf = baseline
+            .csrf
+            .as_deref()
+            .filter(|s| !s.is_empty())
+            .unwrap_or(csrf_config.as_str());
+
+        // Form expects a bare task id (or empty to clear). Never re-post the
+        // human label string the detail API returns ("#5 - Title…").
+        let dependence_owned: String = if let Some(dep) = patch.dependence {
+            dep.to_string()
+        } else if let Some(id) = dependence_id_from_detail(&detail.dependence) {
+            id
+        } else {
+            baseline.dependence.clone()
+        };
+
+        // Detail JSON uses ISO datetimes; the HTML form only accepts YYYY-MM-DD.
+        let start_date_owned = {
+            let from_detail = form_date_yyyy_mm_dd(detail.start_date.as_deref());
+            if !from_detail.is_empty() {
+                from_detail
+            } else {
+                form_date_yyyy_mm_dd(Some(baseline.start_date.as_str()))
+            }
+        };
+
+        let responsible_owned = patch.responsible.map(str::to_string).unwrap_or_else(|| {
+            let from_detail = form_user_id(detail.responsible.as_ref());
+            if !from_detail.is_empty() {
+                from_detail
+            } else {
+                baseline.responsible.clone()
+            }
+        });
+
+        let priority_owned = patch.priority.map(str::to_string).unwrap_or_else(|| {
+            detail
+                .priority
+                .as_ref()
+                .map(val_to_str)
+                .filter(|s| !s.is_empty())
+                .or_else(|| {
+                    let p = baseline.priority.trim();
+                    if p.is_empty() {
+                        None
+                    } else {
+                        Some(p.to_string())
+                    }
+                })
+                .unwrap_or_else(|| "3".to_string())
+        });
+
+        let time_estimated_owned = patch.time_estimated.map(str::to_string).unwrap_or_else(|| {
+            detail
+                .time_estimated
+                .clone()
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| baseline.time_estimated.clone())
+        });
+
+        let name_owned = patch
+            .name
+            .map(str::to_string)
+            .unwrap_or_else(|| detail.name.clone());
+        let description_owned = patch.description.map(str::to_string).unwrap_or_else(|| {
+            detail
+                .description
+                .clone()
+                .unwrap_or_else(|| baseline.description.clone())
+        });
+
         let fields = vec![
             format!("csrfmiddlewaretoken={}", encode(csrf)),
             format!("process_id={}", board_number),
-            format!("name={}", encode(patch.name.unwrap_or(&detail.name))),
-            format!(
-                "description={}",
-                encode(
-                    patch
-                        .description
-                        .unwrap_or(detail.description.as_deref().unwrap_or(""))
-                )
-            ),
-            format!(
-                "time_estimated={}",
-                encode(detail.time_estimated.as_deref().unwrap_or(""))
-            ),
-            format!(
-                "start_date={}",
-                encode(detail.start_date.as_deref().unwrap_or(""))
-            ),
-            format!(
-                "dependence={}",
-                encode(
-                    &detail
-                        .dependence
-                        .as_ref()
-                        .map(val_to_str)
-                        .unwrap_or_default()
-                )
-            ),
-            format!(
-                "responsible={}",
-                encode(
-                    patch.responsible.unwrap_or(
-                        &detail
-                            .responsible
-                            .as_ref()
-                            .map(val_to_str)
-                            .unwrap_or_default()
-                    )
-                )
-            ),
-            format!(
-                "priority={}",
-                encode(
-                    patch.priority.unwrap_or(
-                        &detail
-                            .priority
-                            .as_ref()
-                            .map(val_to_str)
-                            .unwrap_or_else(|| "3".to_string())
-                    )
-                )
-            ),
+            format!("name={}", encode(&name_owned)),
+            format!("description={}", encode(&description_owned)),
+            format!("time_estimated={}", encode(&time_estimated_owned)),
+            format!("start_date={}", encode(&start_date_owned)),
+            format!("dependence={}", encode(&dependence_owned)),
+            format!("responsible={}", encode(&responsible_owned)),
+            format!("priority={}", encode(&priority_owned)),
             format!("id={}", card_id),
         ];
         let body = fields.join("&");
@@ -1101,8 +1511,112 @@ impl HteamClient {
             .context("Error al actualizar card")?;
 
         let code = response.status().as_u16();
+        let text = response.text().await.unwrap_or_default();
         if code >= 400 {
-            anyhow::bail!("Error HTTP {}: {}", code, response.text().await?);
+            anyhow::bail!("Error HTTP {}: {}", code, text);
+        }
+        // Django often returns 200 with the edit form again when validation fails
+        // (e.g. full ISO start_date). Success redirects to the task view (no Edit title).
+        if text.contains("errorlist")
+            || text.contains("<title>Edit task</title>")
+            || text.contains("value=Update")
+        {
+            anyhow::bail!(
+                "El servidor no aplicó el cambio del task (formulario rechazado). Revisa fechas/campos."
+            );
+        }
+
+        Ok(())
+    }
+
+    /// POST board-card times API (`type_time=estimate|time_spend`, `time=45m`).
+    /// `board_id` is the internal board id from list payloads, not the operation id.
+    pub async fn set_card_time(
+        &self,
+        board_id: u64,
+        card_id: u64,
+        type_time: &str,
+        time: &str,
+    ) -> Result<CardTimesResult> {
+        let (url, headers) = {
+            let config = self.config.lock().await;
+            let url = format!(
+                "{}/boards/care/boards/{}/card/{}/times/",
+                self.api_base_url, board_id, card_id
+            );
+            let headers = self.build_headers(&config)?;
+            (url, headers)
+        };
+
+        let body = format!(
+            "type_time={}&time={}",
+            urlencoding::encode(type_time),
+            urlencoding::encode(time)
+        );
+
+        let response = self
+            .client
+            .post(&url)
+            .headers(headers)
+            .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header("Origin", self.site_base_url.as_str())
+            .body(body)
+            .send()
+            .await
+            .context("Error al actualizar tiempos de la card")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+
+        Ok(response.json().await?)
+    }
+
+    /// POST board-card dates API (`start_date` or `due_date` as YYYY-MM-DD).
+    pub async fn set_card_date(
+        &self,
+        board_id: u64,
+        card_id: u64,
+        field: &str,
+        value: &str,
+    ) -> Result<()> {
+        let (url, headers) = {
+            let config = self.config.lock().await;
+            let url = format!(
+                "{}/boards/care/boards/{}/card/{}/dates/",
+                self.api_base_url, board_id, card_id
+            );
+            let headers = self.build_headers(&config)?;
+            (url, headers)
+        };
+
+        let body = format!(
+            "{}={}",
+            urlencoding::encode(field),
+            urlencoding::encode(value)
+        );
+
+        let response = self
+            .client
+            .post(&url)
+            .headers(headers)
+            .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header("Origin", self.site_base_url.as_str())
+            .body(body)
+            .send()
+            .await
+            .context("Error al actualizar fechas de la card")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
         }
 
         Ok(())
@@ -1802,6 +2316,81 @@ mod tests {
         client.cancel_follow_up(13310).await.expect("cancel");
     }
 
+    #[test]
+    fn task_family_from_title_url_and_parse() {
+        assert_eq!(
+            TaskFamily::from_title_url("/operations/447/tasks/1/"),
+            Some(TaskFamily::Operation)
+        );
+        assert_eq!(
+            TaskFamily::from_title_url("/projects/335/tasks/6005/"),
+            Some(TaskFamily::Project)
+        );
+        assert_eq!(TaskFamily::from_title_url("/other/"), None);
+        assert_eq!(TaskFamily::parse("op").unwrap(), TaskFamily::Operation);
+        assert_eq!(TaskFamily::parse("project").unwrap(), TaskFamily::Project);
+        assert!(TaskFamily::parse("board").is_err());
+    }
+
+    #[tokio::test]
+    async fn test_resolve_task_family_from_title_url() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/operation/care/tasks/6005/")
+            .match_query(Matcher::UrlEncoded(
+                "format".to_string(),
+                "json".to_string(),
+            ))
+            .with_status(200)
+            .with_body(
+                r#"{"id":6005,"name":"t","labels":[],"list":null,"title_url":"/projects/335/tasks/6005/"}"#,
+            )
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        assert_eq!(
+            client.resolve_task_family(6005).await.expect("family"),
+            TaskFamily::Project
+        );
+    }
+
+    #[tokio::test]
+    async fn test_close_task_posts_operation_family() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("POST", "/operation/care/tasks/42/close/")
+            .with_status(200)
+            .with_body(r#"{"status":"The task has been closed"}"#)
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        let msg = client
+            .close_task(42, TaskFamily::Operation)
+            .await
+            .expect("close");
+        assert_eq!(msg, "The task has been closed");
+    }
+
+    #[tokio::test]
+    async fn test_reopen_task_posts_project_family() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("POST", "/project-new/care/tasks/6005/reopen/")
+            .with_status(200)
+            .with_body(r#"{"status":"The task has been reopened"}"#)
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        let msg = client
+            .reopen_task(6005, TaskFamily::Project)
+            .await
+            .expect("reopen");
+        assert_eq!(msg, "The task has been reopened");
+    }
+
     #[tokio::test]
     async fn test_test_auth_returns_false_for_forbidden_status() {
         let mut server = mockito::Server::new_async().await;
@@ -1856,5 +2445,58 @@ mod tests {
             client.extract_comment_tokens("<input name=\"timestamp\" value=\"123\">"),
             None
         );
+    }
+
+    #[test]
+    fn parse_task_edit_form_reads_selected_fields() {
+        let html = r#"<html><body><form>
+<input type="hidden" name="csrfmiddlewaretoken" value="abc">
+<input name="name" value="T">
+<textarea name="description">hello</textarea>
+<input name="time_estimated" value="1h 30m">
+<input name="start_date" value="2026-10-13">
+<select name="dependence"><option value="">-</option><option value="8965" selected>X</option></select>
+<select name="responsible"><option value="140" selected>u</option></select>
+<select name="priority"><option value="4" selected>High</option></select>
+</form></body></html>"#;
+        let b = parse_task_edit_form(html);
+        assert_eq!(b.csrf.as_deref(), Some("abc"));
+        assert_eq!(b.time_estimated, "1h 30m");
+        assert_eq!(b.dependence, "8965");
+        assert_eq!(b.responsible, "140");
+        assert_eq!(b.priority, "4");
+        assert_eq!(b.start_date, "2026-10-13");
+        assert_eq!(b.description, "hello");
+    }
+
+    #[test]
+    fn dependence_id_from_detail_ignores_label_string() {
+        assert_eq!(
+            dependence_id_from_detail(&Some(serde_json::json!(8965))).as_deref(),
+            Some("8965")
+        );
+        assert_eq!(
+            dependence_id_from_detail(&Some(serde_json::json!("#5 - Lectura"))),
+            None
+        );
+    }
+    #[test]
+    fn form_date_yyyy_mm_dd_truncates_iso() {
+        assert_eq!(
+            form_date_yyyy_mm_dd(Some("2026-10-13T00:00:00-06:00")),
+            "2026-10-13"
+        );
+        assert_eq!(form_date_yyyy_mm_dd(Some("2026-10-13")), "2026-10-13");
+        assert_eq!(form_date_yyyy_mm_dd(None), "");
+    }
+
+    #[test]
+    fn form_user_id_from_number_or_object() {
+        assert_eq!(form_user_id(Some(&serde_json::json!(140))), "140");
+        assert_eq!(
+            form_user_id(Some(&serde_json::json!({"id": 140, "username": "a"}))),
+            "140"
+        );
+        assert_eq!(form_user_id(None), "");
     }
 }

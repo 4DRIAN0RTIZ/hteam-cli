@@ -43,6 +43,22 @@ struct ListCardsParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+struct SearchCardsParams {
+    #[schemars(description = "Texto libre sobre nombre o descripción (opcional)")]
+    query: Option<String>,
+    #[schemars(description = "Responsable: username, email o id numérico (opcional)")]
+    responsible: Option<String>,
+    #[schemars(description = "Prioridad (opcional, p.ej. 1/2/3)")]
+    priority: Option<String>,
+    #[schemars(description = "Labels requeridas (AND); opcional")]
+    labels: Option<Vec<String>>,
+    #[schemars(description = "Limitar a una lista del board (opcional)")]
+    list_id: Option<u64>,
+    #[schemars(description = "ID del board (opcional; usa el configurado si se omite)")]
+    board: Option<u64>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 struct CardParams {
     #[schemars(description = "ID del card / task")]
     card_id: u64,
@@ -73,6 +89,42 @@ struct MoveCardParams {
     #[schemars(description = "ID de la lista origen (default: 1 = Open)")]
     from_list: Option<u64>,
     #[schemars(description = "ID del board (opcional)")]
+    board: Option<u64>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct CardLifecycleParams {
+    #[schemars(description = "ID del card / task")]
+    card_id: u64,
+    #[schemars(
+        description = "Familia API: operation o project. Si se omite, se infiere del title_url de la task"
+    )]
+    family: Option<String>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct CardDatesParams {
+    #[schemars(description = "ID del card / task")]
+    card_id: u64,
+    #[schemars(description = "Fecha de inicio YYYY-MM-DD (opcional; al menos start o due)")]
+    start: Option<String>,
+    #[schemars(description = "Fecha de vencimiento YYYY-MM-DD (opcional; al menos start o due)")]
+    due: Option<String>,
+    #[schemars(
+        description = "Número de operación/board (opcional). Se resuelve el board_id interno AJAX, no se usa el número de operación como board_id."
+    )]
+    board: Option<u64>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct CardTimeParams {
+    #[schemars(description = "ID del card / task")]
+    card_id: u64,
+    #[schemars(description = "Estimado, por ejemplo 1h 30m (opcional; al menos estimate o spent)")]
+    estimate: Option<String>,
+    #[schemars(description = "Tiempo gastado, por ejemplo 45m o +30m para sumar (opcional)")]
+    spent: Option<String>,
+    #[schemars(description = "Número de operación/board (opcional; resuelve board_id interno)")]
     board: Option<u64>,
 }
 
@@ -197,6 +249,33 @@ impl HteamMcpServer {
         ok(cards)
     }
 
+    #[tool(
+        description = "Buscar y filtrar cards del board por texto, responsable, prioridad y/o labels. Devuelve hits con list_id, list_name y card."
+    )]
+    async fn cards_search(
+        &self,
+        Parameters(SearchCardsParams {
+            query,
+            responsible,
+            priority,
+            labels,
+            list_id,
+            board,
+        }): Parameters<SearchCardsParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let filters = operations::cards::CardSearchFilters {
+            text: query,
+            responsible,
+            priority,
+            labels: labels.unwrap_or_default(),
+        };
+        let scope = operations::cards::CardSearchScope { board, list_id };
+        let hits = operations::cards::search(&self.client, scope, filters)
+            .await
+            .map_err(err)?;
+        ok(hits)
+    }
+
     #[tool(description = "Obtener cards abiertos (lista 1)")]
     async fn cards_open(
         &self,
@@ -266,6 +345,80 @@ impl HteamMcpServer {
             .await
             .map_err(err)?;
         ok(serde_json::json!({"success": true, "card_id": card_id, "to_list": to_list}))
+    }
+
+    #[tool(
+        description = "Cerrar una task con POST close/ de la familia correcta (operation o project). No mueve entre listas."
+    )]
+    async fn card_close(
+        &self,
+        Parameters(CardLifecycleParams { card_id, family }): Parameters<CardLifecycleParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let result = operations::cards::close_card(&self.client, card_id, family.as_deref())
+            .await
+            .map_err(err)?;
+        ok(result)
+    }
+
+    #[tool(
+        description = "Reabrir una task con POST reopen/ de la familia correcta (operation o project). No mueve entre listas."
+    )]
+    async fn card_reopen(
+        &self,
+        Parameters(CardLifecycleParams { card_id, family }): Parameters<CardLifecycleParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let result = operations::cards::reopen_card(&self.client, card_id, family.as_deref())
+            .await
+            .map_err(err)?;
+        ok(result)
+    }
+
+    #[tool(
+        description = "Editar start_date y/o due_date de una task (YYYY-MM-DD) vía POST boards/…/card/…/dates/. Resuelve board_id interno."
+    )]
+    async fn card_dates(
+        &self,
+        Parameters(CardDatesParams {
+            card_id,
+            start,
+            due,
+            board,
+        }): Parameters<CardDatesParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let result = operations::cards::set_dates(
+            &self.client,
+            card_id,
+            board,
+            start.as_deref(),
+            due.as_deref(),
+        )
+        .await
+        .map_err(err)?;
+        ok(result)
+    }
+
+    #[tool(
+        description = "Fijar estimado y/o registrar tiempo gastado vía board-card times/. `spent` admite +30m para sumar al acumulado."
+    )]
+    async fn card_time(
+        &self,
+        Parameters(CardTimeParams {
+            card_id,
+            estimate,
+            spent,
+            board,
+        }): Parameters<CardTimeParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let result = operations::cards::set_times(
+            &self.client,
+            card_id,
+            board,
+            estimate.as_deref(),
+            spent.as_deref(),
+        )
+        .await
+        .map_err(err)?;
+        ok(result)
     }
 
     #[tool(description = "Actualizar la descripción de un card (PATCH rápido)")]

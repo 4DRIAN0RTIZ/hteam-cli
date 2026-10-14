@@ -35,6 +35,8 @@ pub struct List {
 pub struct CardListResponse {
     pub id: u64,
     pub name: String,
+    #[serde(default)]
+    pub total_board_cards: Option<usize>,
     pub cardlist_list: Vec<CardListEntry>,
 }
 
@@ -68,11 +70,8 @@ pub struct Card {
     #[serde(rename = "labels_list")]
     #[tabled(display_with = "display_labels")]
     pub labels: Vec<Label>,
-    #[expect(
-        dead_code,
-        reason = "kept for API compatibility with Hteam card payloads"
-    )]
-    #[serde(skip)]
+    /// Visible task number (e.g. 5 in "#5 - Title").
+    #[serde(default)]
     #[tabled(skip)]
     pub number: Option<u64>,
     #[expect(
@@ -89,18 +88,16 @@ pub struct Card {
     #[serde(skip)]
     #[tabled(skip)]
     pub subtitle_url: Option<String>,
-    #[expect(
-        dead_code,
-        reason = "kept for API compatibility with Hteam card payloads"
-    )]
-    #[serde(skip)]
+    /// Present on some list payloads and always on detail; used by shared card
+    /// search filters. Shape varies (id, username object, plain string).
+    #[serde(default)]
     #[tabled(skip)]
     pub responsible: Option<serde_json::Value>,
-    #[expect(
-        dead_code,
-        reason = "kept for API compatibility with Hteam card payloads"
-    )]
-    #[serde(skip)]
+    /// Optional priority when the list/detail payload includes it (number or string).
+    #[serde(default)]
+    #[tabled(skip)]
+    pub priority: Option<serde_json::Value>,
+    #[serde(default)]
     #[tabled(skip)]
     pub worker: Option<serde_json::Value>,
     /// El texto de `CardListEntry::get_time_status` (ej. "On time", "Expired"),
@@ -125,8 +122,11 @@ impl Card {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Label {
+    /// Missing on some board-card `labels_list` payloads (name+color only).
+    #[serde(default)]
     pub id: u64,
     pub name: String,
+    #[serde(default)]
     pub color: String,
 }
 
@@ -149,20 +149,51 @@ pub struct CardDetail {
     #[serde(deserialize_with = "deserialize_labels")]
     pub labels: Vec<Label>,
     pub list: Option<List>,
+    /// Visible task number on the web (e.g. 303), distinct from `id`.
+    #[serde(default)]
+    pub number: Option<u64>,
     #[serde(default)]
     pub created_at: Option<String>,
     #[serde(default)]
     pub updated_at: Option<String>,
     #[serde(default)]
     pub time_estimated: Option<String>,
+    /// Present on some board-card payloads after a times POST; not always on detail.
+    #[serde(default)]
+    pub time_spend: Option<String>,
     #[serde(default)]
     pub start_date: Option<String>,
+    #[serde(default)]
+    pub due_date: Option<String>,
     #[serde(default)]
     pub dependence: Option<serde_json::Value>,
     #[serde(default)]
     pub responsible: Option<serde_json::Value>,
     #[serde(default)]
     pub priority: Option<serde_json::Value>,
+    #[serde(default)]
+    pub closed: Option<bool>,
+    /// Site path like `/operations/{op}/tasks/{id}/` or `/projects/{p}/tasks/{id}/`.
+    /// Used to pick the close/reopen API family.
+    #[serde(default)]
+    pub title_url: Option<String>,
+}
+
+/// Response from `POST .../card/{id}/times/`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CardTimesResult {
+    #[serde(default)]
+    pub detail: Option<String>,
+    #[serde(default)]
+    pub warnings: Vec<String>,
+    #[serde(default)]
+    pub start_date: Option<String>,
+    #[serde(default)]
+    pub due_date: Option<String>,
+    #[serde(default)]
+    pub estimated_time: Option<String>,
+    #[serde(default)]
+    pub time_spend: Option<String>,
 }
 
 fn deserialize_labels<'de, D>(deserializer: D) -> Result<Vec<Label>, D::Error>
