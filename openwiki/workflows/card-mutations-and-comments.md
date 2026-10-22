@@ -1,33 +1,8 @@
 ---
 type: workflow
 title: Card mutation and comment workflows
-description: Safe end-to-end workflows for changing HTeam cards, posting comments, setting reminders, and toggling work across the CLI, TUI, and MCP interfaces.
+description: Safe end-to-end workflows for changing HTeam cards, moving them, updating dates and time, and posting comments across CLI, TUI, and MCP interfaces.
 tags: [cards, workflows, hteam-api, tui, comments]
-verified:
-  - by: openwiki/0.4.3
-    at: 2026-08-29T04:08:29.740Z
-sources:
-  - id: openwiki-source-187e60c473677e8845811fbd
-    resource: repo://src/cli/cards.rs
-  - id: openwiki-source-3454eda491fb094684a56d2a
-    resource: repo://src/client/mod.rs
-  - id: openwiki-source-55d9f60b5eb1630419488cb7
-    resource: repo://src/mcp/mod.rs
-  - id: openwiki-source-a32e822ad3272b6a9b870734
-    resource: repo://src/operations/cards.rs
-  - id: openwiki-source-4c2e6dae3b729ebb5118d1d6
-    resource: repo://src/operations/comments.rs
-  - id: openwiki-source-d95bb0d4539bbe79de1e9186
-    resource: repo://src/operations/mod.rs
-  - id: openwiki-source-abd7eae9388f07b43eb7706b
-    resource: repo://src/operations/reminders.rs
-  - id: openwiki-source-0fc29dd590a674bf167ededd
-    resource: repo://src/operations/session.rs
-  - id: openwiki-source-bca472904c30f6adc5315e1f
-    resource: repo://src/operations/working.rs
-  - id: openwiki-source-7bcde87b884a289ae2ca3e61
-    resource: repo://src/tui/events.rs
-generated: { by: "openwiki/0.4.3", at: "2026-08-29T04:08:29.740Z" }
 ---
 
 # Card mutation and comment workflows
@@ -41,11 +16,11 @@ Every CLI card command opens a `Session`; that loads configuration and refuses t
 Discovery is not optional plumbing in several mutations:
 
 - List and card reads use the board-number API. The cards response is unwrapped from `cardlist_list` and may yield the internal `board_id` from its first entry.
-- `create_card` needs both the board number and internal board ID. `get_board_id` first uses its in-memory cache; otherwise it probes list **1** (Open), and if Open is empty, scans lists with cards until it finds an entry carrying a board ID. It caches the result. Changing the active board invalidates that cache before subsequent mutations.
+- `create_card` needs both the board number and internal board ID. `get_board_id` first uses its in-memory cache; otherwise it probes list `1` (Open), and if Open is empty, scans lists with cards until it finds an entry carrying a board ID. It caches the result. Changing the active board invalidates that cache before subsequent mutations.
 - Creating also needs a user ID. It uses a cached value first, otherwise checks the active working-on response (array or object) and falls back to the most recent work-shift record. A resolved user ID is persisted in configuration.
 - Full updates first fetch card detail, then GET the HTML edit form, then POST the full form body. The edit endpoint is form-oriented rather than a partial JSON API, so the current detail is only one input to a preserve-on-patch workflow.
 
-> **Safe caller rule:** pass the current source list when it is known. The shared `move_card` operation defaults an omitted source to list **1**, Open; this is convenient for CLI/MCP callers but is wrong when the card is known to be in another list. The TUI therefore always supplies its visible source-list ID.
+> **Safe caller rule:** pass the current source list when it is known. The shared `move_card` operation defaults an omitted source to list `1`, Open; this is convenient for CLI/MCP callers but is wrong when the card is known to be in another list. The TUI therefore always supplies its visible source-list ID.
 
 ## Card creation, movement, and patching
 
@@ -57,11 +32,17 @@ This fallback is useful for a user-facing confirmation, but it is not a durable 
 
 ### Move a card
 
-Moves POST JSON to `boards/care/labels/update_card_position/` with a board number, card ID, source list, destination list, and `card_type: 0`. Success means any 2xx status; HTTP failures preserve their response body in the reported error. CLI JSON and text confirmations display source list 1 when `--from` is omitted, matching the operation default.
+Moves POST JSON to `boards/care/labels/update_card_position/` with a board number, card ID, source list, destination list, and `card_type: 0`. Success means any 2xx status; HTTP failures preserve their response body in the reported error. CLI JSON and text confirmations display source list `1` when `--from` is omitted, matching the operation default.
 
-### Full update sequence
+The TUI performs the same move optimistically: it removes the source card locally, appends the card to the target list, and then posts the move with the explicit source list and current board number. If the request succeeds, it keeps the new placement and selection. If the request fails, it removes the optimistic target copy and reinserts the card at its original source index before surfacing the error.
 
-A full update can change name, description, priority, responsible user, dependence, and estimate. The CLI resolves an explicit/configured/last-used board before invoking it; MCP receives its required board parameter. The operation fetches detail first, then GETs the HTML edit form, then constructs a form submission that substitutes only supplied values and retains `time_estimated`, `start_date`, `dependence`, and the other current values. Missing priority defaults to `3` only when neither the detail nor the form supplies one. Description-only updates use the same read-then-full-form path and resolve their board from the client configuration.
+### Close and reopen a task
+
+Close and reopen are not list moves. They are dedicated task-lifecycle calls that hit `close/` or `reopen/` on the task family resolved from the task's `title_url`, unless the caller overrides the family explicitly. That family selection matters because the API distinguishes `operation` and `project` tasks.
+
+### Update description or full fields
+
+`update-desc` is a narrow write: it sends only the new description to the client helper and does not need to re-scrape the edit form. The broader `update` workflow is different. It fetches the current task detail, resolves the board context, and then posts the full edit form so omitted fields survive the round trip. That workflow can update name, description, priority, responsible user, dependence, and estimate in one pass.
 
 ```mermaid
 sequenceDiagram
@@ -90,9 +71,9 @@ sequenceDiagram
     end
 ```
 
-*Full card updates scrape the HTML form inside `update_card_full` before writing, so omitted patch fields are not discarded. `get_task_edit_form` is the same scrape exposed for read enrichment (`card_detail_enriched`).* 
+*Full card updates scrape the HTML form inside `update_card_full` before writing, so omitted patch fields are not discarded. `get_task_edit_form` is the same scrape exposed for read enrichment (`card_detail_enriched`).*
 
-## Why the HTML form is the source of truth
+### Why the HTML form is the source of truth
 
 The Hteam task edit endpoint is not a patch API. The current HTML form carries the editable values that must survive a partial save, while the task detail JSON often leaves them blank, uses display labels, or returns a different shape. `operation_id` in the edit URL is config `board_number`, not the internal board-card `board_id`.
 
@@ -137,7 +118,7 @@ When Hteam adds a new field to the edit form, the change surface is wider than o
 
 ## Comment workflow: form discovery, date, follow, and mentions
 
-Comments use a site-side HTML form rather than a simple JSON write endpoint. Before posting, the client fetches `/operations/{board}/tasks/{card}/`, extracts `timestamp`, `security_hash`, and the form-specific CSRF token, then URL-encodes and submits the form to `/comments/post/`. It includes `content_type=processes.task`, the card as `object_pk`, `reply_to=0`, an empty honeypot, the comment text, and a `date`; the POST also sets the page as `Referer` and the site as `Origin`. Token extraction fails closed if any required hidden input is absent, and only status codes 400 or higher are treated as post failures.
+Comments use a site-side HTML form rather than a simple JSON write endpoint. Before posting, the client fetches `/operations/{board}/tasks/{card}/`, extracts `timestamp`, `security_hash`, and the form-specific CSRF token, then URL-encodes and submits the form to `/comments/post/`. It includes `content_type=processes.task`, the card as `object_pk`, `reply_to=0`, an empty honeypot, the comment text, and a `date`; the POST also sets the page as `Referer` and the site as `Origin`. Token extraction fails closed if any required hidden input is absent, and only status codes `400` or higher are treated as post failures.
 
 The date contract is `YYYY-MM-DD HH:MM` (`COMMENT_DATE_FORMAT`). A blank or omitted value means the current **local** time, not UTC; a supplied value is parsed strictly before any network request. `follow` is optional in the HTTP form: it is sent as `follow=on` only when true, exactly like a checked HTML checkbox. CLI supplies `false` unless `--follow` is provided; MCP explicitly defaults an absent optional field to false; TUI resets it to false when composition begins.
 
@@ -196,9 +177,11 @@ flowchart TD
 
 *The TUI changes local board state immediately but restores the original ordering on a failed remote move.*
 
-## Reminders and working-on toggles
+## Dates, time, reminders, and working-on toggles
 
-A reminder is a separate JSON mutation: the client posts `{ "type": 1, "object_id": card_id, "card_type": 0 }` to `/tr/reminders/`; any status below 400 counts as success. The TUI refreshes its reminder popup list after a successful creation when that reload succeeds.
+Dates and time are separate board-card AJAX mutations, and they both resolve the internal `board_id` before writing. `set_dates` requires at least one of `start_date` or `due_date`, validates each value as `YYYY-MM-DD`, and POSTs each field independently. `set_times` requires at least one of estimate or spent time, validates non-empty duration strings, and POSTs `estimate` and `time_spend` separately. Both operations return the resolved internal board ID so callers can report which board-card route was actually touched.
+
+A reminder is a separate JSON mutation: the client posts `{ "type": 1, "object_id": card_id, "card_type": 0 }` to `/tr/reminders/`; any status below `400` counts as success. The TUI refreshes its reminder popup list after a successful creation when that reload succeeds.
 
 Working-on status is likewise independent of card-list placement. Starting sends form data for the card with `content_type=99`. Stopping requires the **working-on record ID**, not the card ID, and PUTs that record with `state=4`. The working endpoint can return empty/null, an array, or a singleton object; the client normalizes these to a vector. TUI toggling finds the matching record ID in its cached state, calls start or stop, and refreshes working status only after success; failed operations leave that cache unchanged and report an error.
 
@@ -219,9 +202,9 @@ The focused operation tests use a mock client base URL to verify the wire-level 
 
 ## Related pages
 
-- [Cards and board state](/openwiki/concepts/cards-and-board-state.md)
-- [Session configuration](/openwiki/concepts/session-configuration.md)
-- [Hteam HTTP integration](/openwiki/integrations/hteam-api.md)
-- [MCP server integration](/openwiki/integrations/mcp-server.md)
-- [Terminal experiences](/openwiki/operations/terminal-experiences.md)
-- [Verification strategy](/openwiki/testing/verification-strategy.md)
+- [Cards and board state](../concepts/cards-and-board-state.md)
+- [Session configuration](../concepts/session-configuration.md)
+- [Hteam HTTP integration](../integrations/hteam-api.md)
+- [MCP server integration](../integrations/mcp-server.md)
+- [Terminal experiences](../operations/terminal-experiences.md)
+- [Verification strategy](../testing/verification-strategy.md)

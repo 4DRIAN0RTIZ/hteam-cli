@@ -1,4 +1,4 @@
 # Files
 
-- [Hteam HTTP integration contract](hteam-api.md) - HteamClient is the single HTTP boundary to hteam.mx, centralizing authenticated requests, JSON endpoints, browser-form task edits, HTML extraction, identifier discovery, and transport failures for CLI, TUI, and MCP workflows.
-- [MCP stdio server and tool surface](mcp-server.md) - The hteam MCP server exposes the shared Hteam board operations over stdio, with schema-derived tool parameters, JSON text results, and uniform MCP internal-error translation.
+- [Hteam API Integration](hteam-api.md) - HteamClient centralizes the authenticated Hteam API surface, including board discovery, card and project mutations, comment and working-state flows, and HTML-backed form scraping. It also records which endpoint family owns each field when data must be merged from multiple responses.
+- [MCP Server Integration](mcp-server.md) - The Hteam MCP server exposes board, card, comment, working, project, and activity workflows over stdio using schema-driven tool parameters, thin delegation to shared operations, and uniform MCP error translation.

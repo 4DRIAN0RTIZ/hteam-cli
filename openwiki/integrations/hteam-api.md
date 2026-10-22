@@ -1,61 +1,45 @@
 ---
 type: integration contract
-title: Hteam HTTP integration contract
-description: HteamClient is the single HTTP boundary to hteam.mx, centralizing authenticated requests, JSON endpoints, browser-form task edits, HTML extraction, identifier discovery, and transport failures for CLI, TUI, and MCP workflows.
-tags: [hteam, http, integration, authentication, api-client]
+title: Hteam API Integration
+description: HteamClient centralizes the authenticated Hteam API surface, including board discovery, card and project mutations, comment and working-state flows, and HTML-backed form scraping. It also records which endpoint family owns each field when data must be merged from multiple responses.
+tags: [hteam, api, integration, authentication, client]
 verified:
-  - by: openwiki/0.4.3
-    at: 2026-08-29T04:08:29.740Z
+  - by: openwiki/0.7.2
+    at: 2026-08-29T04:34:19.305Z
 sources:
-  - id: openwiki-source-2e5513f372a973635ee9a0c5
-    resource: repo://src/cli/login.rs
   - id: openwiki-source-3454eda491fb094684a56d2a
     resource: repo://src/client/mod.rs
-  - id: openwiki-source-ec936990c4b0348483afdd8c
-    resource: repo://src/config/mod.rs
   - id: openwiki-source-55d9f60b5eb1630419488cb7
     resource: repo://src/mcp/mod.rs
-  - id: openwiki-source-edfaedbce95f78cec712c59b
-    resource: repo://src/models/mod.rs
-  - id: openwiki-source-d7c0e68afeedea2d27dd68f8
-    resource: repo://src/operations/boards.rs
   - id: openwiki-source-a32e822ad3272b6a9b870734
     resource: repo://src/operations/cards.rs
-  - id: openwiki-source-4c2e6dae3b729ebb5118d1d6
-    resource: repo://src/operations/comments.rs
-  - id: openwiki-source-0d01aafece00a697ee19161c
-    resource: repo://src/operations/daily_work.rs
   - id: openwiki-source-d95bb0d4539bbe79de1e9186
     resource: repo://src/operations/mod.rs
-  - id: openwiki-source-3e9b811753db3d98604d639d
-    resource: repo://src/operations/projects.rs
-  - id: openwiki-source-abd7eae9388f07b43eb7706b
-    resource: repo://src/operations/reminders.rs
-  - id: openwiki-source-bca472904c30f6adc5315e1f
-    resource: repo://src/operations/working.rs
-generated: { by: "openwiki/0.4.3", at: "2026-08-29T04:08:29.740Z" }
+generated: { by: "openwiki/0.7.2", at: "2026-08-29T04:34:19.305Z" }
 ---
 
-# Hteam HTTP integration contract
+# Hteam API Integration
 
-`HteamClient` is the exclusive implementation boundary for communication with Hteam. Delivery surfaces and the shared `operations` layer receive a client reference and work with domain models; they do not construct URLs, headers, request bodies, or response parsers. This keeps the quirks of the remote service—two hosts, cookies plus CSRF, JSON and browser-form endpoints, HTML extraction, and inconsistent response shapes—out of CLI, TUI, and MCP code.
+`HteamClient` is the HTTP boundary for Hteam. Presentation surfaces such as the CLI, TUI, and MCP call the shared `operations` layer, and that layer calls the client; they do not build request URLs, headers, or parsers themselves. The important consequence is that remote-service quirks stay isolated in one place: two base hosts, manual cookie and CSRF handling, JSON endpoints, browser-form endpoints, HTML scraping, and responses whose shape varies by family.
 
-## Construction, authentication, and host split
+## Session probing and client construction
 
 A normal client uses these fixed production bases:
 
 - API endpoints: `https://hteam.mx/api`
 - Site/browser endpoints: `https://hteam.mx`
 
-`HteamClient::new` builds one `reqwest::Client` with a 30-second timeout and `curl/7.81.0` user agent, keeps an `Arc<Mutex<Config>>`, and initializes both bases. It deliberately does **not** enable a cookie store: credentials are emitted explicitly on every request. `HteamClient::with_auth` is the entrypoint for authenticated application sessions and refuses a configuration without both `session_id` and `csrf_token`. Login instead creates a client from the candidate configuration, probes a board-list endpoint, and persists the credentials only after a successful response.
+`HteamClient::new` builds one `reqwest::Client` with a 30-second timeout and `curl/7.81.0` user agent, keeps the mutable `Config` behind `Arc<Mutex<_>>`, and initializes both base URLs. It does **not** use a cookie store; each request emits credentials explicitly. `HteamClient::with_auth` rejects configuration that does not already contain both `session_id` and `csrf_token`.
+
+Login probing follows the same auth boundary as the application itself. The login flow creates a temporary client from candidate credentials, probes the boards list through `check_auth`, and only persists the cookies after that probe succeeds. That means authentication is validated against a real Hteam response before the config is saved.
 
 Every request starts from shared headers:
 
-- `Referer: https://hteam.mx/`, `X-Requested-With: XMLHttpRequest`, and `Accept: */*`;
-- when both cookie values exist, `Cookie: sessionid=…; csrftoken=…` and `X-CSRFToken: …`;
-- `Authorization: Bearer …` when an access token is configured.
+- `Referer: https://hteam.mx/`, `X-Requested-With: XMLHttpRequest`, and `Accept: */*`
+- `Cookie: sessionid=…; csrftoken=…` and `X-CSRFToken: …` when both cookie values exist
+- `Authorization: Bearer …` when an access token is configured
 
-The client holds configuration in memory, so callers can change its selected board with `set_board_number`. That operation clears the cached internal `board_id`: a board ID from a prior board must never be reused for card creation or movement. In contrast, the board-switch operation owns durable selected-board and display-name persistence, rather than the HTTP client.
+The client keeps configuration in memory, so callers can update the active board with `set_board_number`. That method also clears the cached internal `board_id`; a board ID discovered for one board must never be reused after switching. Durable selected-board persistence remains the responsibility of the session / board-switch operations, not the HTTP client.
 
 ```mermaid
 sequenceDiagram
@@ -75,77 +59,87 @@ sequenceDiagram
     Ops-->>Surface: Result of domain data
 ```
 
-This shows the normal authenticated-request path and the ownership boundary between presentation, operations, and HTTP transport.
+## Major endpoint families
 
-## Endpoint families and payload conventions
-
-The client exposes domain-oriented methods rather than a generic public request API. The important families are:
+The client exposes family-specific methods instead of a generic request API. The families that matter for safe changes are:
 
 | Family | Base and representative routes | Request and response style |
 | --- | --- | --- |
-| Boards, lists, cards, and labels | API: `/operation/care/operations/`, `/operation/care/operations/{board}/lists/`, `/operation/care/operations/{board}/lists/{list}/cards/`, `/operation/care/tasks/{card}/`, and `/boards/care/…` | Reads use `?format=json` except the board picker, which sends a DataTables query and reads its `data` envelope. Create, move, label, and reminder mutations use JSON. |
-| Card edits | Site: `/operations/{board}/tasks/{card}/edit/` | The client GETs the edit page, scrapes the HTML form baseline, and POSTs a URL-encoded browser form that retains all non-patched editable values. The task-detail JSON is not enough on its own because it often omits or mangles dependence, priority, estimate, and date shapes. |
-| Comments and mentions | Site: `/comments/api/processes-task/{card}/` and `/comments/post/`; API: `/users/username-autocomplete/` | Comment reads are a JSON `results` envelope. Posting requires tokens from the rendered task page and a URL-encoded form. Autocomplete is a GET with `q`. |
-| Working state, reminders, and shift | API: `/tr/workingonit/`, `/tr/reminders/`, and `/tr/checkworkshifs/…` | Working start/stop use URL-encoded AJAX-style bodies; reminders and check-in use JSON; reads parse Hteam-specific status models. |
-| Project and daily work | API project routes under `/project-new/care/`; site `/history/daily-work` | Project routes return JSON. Daily work sends optional URL-encoded query parameters and parses the returned history HTML. |
+| Boards / listing | API: `/operation/care/operations/` and `/operation/care/operations/{board}/lists/` | Reads use `?format=json`; the boards list is also the auth probe. The board-list response is the source of truth for whether the current session is authorized. |
+| Cards | API: `/operation/care/operations/{board}/lists/{list}/cards/`, `/operation/care/tasks/{card}/`, and `/boards/care/boards/{board}/card/{card}/…` | JSON reads return cards and task details. Card creation, movement, labels, and board-card time/date updates are JSON mutations. |
+| Comments | Site: `/comments/api/processes-task/{card}/` and `/comments/post/` | Comment reads return a `results` envelope. Posting is a browser-form flow that must scrape tokens from the task page before the POST. |
+| Projects | API: `/project-new/care/projects/…` and `/project-new/care/{project}/tasks-projects/` | Project summary, milestone, and task endpoints return JSON. Project task lifecycle routes are separate from operation-task routes. |
+| Working on it / reminders | API: `/tr/workingonit/`, `/tr/reminders/`, and `/tr/checkworkshifs/…` | These are JSON or URL-encoded AJAX-style calls depending on the action. Their readers accept a few server-shape variants, but only for the shapes seen in practice. |
+| Daily work | Site: `/history/daily-work` | Query parameters are URL-encoded, and the response is parsed from HTML history paragraphs. |
 
-`operations` primarily forwards these calls and returns plain data. Its meaningful additions are workflow policy: card updates GET the HTML edit form before POSTing a full body, movement defaults its source list to Open (ID 1), and comment date input is validated against `COMMENT_DATE_FORMAT` (`%Y-%m-%d %H:%M`) or defaults to local time. This date is intentionally local/server-style time rather than UTC.
+`operations` primarily forwards these calls and returns plain data. Its meaningful policy additions are: card updates load the HTML edit form before POSTing a full body, movement defaults the source list to Open (ID 1), and comment date input is validated against `COMMENT_DATE_FORMAT` (`%Y-%m-%d %H:%M`) or defaults to local time.
+
+## Board discovery and internal board_id resolution
+
+Hteam distinguishes the user-facing board number from an internal `board_id`. The API methods that need the internal value do not assume a hardcoded board; they resolve it from live data.
+
+`get_board_id` first tries the cached value in config. If it is missing, it fetches Open list 1 and extracts `board_id` from the first card-list entry. If Open is empty, it falls back to other lists that report a positive card count and retries them until one yields an ID. If no list produces an internal board ID, card creation fails instead of guessing.
+
+That distinction matters because the board number and the internal `board_id` are used by different routes. The operation/process number appears in `/operations/{board_number}/…` and most task-edit URLs, while the internal board ID appears in board-card AJAX routes such as `/boards/care/boards/{board_id}/card/{card_id}/…`. When a caller changes boards, the cached internal ID is invalidated immediately.
+
+## Card reads, creation, and movement
+
+Card reads are intentionally split across more than one endpoint because no single response contains everything the UI needs.
+
+- `get_card_detail` is the basic task detail JSON.
+- `get_board_card` is the board-sidebar JSON, which carries fields such as `estimated_time`, `time_spent`, `labels_list`, and an object-shaped responsible field.
+- `get_task_edit_form` scrapes the HTML edit form, which is the source of truth for `csrfmiddlewaretoken`, `name`, `description`, `time_estimated`, `start_date`, `dependence`, `responsible`, and `priority`.
+
+This merging is deliberate: task detail JSON is not authoritative for several editable fields, and the board-card JSON is not authoritative for form-only values like the raw dependence id. The merge policy in `operations::cards::card_detail_enriched` reflects that hierarchy: board-card JSON fills in time/label/responsible data, while the edit form fills in priority and estimate when the task detail payload is incomplete.
+
+```mermaid
+sequenceDiagram
+    participant Ops as operations::cards
+    participant Client as HteamClient
+    participant API as Hteam API
+    participant Site as Hteam site
+
+    Ops->>Client: card_detail_enriched(card_id)
+    Client->>API: GET task detail JSON
+    API-->>Client: CardDetail
+    Client->>API: GET board-card JSON (if board_id known)
+    API-->>Client: board-card payload
+    Client->>Site: GET task edit form
+    Site-->>Client: HTML form baseline
+    Client->>Ops: merged CardDetail
+```
+
+Card creation posts JSON with the card name, resolved user/complement, process/board number, and optional list labels. If the API returns an empty body or a response that decodes to card ID 0, the client treats that as an ambiguous success and tries to find the named card in the target list. If it still cannot identify the new card, it returns a placeholder card with ID 0 rather than inventing an identifier.
+
+Card movement is a separate JSON call that posts `board_id`, `card_id`, `from_list`, `to_list`, and `card_type: 0`. The operation layer supplies the board number, but the client sends the internal board ID only where the route expects it.
+
+## Project task families are separate from operation-task families
+
+Project task actions live under a different API tree from operation task actions. `TaskFamily` makes that separation explicit, and the lifecycle methods choose the route family from the task’s `title_url` when possible.
+
+- Operation tasks use `/operation/care/tasks/{id}/{close|reopen}/`
+- Project tasks use `/project-new/care/tasks/{id}/{close|reopen}/`
+
+`resolve_task_family` inspects the task detail `title_url` and defaults to `Operation` only when the URL is missing or unrecognized. This matters because the client intentionally treats the two trees as separate; safe changes must not assume that one close/reopen route works for both kinds of task.
 
 ## Browser-form card editing
 
-The task edit flow is a browser form, not a partial JSON patch endpoint. Entry points:
+The task edit flow is a browser form, not a partial JSON patch endpoint. `update_card_full` always GETs `/operations/{board_number}/tasks/{card_id}/edit/`, scrapes the current HTML form baseline, overlays only the explicit patch fields, and POSTs a complete URL-encoded form back to the same URL.
 
-- `HteamClient::get_task_edit_form` / `parse_task_edit_form` → `TaskEditFormBaseline` (read path and scrape helper)
-- `HteamClient::update_card_full` with `UpdateCardPatch` (write path; scrapes the form internally before POST)
-- `operations::cards::update_card_fields` with `CardFieldUpdates` (adapter-facing patch)
-- `operations::cards::card_detail_enriched` + `merge_edit_form_into_detail` (merge form priority/estimate into detail for UI)
-
-Routes use the **site** base:
-
-```text
-GET  /operations/{operation_id}/tasks/{task_id}/edit/
-POST /operations/{operation_id}/tasks/{task_id}/edit/
-```
-
-`operation_id` is config `board_number` (for example `447`), **not** the internal `board_id` used by board-card AJAX (for example `483`). Board-card time/date mutations (`set_card_time`, `set_card_date`) stay under `/api/boards/care/boards/{board_id}/card/{id}/…` and are a separate system from this form.
-
-`TaskEditFormBaseline` scrapes:
+`TaskEditFormBaseline` is the source of truth for fields that the JSON detail endpoint cannot preserve reliably:
 
 - `csrfmiddlewaretoken`
-- `name`, `description`
-- `time_estimated` (for example `1h 30m`)
-- `start_date` (`YYYY-MM-DD`)
-- `dependence` (bare task id, or empty)
-- `responsible` (bare user id)
-- `priority` (`1`..=`5`)
+- `name`
+- `description`
+- `time_estimated`
+- `start_date` in `YYYY-MM-DD` form
+- `dependence` as a bare task id, or empty to clear
+- `responsible` as a bare user id
+- `priority` as `1`..=`5`
 
-`update_card_full` always:
+The important safe-change rule is that the task detail JSON is not authoritative for these values. In particular, dependence is a display label in the detail payload but a bare id in the form, and priority is often missing from detail entirely. The form baseline is what prevents a patch to one field from accidentally clearing a sibling field that only the HTML form knows about.
 
-1. GET the edit page and parse the current form baseline.
-2. Apply only the fields explicitly present on `UpdateCardPatch`.
-3. POST the complete URL-encoded form body back to the same edit URL.
-
-Task detail JSON is incomplete for editable fields:
-
-| Field | Task JSON | HTML form |
-| --- | --- | --- |
-| `dependence` | Often a label like `#5 - Title…` | bare task id, or empty to clear |
-| `priority` | Almost always `null` | select `1`..=`5` |
-| `time_estimated` | Often missing / null | input such as `1h 30m` |
-| `start_date` | full ISO timestamp | `YYYY-MM-DD` only (`form_date_yyyy_mm_dd`) |
-| `responsible` | bare id or object | bare user id (`form_user_id`) |
-
-### Priority scale (do not invert)
-
-| Value | Web label | CLI/TUI (`priority_label`) |
-| ---: | --- | --- |
-| 1 | Very low | 1 · Muy baja |
-| 2 | Low | 2 · Baja |
-| 3 | Normal | 3 · Normal |
-| 4 | High | 4 · Alta |
-| 5 | Very high | 5 · Muy alta |
-
-Missing priority defaults to `"3"` only when neither detail nor form supplies one.
+`operations::cards::card_detail_enriched` mirrors the same trust hierarchy for reads: when detail JSON and board-card JSON disagree, the form / board-card sources supply the values that the UI cannot safely infer from task detail alone.
 
 ```mermaid
 sequenceDiagram
@@ -159,7 +153,7 @@ sequenceDiagram
     Client->>Site: GET task detail JSON
     Site-->>Client: CardDetail
     Ops->>Client: update_card_full with UpdateCardPatch
-    Client->>Site: GET /operations/{operation_id}/tasks/{id}/edit/
+    Client->>Site: GET /operations/{board_number}/tasks/{id}/edit/
     Site-->>Client: HTML edit form
     Client->>Client: parse TaskEditFormBaseline and merge patch
     Client->>Site: POST encoded full edit form
@@ -172,83 +166,42 @@ sequenceDiagram
     end
 ```
 
-Building the body from task JSON alone risks wiping sibling fields that only the HTML form knows about. Never re-post a dependence display label; write the bare internal task id or `""` to clear.
-
-## Browser-form card edit failure detection
-
-After the POST, the client treats the save as failed if the response still looks like the edit page, even when the HTTP status is 200. That includes pages containing `<title>Edit task</title>`, `value=Update`, or `errorlist`. This guards against silent validation failures such as an ISO `start_date` that Django accepts syntactically but does not persist.
-
-Known failure patterns that this check protects against:
-
-1. Posting an ISO `start_date` instead of `YYYY-MM-DD` returns 200 and leaves the page on “Edit task”, with nothing saved.
-2. Posting a priority-only change without first scraping the form can send an empty `dependence` and clear the existing dependency.
-3. Posting a dependence-only change without the form baseline can send an empty `time_estimated` and clear the estimate.
-4. Priority changes may succeed on POST but still appear unchanged in task JSON until `card_detail_enriched` merges the form value via `merge_edit_form_into_detail`.
-
-Callers should treat a successful return as “the edit form accepted and moved on”, not merely “the HTTP request did not error”.
+After the POST, the client treats the save as failed if the response still looks like the edit page, even when the HTTP status is 200. That catches silent validation failures and other cases where Django returns the form again instead of persisting the change.
 
 ## Browser-form comment posting
 
-A comment is not a single API POST. `post_comment` first retrieves the site task page for the selected board and card, requires `timestamp`, `security_hash`, and `csrfmiddlewaretoken` hidden inputs, then posts the generated form to `/comments/post/`. The form includes the card identity, `processes.task` content type, comment text, local formatted date, and conditionally `follow=on`; it percent-encodes values and sends `Origin` plus the task page as `Referer`. Missing any required token stops the operation before the POST.
+`post_comment` is also a multi-step browser interaction, not a direct API mutation. It first GETs the selected task page, then extracts the hidden `timestamp`, `security_hash`, and `csrfmiddlewaretoken` values, and only then POSTs a URL-encoded form to `/comments/post/`.
 
-```mermaid
-sequenceDiagram
-    participant Surface as CLI TUI or MCP
-    participant Client as HteamClient
-    participant Site as Hteam Site
-    Surface->>Client: post_comment with card and text
-    Client->>Site: GET task page with auth headers
-    Site-->>Client: HTML comment form
-    Client->>Client: extract timestamp security hash and CSRF
-    alt all tokens found
-        Client->>Site: POST encoded comment form
-        Site-->>Client: status response
-        Client-->>Surface: success or HTTP error
-    else token missing
-        Client-->>Surface: form extraction error
-    end
-```
+The comment form includes the card id, `processes.task` content type, comment body, local formatted date, and an optional `follow=on` flag. The site base is used for both the page scrape and the final POST, while `Origin` and `Referer` are set to match the browser form flow. If any required token is missing, the operation stops before the POST is attempted.
 
-This shows the HTML-token-fetch then form-post sequence required for comments.
+## Working state, reminders, and daily work
 
-## Identifier discovery and cache lifecycle
+The working-state endpoints accept a small set of response shapes that have been observed in practice:
 
-Hteam distinguishes the user-facing board number from an internal `board_id`. When it is absent from configuration, `get_board_id` reads cards from Open list 1 and extracts `board_id` from the first card-list entry. Empty Open is handled by listing board lists and retrying only lists with a positive card count. If no entry yields an ID, creation fails rather than sending an ambiguous request. A successful lookup is cached in the shared config in memory. Switching board clears that cache.
+- Working status accepts an empty body or `null` as “no active records”, then accepts either an array or a single object.
+- Reminders accept empty or `null` as “no reminders”, then accept either `{ "reminders": [...] }` or a bare array.
+- User autocomplete accepts empty or `null`, then tries the documented `{ "results": [...] }` envelope followed by a bare array.
+- Daily-work history is HTML, not JSON: the client reads `#history p`, extracts links and timestamps, and skips entries that do not contain usable text.
 
-Card creation also needs the current user ID. `get_user_id` first uses its cache; otherwise it reads the active working record. That endpoint only supplies a user while a card is active, so a non-parsing or empty working response falls back to the latest work-shift resume record. A resolved user ID is stored in memory and saved to `config.toml`, reflecting that it is user-scoped rather than session-scoped.
-
-Board-number lookup follows configured `auth.board_number`, then `~/.last_ticket`; methods that accept an explicit board use that argument first. Operations outside the client persist board selections and last-ticket state, while the client only mutates its live board setting and cache.
-
-## Parsing tolerance is deliberate and narrow
-
-Models describe the expected wire fields, including Hteam naming translations such as card `title` to `Card.name`, `subtitle` to description, and `labels_list` to labels. The client adds defensive parsing only where it has evidence that server payload shapes vary:
-
-- Working status accepts an empty body or `null` as no active records, then accepts either an array or one `WorkingOnResponse` object.
-- Reminders accept empty or `null` as no reminders, then accept either `{ "reminders": [...] }` or a bare reminder array. A nonempty unrecognized reminder response is treated as an empty result.
-- User autocomplete accepts empty or `null`, then tries the documented `{ "results": [...] }` envelope followed by a bare suggestion array; unknown nonempty data is an error with a truncated response excerpt. Suggestions preserve the endpoint's string `id`.
-- Create-card accepts a normal `Card` JSON response, but Hteam may respond successfully with an empty body or a card with ID 0. In that case the client tries to find the named card in the requested target list; if it cannot, it returns a placeholder card with ID 0 rather than fabricating an identifier.
-- Card-detail labels tolerate an array containing valid label objects and skip malformed members; scalar, string, and other label shapes become an empty label list.
-
-Do not generalize this tolerance to ordinary endpoints: standard malformed JSON still propagates as a parsing error. Daily-work history is explicitly HTML parsing, selecting `#history p`, links, and the expected timestamp pattern; entries without usable text or timestamp are skipped.
+These are intentional compatibility shims, not a blanket permission to tolerate malformed data everywhere. Ordinary malformed JSON still propagates as an error after status validation.
 
 ## Errors, status handling, and safe extensions
 
-Methods consistently return `anyhow::Result`. Network/send failures gain operation-specific context such as “Error al obtener listas”; most non-success responses fail with the HTTP status and response body. Browser-form mutations and reminders use the equivalent `status >= 400` rule, permitting redirect-class responses from site forms. JSON decoding and HTML parsing errors propagate after status validation. The client does not implement retries, token refresh, or automatic recovery; callers receive one contextual failure and decide how to present it.
+Methods consistently return `anyhow::Result`. Transport failures gain operation-specific context such as “Error al obtener listas”; most non-success responses fail with the HTTP status and response body. Browser-form mutations and reminders use the equivalent `status >= 400` rule, which means redirect-class site responses can still count as success when the browser flow expects them. JSON decoding and HTML parsing errors propagate after status validation. The client does not implement retries, token refresh, or automatic recovery.
 
 When extending the contract:
 
-1. Add the remote call, request encoding, status policy, and model parsing to `HteamClient`, selecting the API or site base intentionally.
-2. Reuse `build_headers`; retain special `Origin` or `Referer` requirements for browser-form routes.
+1. Add the remote call, request encoding, status policy, and model parsing to `HteamClient`, and choose the API or site base intentionally.
+2. Reuse `build_headers`; keep special `Origin` and `Referer` requirements for browser-form routes.
 3. Add a thin operation that returns domain data and leaves rendering to CLI, TUI, or MCP.
 4. Preserve cache scope: clear board-specific values on board changes and persist only values whose scope warrants it.
-5. Add a `mockito` test through `new_for_test`, which permits independent API and site base URLs without changing production constants. Test the exact path/query/body and the relevant fallback or parsing branch.
+5. Add or update `mockito` tests through `new_for_test`, which lets the API and site bases be swapped independently during tests.
 
-Existing focused tests exercise representative list/card JSON mapping, move and update request bodies, comments and autocomplete delegation, working start/stop payloads, wrapped reminders, project tuple decoding, daily-work HTML extraction, live board DataTables queries, configurable mock hosts, and the requirement that all three comment form tokens be present.
+Focused tests cover representative list and card JSON mapping, move and update request bodies, comment scraping and autocomplete, working start/stop payloads, project decoding, daily-work HTML parsing, and configurable mock hosts.
 
 ## Related pages
 
-- [System overview](/openwiki/architecture/system-overview.md)
-- [Cards and board state](/openwiki/concepts/cards-and-board-state.md)
-- [Session configuration](/openwiki/concepts/session-configuration.md)
-- [Card mutations and comments](/openwiki/workflows/card-mutations-and-comments.md)
-- [Verification strategy](/openwiki/testing/verification-strategy.md)
+- [System overview](../architecture/system-overview.md)
+- [Cards and board state](../concepts/cards-and-board-state.md)
+- [Session configuration](../concepts/session-configuration.md)
+- [Card mutations and comments](../workflows/card-mutations-and-comments.md)

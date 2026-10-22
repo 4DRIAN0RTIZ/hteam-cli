@@ -1,11 +1,11 @@
 ---
 type: integration runtime
-title: MCP stdio server and tool surface
-description: The hteam MCP server exposes the shared Hteam board operations over stdio, with schema-derived tool parameters, JSON text results, and uniform MCP internal-error translation.
+title: MCP Server Integration
+description: The Hteam MCP server exposes board, card, comment, working, project, and activity workflows over stdio using schema-driven tool parameters, thin delegation to shared operations, and uniform MCP error translation.
 tags: [mcp, stdio, integration, tools, hteam]
 verified:
-  - by: openwiki/0.4.3
-    at: 2026-08-29T04:08:29.740Z
+  - by: openwiki/0.7.2
+    at: 2026-08-29T04:34:19.305Z
 sources:
   - id: openwiki-source-2d189e28b5edbe9715440baf
     resource: repo://src/cli/mod.rs
@@ -23,12 +23,13 @@ sources:
     resource: repo://src/operations/session.rs
   - id: openwiki-source-bca472904c30f6adc5315e1f
     resource: repo://src/operations/working.rs
-generated: { by: "openwiki/0.4.3", at: "2026-08-29T04:08:29.740Z" }
+generated: { by: "openwiki/0.7.2", at: "2026-08-29T04:34:19.305Z" }
 ---
 
-# MCP stdio server and tool surface
+# MCP Server Integration
 
-`hteam mcp` is the Model Context Protocol (MCP) delivery surface for Hteam operations. The CLI dispatcher invokes `mcp::run`, which opens one authenticated application session and serves an `HteamMcpServer` through rmcp's standard-input/output transport. It is an adapter, not a second API client or business-logic implementation: tools call the shared [`operations` contract](../architecture/system-overview.md), which in turn uses `HteamClient`. Consequently, an MCP tool should preserve the same domain workflow, defaults, authentication behavior, and remote-service handling as the terminal-facing application rather than reimplementing HTTP mechanics. See [Hteam HTTP integration contract](hteam-api.md) for the HTTP boundary and [session configuration](../concepts/session-configuration.md) for credential setup.
+<!-- openwiki: broken internal link [../openwiki/architecture/system-overview.md] file "../openwiki/architecture/system-overview.md" does not exist. Fix the href or restore the target, then delete this comment. -->
+`hteam mcp` is the Model Context Protocol (MCP) delivery surface for Hteam. The CLI dispatches `mcp::run`, which opens one authenticated [`Session`](../openwiki/architecture/system-overview.md) and serves an `HteamMcpServer` over rmcp's stdio transport. The MCP layer is intentionally thin: handlers map JSON-RPC tool inputs into shared `operations` functions, and those operations in turn use `HteamClient`. The server does not duplicate HTTP, patching, or presentation logic; it preserves the same domain workflow and defaults as the terminal-facing application.
 
 ## Startup and lifetime
 
@@ -38,9 +39,9 @@ Start the server with:
 hteam mcp
 ```
 
-The `Mcp` subcommand is dispatched before any MCP transport is created. `run` then calls `Session::open()`: it loads persisted configuration and constructs an authenticated `HteamClient`. Authentication must already be configured; `HteamClient::with_auth` rejects a configuration without the required credentials. Startup failure therefore ends the command rather than starting an unauthenticated MCP server.
+Startup is all-or-nothing. `Session::open()` loads persisted configuration and constructs an authenticated `HteamClient`; if credentials are missing or invalid, server startup fails instead of exposing an unauthenticated MCP endpoint. The resulting client is wrapped in `Arc<HteamClient>` so all tool handlers in the same service share one authenticated session for the process lifetime.
 
-The server wraps that client in `Arc<HteamClient>`. `HteamMcpServer` is cloneable, so rmcp handlers can share the same client for the lifetime of the service without reconstructing sessions per tool invocation. `serve(stdio())` establishes the stdio service, and `waiting()` keeps the command alive until the service ends. Errors from either stage are written to standard error with MCP-server or MCP-service context and propagated to the process caller. Protocol traffic belongs on stdio; diagnostics must remain on stderr.
+`serve(stdio())` establishes the stdio service, and `waiting()` keeps the process alive until the service ends. Errors from either stage are written to standard error with MCP-server or MCP-service context and then propagated. This matters for stdio transport: JSON-RPC protocol traffic must stay on stdout/stdin, while diagnostics and startup failure messages belong on stderr so they do not corrupt the wire protocol.
 
 ```mermaid
 sequenceDiagram
@@ -50,7 +51,7 @@ sequenceDiagram
     participant Ops as shared operations
     participant HClient as HteamClient
     Client->>Handler: tool call with JSON parameters
-    Handler->>Server: deserialize Parameters
+    Handler->>Server: deserialize Parameters<T>
     Server->>Ops: invoke domain operation
     Ops->>HClient: perform domain client call
     HClient-->>Ops: domain result or error
@@ -66,45 +67,56 @@ sequenceDiagram
     end
 ```
 
-This sequence shows one call after startup; the handler and all calls within a service share the server's authenticated client.
-
 ## Schema-to-operation adapter
 
-Each `#[tool]` method is registered by rmcp's `#[tool_router(server_handler)]`. Its single structured argument is generally `Parameters<T>`, where `T` derives both `Deserialize` and `JsonSchema`. This makes the tool input schema and runtime deserialization come from the same Rust parameter type. Required Rust scalars such as `u64` and `String` are required tool inputs; `Option<T>` fields are optional. Field names are the MCP JSON names—use `card_id`, `list_id`, `to_list`, `from_list`, `working_id`, `project_id`, `activity_type`, and so on, not CLI positional syntax or flag spellings.
+Each tool method is registered by `#[tool_router(server_handler)]`, and each structured argument is a `Parameters<T>` wrapper around a Rust type that derives both `Deserialize` and `JsonSchema`. That means the same parameter struct drives runtime deserialization and the JSON Schema published to MCP clients. Required Rust fields become required tool inputs; `Option<T>` fields become optional tool inputs.
 
-Parameter policy is intentional and should be retained when adding tools:
+Parameter names are the MCP JSON names, not CLI flag names or positional arguments. For example, handlers accept `card_id`, `list_id`, `to_list`, `from_list`, `working_id`, `project_id`, `activity_type`, and similar field names that match the tool contract.
 
-- Board-scoped reads and moves accept optional `board`; omitting it delegates selected-board resolution to the client. `lists`, `cards_list`, `cards_open`, `cards_closed`, `card_labels`, `card_move`, and `card_comment` have this form.
-- `card_create` takes required `name` and optional `list_id`; it uses the selected board through the underlying operation. `card_detail`, `card_comments`, `card_remind`, and working start require only `card_id`.
-- Full `card_update` is the notable strict case: it requires both `card_id` and `board`, while all editable fields (`name`, `description`, `priority`, `responsible`) are optional. The operation reads current card detail before submitting the full patch, so omitted properties retain their patch-base values.
-- `card_comment` requires `card_id` and `comment`; optional `follow` defaults to `false`, and optional `date` is passed to the shared comment operation. A supplied date must use `YYYY-MM-DD HH:MM`; omitted or blank dates resolve to current local time.
-- `daily_work` accepts optional `user`, `activity_type`, and `range`; the downstream operation supplies its usual default behavior when range is absent. `users_search` requires `query`; project tools require `project_id`; `working_stop` requires a **working-record** ID, not a card ID.
+The adapter rules are deliberate:
 
-Do not add presentation formatting, URL construction, or Hteam-specific request payloads to a tool handler. The shared operations module explicitly separates plain domain results from CLI, TUI, and MCP presentation. A new MCP capability should first have (or reuse) an operation that accepts `&HteamClient`, then add a schema parameter type and a thin handler that maps fields and selects the MCP result form.
+- Board-scoped reads and moves may accept optional `board`; when omitted, the shared client resolves the configured board or last ticket through the existing session logic.
+- `card_create` requires `name` and accepts an optional `list_id`.
+- `card_update` is the strict case: it requires both `card_id` and `board`, and its editable fields are optional. The underlying operation first reads the current card state so omitted fields preserve the current patch base.
+- `card_comment` requires `card_id` and `comment`; `follow` defaults to `false`, and `date` is optional. Date parsing uses the shared comment-date format and local-time defaulting in operations.
+- `working_stop` requires a working-record ID, not a card ID; the record ID comes from `working_list` / `working_on`.
+- `daily_work` accepts optional `user`, `activity_type`, and `range` filters.
+- `users_search` requires a query string, and project tools require `project_id`.
 
-## Tool inventory
+Do not add request-shaping, URL construction, or output formatting code to a tool handler. If a new MCP capability is needed, first add or reuse a shared operation that accepts `&HteamClient`, then add the schema parameter type and a thin handler that translates fields and selects the MCP result form.
 
-The server currently registers 22 tools. The grouping below describes its public surface; detailed remote endpoints and mutation protocols deliberately remain in the shared operations and Hteam-client contract.
+## Tool groups
+
+The server currently registers 22 tools. The groups below describe the public surface; the remote endpoints and mutation protocols remain in the shared operations and `HteamClient` contract.
 
 | Domain | Tools | Purpose and key inputs |
 | --- | --- | --- |
-| Boards and card queries | `lists`, `cards_list`, `cards_open`, `cards_closed`, `card_detail`, `card_labels` | List board lists; list a specified list; read the conventionally Open (list 1) or Closed (list 2) cards; and retrieve a card or its labels. List and open/closed queries can override `board`; card detail does not take a board. |
+| Board and card reads | `lists`, `cards_list`, `cards_open`, `cards_closed`, `card_detail`, `card_labels`, `cards_search` | List board lists; list a specified list; read the conventionally Open or Closed cards; retrieve a card or its labels; and search cards by text, responsible, priority, labels, and optional board/list scope. |
 | Card mutations | `card_create`, `card_move`, `card_update_desc`, `card_update`, `card_remind` | Create by name, move between lists, update only description, apply a full card patch, or create a reminder. `card_move` uses Open list 1 when `from_list` is omitted. |
-| Comments | `card_comments`, `card_comment` | Retrieve comments or post text with optional board, follow flag, and local-time date. |
-| Working on it | `working_list`, `working_start`, `working_stop` | Read active work, start it for a card, or stop it by `working_id`. The latter identifier comes from `working_list`. |
+| Comments and follow-ups | `card_comments`, `card_comment`, `card_follow_up`, `card_follow_up_complete`, `card_follow_up_cancel` | Retrieve comments, post a comment with optional board/follow/date fields, inspect a follow-up, or complete/cancel a follow-up by its follow-up id. |
+| Working on it | `working_list`, `working_start`, `working_stop` | Read active work, start it for a card, or stop it by `working_id`. |
 | Projects | `project_milestones`, `project_tasks` | Read a project's milestone progress or task/status/responsibility data by `project_id`. |
-| People and personal/team activity | `users_search`, `reminders`, `check_in`, `daily_work` | Search users, list pending reminders, check in, and read daily-work history with optional filters. |
+| People and activity | `users_search`, `reminders`, `check_in`, `daily_work` | Search users, list pending reminders, check in, and read daily-work history with optional filters. |
 
-Tool names are stable integration names, independent of the CLI command hierarchy. Tools return domain models rather than terminal tables; for example, `cards_list` intentionally returns only the card vector even though the shared operation also obtains an optional board ID.
+Tool names are stable integration names, independent of the CLI command hierarchy. Tools return domain models rather than terminal tables; for example, `cards_list` returns only the card vector even though the shared operation also resolves the selected board.
 
 ## Results and failure semantics
 
-Every successful handler passes its value through `ok`. It serializes the value with `serde_json::to_string_pretty` and returns exactly one MCP text content item in `CallToolResult::success`. Thus callers receive pretty-printed JSON encoded as text, consistently for reads, created-card objects, check-in results, and mutation acknowledgements. Actions without a useful domain response return explicit JSON confirmation objects, such as `{"success": true, "card_id": ...}`, `{"success": true, "card_id": ..., "to_list": ...}`, or `{"success": true, "working_id": ...}`. This is distinct from CLI human tables and aligns programmatic tool output across all 22 methods.
+Every successful handler passes its value through `ok`. That helper serializes the value with `serde_json::to_string_pretty` and returns exactly one MCP `Content::text(...)` item in `CallToolResult::success`. Successful reads therefore return pretty-printed JSON as text, and mutations that do not return a natural domain object use explicit JSON acknowledgements such as `{"success": true, "card_id": ...}`, `{"success": true, "follow_up_id": ...}`, or `{"success": true, "working_id": ...}`.
 
-An operation's `anyhow::Error` is mapped to `McpError::internal_error` with its message. Serialization failures follow the same MCP internal-error path. Therefore, remote HTTP failures, authentication/configuration problems discovered during operation execution, validation failures such as an invalid comment date, and data-processing failures are surfaced to the MCP client as internal errors rather than successful text containing an error message. Tool extensions should retain this `map_err(err)?` pattern: do not silently turn a failed mutation into a success acknowledgement, and do not introduce tool-local error formatting that diverges from the shared operation.
+Operation failures and serialization failures both become MCP internal errors. The handlers use `map_err(err)?`, and `err` converts `anyhow::Error` into `McpError::internal_error(...)`. As a result, remote HTTP failures, authentication or configuration problems discovered during a delegated operation, and validation failures such as an invalid comment date are surfaced to the MCP client as tool failures instead of success responses containing error text.
+
+## Read-only versus mutating workflows
+
+The tool surface is split between read-only queries and mutations:
+
+- Read-only: `lists`, `cards_list`, `cards_open`, `cards_closed`, `card_detail`, `card_labels`, `cards_search`, `card_comments`, `card_follow_up`, `working_list`, `project_milestones`, `project_tasks`, `users_search`, `reminders`, `check_in`, and `daily_work`.
+- Mutating: `card_create`, `card_move`, `card_update_desc`, `card_update`, `card_remind`, `card_comment`, `card_follow_up_complete`, `card_follow_up_cancel`, `working_start`, and `working_stop`.
+
+This distinction matters operationally. Read-only tools can be retried without changing server state, while mutating tools should be treated as state-changing operations that may have already succeeded remotely if the transport is interrupted after the request leaves the client. The MCP layer does not invent compensation logic; it simply propagates the shared operation outcome.
 
 ## Safe extension and verification
 
-When adding a tool, keep the boundary sequence: implement or reuse the domain operation, define a `Deserialize + JsonSchema` parameter struct, add the `#[tool]` handler in `HteamMcpServer`, delegate to the operation, and return `ok(value)` or a clearly scoped success acknowledgement only after it succeeds. Be especially careful with defaults already centralized by operations: movement defaults `from_list` to 1, full updates fetch their patch base, comment timestamps use local format/defaulting, and stopping work requires the working record rather than the card.
+When adding a tool, keep the boundary sequence: implement or reuse the domain operation, define a `Deserialize + JsonSchema` parameter struct, add the `#[tool]` handler in `HteamMcpServer`, delegate to the operation, and return `ok(value)` or a narrowly scoped success acknowledgement only after success. Preserve defaults already centralized by operations, such as movement defaulting `from_list` to 1, full updates fetching their patch base, comment timestamps using local format/defaulting, and stopping work requiring the working record rather than the card.
 
-There are focused mock-backed tests at the operations boundary for representative behavior: card-list delegation, Open-source movement, and two-step full update; comments test parsing and date validation; working tests verify record identity and start/stop requests. This reflects the intended testing boundary for a thin MCP adapter: protect behavior and HTTP contract in `operations`/`HteamClient`, then add MCP-specific tests when a schema mapping, result envelope, or error translation introduces logic that delegation tests cannot cover.
+Representative tests at the operations boundary cover the behaviors this adapter depends on: card-list delegation, default Open-list movement, two-step full update, comment date parsing and validation, and working-record identity plus start/stop transport behavior. The MCP layer should remain thin enough that most logic changes belong in `operations` or `HteamClient`; add MCP-specific tests only when parameter mapping, result envelopes, or error translation introduce behavior that delegation tests do not cover.

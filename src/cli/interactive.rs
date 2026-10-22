@@ -8,7 +8,7 @@ use crate::cli;
 use crate::config::Config;
 
 pub async fn run() -> Result<()> {
-    println!("{}", "🚀 Hteam CLI - Modo Interactivo".bold());
+    println!("{}", "Hteam CLI - Modo Interactivo".bold());
     println!(
         "{}",
         "Escribe 'help' para ver los comandos disponibles.".dimmed()
@@ -28,7 +28,7 @@ pub async fn run() -> Result<()> {
 
     let config = Config::load()?;
     if let Some(board) = config.get_board_number() {
-        println!("📋 Board activo: {}\n", board);
+        println!("Board activo: {}\n", board);
     }
 
     loop {
@@ -50,11 +50,11 @@ pub async fn run() -> Result<()> {
                 }
             }
             Err(ReadlineError::Interrupted) => {
-                println!("\n{} Usa 'exit' o Ctrl+D para salir", "⚠️".yellow());
+                println!("\nUsa 'exit' o Ctrl+D para salir");
                 continue;
             }
             Err(ReadlineError::Eof) => {
-                println!("\n👋 Adiós!");
+                println!("\nAdiós!");
                 break;
             }
             Err(err) => {
@@ -82,7 +82,7 @@ async fn process_command(line: &str) -> Result<()> {
 
     match cmd {
         "exit" | "quit" | "q" => {
-            println!("👋 Adiós!");
+            println!("Adiós!");
             std::process::exit(0);
         }
         "help" | "h" | "?" => {
@@ -139,7 +139,7 @@ async fn process_command(line: &str) -> Result<()> {
         "!" => {
             // Shell command
             if args.is_empty() {
-                println!("⚠️  Uso: ! <comando>");
+                println!("Uso: ! <comando>");
             } else {
                 let shell_cmd = args.join(" ");
                 let status = ProcessCommand::new("sh")
@@ -147,12 +147,12 @@ async fn process_command(line: &str) -> Result<()> {
                     .arg(&shell_cmd)
                     .status()?;
                 if !status.success() {
-                    eprintln!("⚠️  El comando terminó con código: {:?}", status.code());
+                    eprintln!("El comando terminó con código: {:?}", status.code());
                 }
             }
         }
         _ => {
-            println!("{} Comando desconocido: '{}'", "❌".red(), cmd);
+            println!("{} Comando desconocido: '{}'", "Error:".red(), cmd);
             println!("   Escribe 'help' para ver los comandos disponibles.");
         }
     }
@@ -161,7 +161,7 @@ async fn process_command(line: &str) -> Result<()> {
 }
 
 fn print_help() {
-    println!("{}", "\n📚 Comandos disponibles:\n".bold());
+    println!("{}", "\nComandos disponibles:\n".bold());
 
     println!("{}", "Gestión de Boards:".bold());
     println!("  board list              Listar boards configurados");
@@ -217,7 +217,7 @@ async fn handle_board_command(args: &[&str]) -> Result<()> {
         }
         "switch" | "sw" => {
             if args.len() < 2 {
-                println!("⚠️  Uso: board switch <board_id>");
+                println!("Uso: board switch <board_id>");
                 return Ok(());
             }
             let board_id = args[1].parse::<u64>()?;
@@ -232,7 +232,7 @@ async fn handle_board_command(args: &[&str]) -> Result<()> {
             cli::board::execute(BoardCommands::Current, false).await?;
         }
         _ => {
-            println!("⚠️  Subcomando desconocido: {}", args[0]);
+            println!("Subcomando desconocido: {}", args[0]);
         }
     }
 
@@ -243,7 +243,7 @@ async fn handle_cards_command(args: &[&str]) -> Result<()> {
     use crate::cli::cards::{CardsCommands, ListCardsArgs};
 
     if args.is_empty() {
-        println!("⚠️  Uso: cards <list_id>");
+        println!("Uso: cards <list_id>");
         return Ok(());
     }
 
@@ -256,7 +256,7 @@ async fn handle_create_command(args: &[&str]) -> Result<()> {
     use crate::cli::cards::{CardsCommands, CreateArgs};
 
     if args.is_empty() {
-        println!("⚠️  Uso: create <nombre> [--complement <id>] [--process <id>]");
+        println!("Uso: create <nombre> [--complement <id>] [--process <id>]");
         return Ok(());
     }
 
@@ -277,7 +277,7 @@ async fn handle_time_command(args: &[&str]) -> Result<()> {
     use crate::cli::cards::{CardsCommands, TimeArgs};
 
     if args.is_empty() {
-        println!("⚠️  Uso: time <card_id> [--estimate DURACIÓN] [--spent DURACIÓN]");
+        println!("Uso: time <card_id> [--estimate DURACIÓN] [--spent DURACIÓN]");
         return Ok(());
     }
 
@@ -292,7 +292,7 @@ async fn handle_time_command(args: &[&str]) -> Result<()> {
                     estimate = Some(args[i + 1].to_string());
                     i += 2;
                 } else {
-                    println!("⚠️  Falta valor para --estimate");
+                    println!("Falta valor para --estimate");
                     return Ok(());
                 }
             }
@@ -301,7 +301,7 @@ async fn handle_time_command(args: &[&str]) -> Result<()> {
                     spent = Some(args[i + 1].to_string());
                     i += 2;
                 } else {
-                    println!("⚠️  Falta valor para --spent");
+                    println!("Falta valor para --spent");
                     return Ok(());
                 }
             }
@@ -326,7 +326,7 @@ async fn handle_dates_command(args: &[&str]) -> Result<()> {
     use crate::cli::cards::{CardsCommands, DatesArgs};
 
     if args.is_empty() {
-        println!("⚠️  Uso: dates <card_id> [--start YYYY-MM-DD] [--due YYYY-MM-DD]");
+        println!("Uso: dates <card_id> [--start YYYY-MM-DD] [--due YYYY-MM-DD]");
         return Ok(());
     }
 
@@ -341,7 +341,7 @@ async fn handle_dates_command(args: &[&str]) -> Result<()> {
                     start = Some(args[i + 1].to_string());
                     i += 2;
                 } else {
-                    println!("⚠️  Falta valor para --start");
+                    println!("Falta valor para --start");
                     return Ok(());
                 }
             }
@@ -350,7 +350,7 @@ async fn handle_dates_command(args: &[&str]) -> Result<()> {
                     due = Some(args[i + 1].to_string());
                     i += 2;
                 } else {
-                    println!("⚠️  Falta valor para --due");
+                    println!("Falta valor para --due");
                     return Ok(());
                 }
             }
@@ -375,7 +375,7 @@ async fn handle_lifecycle_command(action: &str, args: &[&str]) -> Result<()> {
     use crate::cli::cards::{CardsCommands, LifecycleArgs};
 
     if args.is_empty() {
-        println!("⚠️  Uso: {action} <card_id> [--family operation|project]");
+        println!("Uso: {action} <card_id> [--family operation|project]");
         return Ok(());
     }
 
@@ -389,7 +389,7 @@ async fn handle_lifecycle_command(action: &str, args: &[&str]) -> Result<()> {
                     family = Some(args[i + 1].to_string());
                     i += 2;
                 } else {
-                    println!("⚠️  Falta valor para --family");
+                    println!("Falta valor para --family");
                     return Ok(());
                 }
             }
@@ -410,7 +410,7 @@ async fn handle_move_command(args: &[&str]) -> Result<()> {
     use crate::cli::cards::{CardsCommands, MoveArgs};
 
     if args.len() < 2 {
-        println!("⚠️  Uso: move <card_id> --to <list_id>");
+        println!("Uso: move <card_id> --to <list_id>");
         return Ok(());
     }
 
@@ -426,7 +426,7 @@ async fn handle_move_command(args: &[&str]) -> Result<()> {
                     to_list = Some(args[i + 1].parse::<u64>()?);
                     i += 2;
                 } else {
-                    println!("⚠️  Falta valor para --to");
+                    println!("Falta valor para --to");
                     return Ok(());
                 }
             }
@@ -435,7 +435,7 @@ async fn handle_move_command(args: &[&str]) -> Result<()> {
                     from_list = Some(args[i + 1].parse::<u64>()?);
                     i += 2;
                 } else {
-                    println!("⚠️  Falta valor para --from");
+                    println!("Falta valor para --from");
                     return Ok(());
                 }
             }
@@ -462,7 +462,7 @@ async fn handle_detail_command(args: &[&str]) -> Result<()> {
     use crate::cli::cards::{CardsCommands, DetailArgs};
 
     if args.is_empty() {
-        println!("⚠️  Uso: detail <card_id>");
+        println!("Uso: detail <card_id>");
         return Ok(());
     }
 
@@ -486,7 +486,7 @@ async fn handle_working_command(args: &[&str]) -> Result<()> {
         }
         "start" | "s" => {
             if args.len() < 2 {
-                println!("⚠️  Uso: working start <card_id>");
+                println!("Uso: working start <card_id>");
                 return Ok(());
             }
             let card_id = args[1].parse::<u64>()?;
@@ -495,7 +495,7 @@ async fn handle_working_command(args: &[&str]) -> Result<()> {
         }
         "stop" => {
             if args.len() < 2 {
-                println!("⚠️  Uso: working stop <working_id>");
+                println!("Uso: working stop <working_id>");
                 return Ok(());
             }
             let working_id = args[1].parse::<u64>()?;
@@ -503,7 +503,7 @@ async fn handle_working_command(args: &[&str]) -> Result<()> {
                 .await?;
         }
         _ => {
-            println!("⚠️  Subcomando desconocido: {}", args[0]);
+            println!("Subcomando desconocido: {}", args[0]);
         }
     }
 
@@ -513,7 +513,7 @@ async fn handle_working_command(args: &[&str]) -> Result<()> {
 async fn handle_comment_command(args: &[&str]) -> Result<()> {
     use crate::cli::cards::{CardsCommands, CommentArgs};
 
-    const USAGE: &str = "⚠️  Uso: comment <card_id> [--follow] [--date YYYY-MM-DD HH:MM] <texto>";
+    const USAGE: &str = " Uso: comment <card_id> [--follow] [--date YYYY-MM-DD HH:MM] <texto>";
 
     if args.len() < 2 {
         println!("{}", USAGE);
@@ -533,7 +533,7 @@ async fn handle_comment_command(args: &[&str]) -> Result<()> {
             }
             Some(&"--date") => {
                 if rest.len() < 3 {
-                    println!("⚠️  --date requiere fecha y hora: --date YYYY-MM-DD HH:MM");
+                    println!("--date requiere fecha y hora: --date YYYY-MM-DD HH:MM");
                     return Ok(());
                 }
                 date = Some(format!("{} {}", rest[1], rest[2]));
@@ -566,7 +566,7 @@ async fn handle_comment_command(args: &[&str]) -> Result<()> {
 
 async fn handle_config_command(args: &[&str]) -> Result<()> {
     if args.is_empty() {
-        println!("⚠️  Uso: config show");
+        println!("Uso: config show");
         return Ok(());
     }
 
@@ -576,12 +576,12 @@ async fn handle_config_command(args: &[&str]) -> Result<()> {
             println!("\n{}", "Configuración:".bold());
 
             if config.is_authenticated() {
-                println!("  Estado: ✅ Autenticado");
+                println!("  Estado: Autenticado");
                 if let Some(board) = config.get_board_number() {
                     println!("  Board activo: {}", board);
                 }
             } else {
-                println!("  Estado: ❌ No autenticado");
+                println!("  Estado: No autenticado");
             }
 
             if !config.boards.is_empty() {
@@ -593,7 +593,7 @@ async fn handle_config_command(args: &[&str]) -> Result<()> {
             println!();
         }
         _ => {
-            println!("⚠️  Subcomando desconocido: {}", args[0]);
+            println!("Subcomando desconocido: {}", args[0]);
         }
     }
 

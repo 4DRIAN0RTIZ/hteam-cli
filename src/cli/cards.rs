@@ -277,14 +277,14 @@ pub async fn lists(board: Option<u64>, json: bool) -> Result<()> {
     }
 
     if lists.is_empty() {
-        println!("⚠️  No se encontraron listas.");
+        println!("No se encontraron listas.");
         return Ok(());
     }
 
     let mut table = Table::new(&lists);
     table.with(Style::rounded());
 
-    println!("\n📋 Listas del board:\n");
+    println!("\nListas del board:\n");
     println!("{}", table);
     println!();
 
@@ -302,14 +302,14 @@ async fn list_cards(args: ListCardsArgs, board: Option<u64>, json: bool) -> Resu
     }
 
     if cards.is_empty() {
-        println!("⚠️  No se encontraron cards en la lista {}.", args.list_id);
+        println!("No se encontraron cards en la lista {}.", args.list_id);
         return Ok(());
     }
 
     let mut table = Table::new(&cards);
     table.with(Style::rounded());
 
-    println!("\n🎴 Cards en lista {}:\n", args.list_id);
+    println!("\nCards en lista {}:\n", args.list_id);
     println!("{}", table);
     println!();
 
@@ -344,7 +344,7 @@ async fn search_cards(args: SearchArgs, board: Option<u64>, json: bool) -> Resul
     }
 
     if hits.is_empty() {
-        println!("⚠️  Ninguna card coincide con los filtros.");
+        println!("Ninguna card coincide con los filtros.");
         return Ok(());
     }
 
@@ -390,7 +390,7 @@ async fn search_cards(args: SearchArgs, board: Option<u64>, json: bool) -> Resul
     let mut table = Table::new(&rows);
     table.with(Style::rounded());
 
-    println!("\n🔍 {} card(s):\n", rows.len());
+    println!("\n{} card(s):\n", rows.len());
     println!("{}", table);
     println!();
 
@@ -408,14 +408,14 @@ pub async fn open_cards(board: Option<u64>, json: bool) -> Result<()> {
     }
 
     if cards.is_empty() {
-        println!("⚠️  No hay cards abiertos.");
+        println!("No hay cards abiertos.");
         return Ok(());
     }
 
     let mut table = Table::new(&cards);
     table.with(Style::rounded());
 
-    println!("\n🎴 Cards abiertos:\n");
+    println!("\nCards abiertos:\n");
     println!("{}", table);
     println!();
 
@@ -433,14 +433,14 @@ pub async fn closed_cards(board: Option<u64>, json: bool) -> Result<()> {
     }
 
     if cards.is_empty() {
-        println!("⚠️  No hay cards cerrados.");
+        println!("No hay cards cerrados.");
         return Ok(());
     }
 
     let mut table = Table::new(&cards);
     table.with(Style::rounded());
 
-    println!("\n🎴 Cards cerrados:\n");
+    println!("\nCards cerrados:\n");
     println!("{}", table);
     println!();
 
@@ -457,7 +457,7 @@ async fn card_detail(args: DetailArgs, json: bool) -> Result<()> {
         return Ok(());
     }
 
-    println!("\n🎴 Card #{}: {}", detail.id, detail.name.bold());
+    println!("\nCard #{}: {}", detail.id, detail.name.bold());
     if let Some(status) = &detail.status {
         println!("   Estado: {}", status);
     }
@@ -522,7 +522,7 @@ async fn create_card(args: CreateArgs, json: bool) -> Result<()> {
         return Ok(());
     }
 
-    println!("\n✅ Card creado exitosamente:");
+    println!("\nCard creado exitosamente:");
     println!("   ID: {}", card.id);
     println!("   Nombre: {}", card.name);
     println!();
@@ -547,7 +547,7 @@ async fn move_card(args: MoveArgs, board: Option<u64>, json: bool) -> Result<()>
     }
 
     println!(
-        "\n✅ Card {} movido de lista {} a lista {}",
+        "\nCard {} movido de lista {} a lista {}",
         args.card_id, from_list, args.to
     );
     println!();
@@ -567,7 +567,7 @@ async fn close_card(args: LifecycleArgs, json: bool) -> Result<()> {
     }
 
     println!(
-        "\n✅ Task {} cerrada (familia {})\n   {}\n",
+        "\nTask {} cerrada (familia {})\n   {}\n",
         result.card_id, result.family, result.status
     );
     Ok(())
@@ -585,7 +585,7 @@ async fn reopen_card(args: LifecycleArgs, json: bool) -> Result<()> {
     }
 
     println!(
-        "\n✅ Task {} reabierta (familia {})\n   {}\n",
+        "\nTask {} reabierta (familia {})\n   {}\n",
         result.card_id, result.family, result.status
     );
     Ok(())
@@ -608,7 +608,7 @@ async fn set_dates(args: DatesArgs, board: Option<u64>, json: bool) -> Result<()
     }
 
     println!(
-        "\n✅ Fechas actualizadas para task {} (board_id {})",
+        "\nFechas actualizadas para task {} (board_id {})",
         result.card_id, result.board_id
     );
     if let Some(d) = &result.start_date {
@@ -638,7 +638,7 @@ async fn set_time(args: TimeArgs, board: Option<u64>, json: bool) -> Result<()> 
     }
 
     println!(
-        "\n✅ Tiempo actualizado para task {} (board_id {})",
+        "\nTiempo actualizado para task {} (board_id {})",
         result.card_id, result.board_id
     );
     if let Some(value) = &result.estimate {
@@ -648,7 +648,7 @@ async fn set_time(args: TimeArgs, board: Option<u64>, json: bool) -> Result<()> 
         println!("   gastado:  {value}");
     }
     for warning in &result.warnings {
-        println!("   ⚠️  {warning}");
+        println!("   {warning}");
     }
     println!();
     Ok(())
@@ -664,7 +664,7 @@ async fn update_desc(args: UpdateDescArgs, json: bool) -> Result<()> {
         return Ok(());
     }
 
-    println!("\n✅ Descripción actualizada para card {}", args.card_id);
+    println!("\nDescripción actualizada para card {}", args.card_id);
     println!();
 
     Ok(())
@@ -688,7 +688,7 @@ async fn post_comment(args: CommentArgs, board: Option<u64>, json: bool) -> Resu
         return Ok(());
     }
 
-    println!("\n💬 Comentario agregado al card {}", args.card_id);
+    println!("\nComentario agregado al card {}", args.card_id);
     println!();
 
     Ok(())
@@ -705,11 +705,11 @@ async fn list_comments(args: CommentsArgs, json: bool) -> Result<()> {
     }
 
     if comments.is_empty() {
-        println!("⚠️  No hay comentarios en el card {}.", args.card_id);
+        println!("No hay comentarios en el card {}.", args.card_id);
         return Ok(());
     }
 
-    println!("\n💬 Comentarios del card {}:\n", args.card_id);
+    println!("\nComentarios del card {}:\n", args.card_id);
     let mut table = Table::new(&comments);
     table.with(Style::rounded());
     println!("{}", table);
@@ -729,14 +729,11 @@ async fn card_labels(args: LabelsArgs, board: Option<u64>, json: bool) -> Result
     }
 
     if labels.is_empty() {
-        println!(
-            "⚠️  No se encontraron labels para el card {}.",
-            args.card_id
-        );
+        println!("No se encontraron labels para el card {}.", args.card_id);
         return Ok(());
     }
 
-    println!("\n🏷️  Labels del card {}:\n", args.card_id);
+    println!("\n Labels del card {}:\n", args.card_id);
     for label in &labels {
         println!("   {} — {} ({})", label.id, label.name, label.color);
     }
@@ -768,7 +765,7 @@ async fn update_card(args: UpdateArgs, board: Option<u64>, json: bool) -> Result
         return Ok(());
     }
 
-    println!("\n✅ Card {} actualizado.", args.card_id);
+    println!("\nCard {} actualizado.", args.card_id);
     println!();
 
     Ok(())
@@ -784,7 +781,7 @@ async fn card_remind(args: RemindArgs, json: bool) -> Result<()> {
         return Ok(());
     }
 
-    println!("\n🔔 Recordatorio creado para el card {}.", args.card_id);
+    println!("\nRecordatorio creado para el card {}.", args.card_id);
     println!();
 
     Ok(())
@@ -804,15 +801,12 @@ async fn follow_up(args: FollowUpArgs, board: Option<u64>, json: bool) -> Result
     match follow_up {
         Some(f) => {
             println!(
-                "\n🔔 Seguimiento #{} del card {}: {}",
+                "\nSeguimiento #{} del card {}: {}",
                 f.id, args.card_id, f.date
             );
             println!();
         }
-        None => println!(
-            "⚠️  El card {} no tiene un seguimiento agendado.",
-            args.card_id
-        ),
+        None => println!("El card {} no tiene un seguimiento agendado.", args.card_id),
     }
 
     Ok(())
@@ -831,7 +825,7 @@ async fn follow_up_complete(args: FollowUpIdArgs, json: bool) -> Result<()> {
         return Ok(());
     }
 
-    println!("\n✅ Seguimiento {} completado.", args.follow_up_id);
+    println!("\nSeguimiento {} completado.", args.follow_up_id);
     println!();
 
     Ok(())
@@ -850,7 +844,7 @@ async fn follow_up_cancel(args: FollowUpIdArgs, json: bool) -> Result<()> {
         return Ok(());
     }
 
-    println!("\n🗑️  Seguimiento {} cancelado.", args.follow_up_id);
+    println!("\n Seguimiento {} cancelado.", args.follow_up_id);
     println!();
 
     Ok(())

@@ -1,4 +1,4 @@
 # Files
 
-- [Board, card, and work-tracking domain](cards-and-board-state.md) - Defines the Hteam board, card, work-tracking, reminder, comment, project, and shift records exposed by the client, including identifier boundaries, mutation defaults, and the HTML edit-form baseline used for safe partial card edits.
-- [Authentication, sessions, and persisted preferences](session-configuration.md) - How Hteam authenticates requests, constructs authenticated sessions, resolves boards, and persists credentials and terminal preferences. Covers the local state boundaries that matter when changing CLI, TUI, or client behavior.
+- [Cards and Board State](cards-and-board-state.md) - Explains how Hteam board, list, card, and edit-form data fit together, including which identifiers must not be confused and how the client preserves card state across list, detail, board-card, and edit-form endpoints.
+- [Session and Configuration](session-configuration.md) - How Hteam authenticates sessions, resolves boards, and persists user-local configuration that affects CLI, TUI, and MCP behavior.

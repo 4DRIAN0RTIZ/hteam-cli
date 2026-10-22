@@ -61,7 +61,7 @@ async fn project_list(args: ProjectListArgs, json: bool) -> Result<()> {
 
     if projects.is_empty() {
         println!(
-            "⚠️  No hay proyectos en estado '{}'.",
+            "No hay proyectos en estado '{}'.",
             status.unwrap_or("Execution")
         );
         return Ok(());
@@ -93,7 +93,7 @@ async fn project_milestones(args: ProjectArgs, json: bool) -> Result<()> {
 
     if milestones.is_empty() {
         println!(
-            "⚠️  No se encontraron milestones para el proyecto {}.",
+            "No se encontraron milestones para el proyecto {}.",
             args.project_id
         );
         return Ok(());
@@ -102,7 +102,7 @@ async fn project_milestones(args: ProjectArgs, json: bool) -> Result<()> {
     let mut table = Table::new(&milestones);
     table.with(Style::rounded());
 
-    println!("\n🎯 Milestones del proyecto {}:\n", args.project_id);
+    println!("\nMilestones del proyecto {}:\n", args.project_id);
     println!("{}", table);
     println!();
 
@@ -149,7 +149,7 @@ async fn project_tasks(args: ProjectArgs, json: bool) -> Result<()> {
 
     if resp.results.is_empty() {
         println!(
-            "⚠️  No se encontraron tasks para el proyecto {}.",
+            "No se encontraron tasks para el proyecto {}.",
             args.project_id
         );
         return Ok(());
@@ -159,7 +159,7 @@ async fn project_tasks(args: ProjectArgs, json: bool) -> Result<()> {
     table.with(Style::rounded());
 
     println!(
-        "\n📌 Tasks del proyecto {} ({} total):\n",
+        "\nTasks del proyecto {} ({} total):\n",
         args.project_id, resp.count
     );
     println!("{}", table);
