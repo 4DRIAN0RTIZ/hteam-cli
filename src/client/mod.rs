@@ -18,6 +18,13 @@ use crate::models::{
 const BASE_URL: &str = "https://hteam.mx/api";
 const SITE_URL: &str = "https://hteam.mx";
 
+/// Result of probing cookies against the boards list (no board id required).
+#[derive(Debug, Clone)]
+pub enum AuthProbe {
+    Authorized(Vec<BoardEntry>),
+    Unauthorized,
+}
+
 /// Hteam keeps operation tasks and project tasks on separate API trees.
 /// Close/reopen must hit the matching family (both POSTs may succeed on the
 /// wrong tree today, but the web always uses the URL family from `title_url`).
@@ -298,20 +305,30 @@ impl HteamClient {
             .context("No se especificó el board number. Usa --board o configura uno por defecto.")
     }
 
-    pub async fn test_auth(&self) -> Result<bool> {
-        // Try to get lists from a default board (483 is common)
-        // This endpoint should work with cookie authentication
-        let config = self.config.lock().await;
-        let board = config.get_board_number().unwrap_or(483);
-        let url = format!(
-            "{}/operation/care/operations/{}/lists/?format=json",
-            self.api_base_url, board
-        );
-        let headers = self.build_headers(&config)?;
+    /// Probes session cookies without a board id by listing operations boards.
+    /// `401`/`403` mean bad or expired credentials; other failures stay as `Err`
+    /// (network / unexpected HTTP) so callers can tell unauthorized from red.
+    pub async fn probe_auth(&self) -> Result<AuthProbe> {
+        let response = self.fetch_boards_response().await?;
+        let status = response.status();
 
-        let response = self.client.get(&url).headers(headers).send().await?;
+        if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
+            return Ok(AuthProbe::Unauthorized);
+        }
 
-        Ok(response.status().is_success())
+        if !status.is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                status,
+                response.text().await.unwrap_or_default()
+            );
+        }
+
+        let data: BoardsResponse = response
+            .json()
+            .await
+            .context("Error al parsear boards en el probe de auth")?;
+        Ok(AuthProbe::Authorized(data.data))
     }
 
     pub async fn get_lists(&self, board_number: Option<u64>) -> Result<Vec<List>> {
@@ -1917,15 +1934,13 @@ impl HteamClient {
         Ok(result)
     }
 
-    /// Obtiene todos los boards en estado "Execution" desde el endpoint datatables.
-    pub async fn get_boards(&self) -> Result<Vec<BoardEntry>> {
+    async fn fetch_boards_response(&self) -> Result<reqwest::Response> {
         let config = self.config.lock().await;
         let headers = self.build_headers(&config)?;
         drop(config);
 
         let url = format!("{}/operation/care/operations/", self.api_base_url);
-        let response = self
-            .client
+        self.client
             .get(&url)
             .headers(headers)
             .query(&[
@@ -1948,18 +1963,17 @@ impl HteamClient {
             ])
             .send()
             .await
-            .context("Error al obtener boards")?;
+            .context("Error de red al obtener boards")
+    }
 
-        if !response.status().is_success() {
-            anyhow::bail!(
-                "Error HTTP {}: {}",
-                response.status(),
-                response.text().await?
-            );
+    /// Obtiene todos los boards en estado "Execution" desde el endpoint datatables.
+    pub async fn get_boards(&self) -> Result<Vec<BoardEntry>> {
+        match self.probe_auth().await? {
+            AuthProbe::Authorized(boards) => Ok(boards),
+            AuthProbe::Unauthorized => {
+                anyhow::bail!("No autorizado al listar boards (sesión inválida o sin permiso)")
+            }
         }
-
-        let data: BoardsResponse = response.json().await?;
-        Ok(data.data)
     }
 
     /// Obtiene los proyectos en `status` (default "Execution", igual que el
@@ -2392,20 +2406,50 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_test_auth_returns_false_for_forbidden_status() {
+    async fn test_probe_auth_returns_unauthorized_for_forbidden_status() {
         let mut server = mockito::Server::new_async().await;
         let _m = server
-            .mock("GET", "/operation/care/operations/483/lists/")
-            .match_query(Matcher::UrlEncoded(
-                "format".to_string(),
-                "json".to_string(),
-            ))
+            .mock("GET", "/operation/care/operations/")
+            .match_query(Matcher::AllOf(vec![
+                Matcher::UrlEncoded("format".to_string(), "datatables".to_string()),
+                Matcher::UrlEncoded("status".to_string(), "Execution".to_string()),
+            ]))
             .with_status(403)
             .create_async()
             .await;
         let client = authenticated_client(&server.url());
 
-        assert!(!client.test_auth().await.expect("auth check"));
+        match client.probe_auth().await.expect("auth check") {
+            AuthProbe::Unauthorized => {}
+            AuthProbe::Authorized(_) => panic!("expected unauthorized"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_probe_auth_returns_boards_when_authorized() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/operation/care/operations/")
+            .match_query(Matcher::AllOf(vec![
+                Matcher::UrlEncoded("format".to_string(), "datatables".to_string()),
+                Matcher::UrlEncoded("status".to_string(), "Execution".to_string()),
+            ]))
+            .with_status(200)
+            .with_body(
+                r#"{"data":[{"id":12,"name":"Solo","service":"Managed","total_tasks":1,"total_tasks_closed":0}]}"#,
+            )
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        match client.probe_auth().await.expect("auth check") {
+            AuthProbe::Authorized(boards) => {
+                assert_eq!(boards.len(), 1);
+                assert_eq!(boards[0].id, 12);
+                assert_eq!(boards[0].name, "Solo");
+            }
+            AuthProbe::Unauthorized => panic!("expected authorized"),
+        }
     }
 
     #[tokio::test]
