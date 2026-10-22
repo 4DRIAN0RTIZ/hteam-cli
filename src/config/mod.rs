@@ -350,30 +350,99 @@ fn write_private_file(path: &Path, content: &str) -> Result<()> {
     if let Some(dir) = parent {
         ensure_private_dir(dir)?;
         restrict_file_mode(dir, 0o700)?;
-    }
-
-    let legacy_tmp = well_known_temp_path(path);
-    if legacy_tmp.exists() {
-        let _ = fs::remove_file(&legacy_tmp);
+        cleanup_stale_temps(dir, path);
     }
 
     let tmp_path = private_temp_path(path);
-    let write_result = write_temp_file(&tmp_path, content);
-    if let Err(err) = write_result {
-        let _ = fs::remove_file(&tmp_path);
-        return Err(err);
-    }
-
-    if let Err(err) = fs::rename(&tmp_path, path) {
-        let _ = fs::remove_file(&tmp_path);
-        return Err(err).with_context(|| format!("No se pudo reemplazar {}", path.display()));
-    }
-
+    let mut guard = TempFileGuard::new(tmp_path.clone());
+    write_temp_file(&tmp_path, content)?;
+    fs::rename(&tmp_path, path)
+        .with_context(|| format!("No se pudo reemplazar {}", path.display()))?;
+    guard.keep();
     restrict_file_mode(path, 0o600)
 }
 
-fn well_known_temp_path(path: &Path) -> PathBuf {
-    temp_path_with_suffix(path, ".tmp")
+struct TempFileGuard {
+    path: PathBuf,
+    keep: bool,
+}
+
+impl TempFileGuard {
+    fn new(path: PathBuf) -> Self {
+        Self { path, keep: false }
+    }
+
+    fn keep(&mut self) {
+        self.keep = true;
+    }
+}
+
+impl Drop for TempFileGuard {
+    fn drop(&mut self) {
+        if !self.keep {
+            let _ = fs::remove_file(&self.path);
+        }
+    }
+}
+
+fn cleanup_stale_temps(dir: &Path, dest: &Path) {
+    let Some(prefix) = temp_name_prefix(dest) else {
+        return;
+    };
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+
+    for entry in entries.filter_map(Result::ok) {
+        let name = entry.file_name();
+        let Some(name) = name.to_str() else {
+            continue;
+        };
+        if !is_stale_temp_name(name, &prefix) {
+            continue;
+        }
+        let _ = fs::remove_file(entry.path());
+    }
+}
+
+fn temp_name_prefix(path: &Path) -> Option<String> {
+    path.file_name()
+        .map(|name| format!(".{}{}", name.to_string_lossy(), ".tmp"))
+}
+
+fn is_stale_temp_name(name: &str, prefix: &str) -> bool {
+    if name == prefix {
+        return true;
+    }
+    let Some(rest) = name.strip_prefix(&format!("{prefix}-")) else {
+        return false;
+    };
+    let Some(pid_str) = rest.split('-').next() else {
+        return true;
+    };
+    let Ok(pid) = pid_str.parse::<u32>() else {
+        return true;
+    };
+    !process_exists(pid)
+}
+
+fn process_exists(pid: u32) -> bool {
+    #[cfg(unix)]
+    {
+        if pid == 0 {
+            return false;
+        }
+        let result = unsafe { libc::kill(pid as libc::pid_t, 0) };
+        if result == 0 {
+            return true;
+        }
+        std::io::Error::last_os_error().raw_os_error() != Some(libc::ESRCH)
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = pid;
+        true
+    }
 }
 
 fn private_temp_path(path: &Path) -> PathBuf {
@@ -847,6 +916,55 @@ mod tests {
         assert!(!message.contains("csrf"));
 
         let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn save_removes_dead_pid_temp_and_keeps_live_pid_temp() {
+        let root = unique_temp_dir("hteam-config-stale-pid");
+        let config_dir = root.join("hteam");
+        fs::create_dir_all(&config_dir).expect("creates config dir");
+        let config_file = config_dir.join("config.toml");
+        let dead = config_dir.join(format!(".config.toml.tmp-{}-0-1", unused_pid()));
+        let live = config_dir.join(format!(".config.toml.tmp-{}-0-1", std::process::id()));
+        fs::write(&dead, "dead-secret = true\n").expect("writes dead pid leftover");
+        fs::write(&live, "live-secret = true\n").expect("writes live pid leftover");
+
+        let mut config = Config::default();
+        config.auth.session_id = Some("sid".to_string());
+        config.auth.csrf_token = Some("csrf".to_string());
+        config
+            .save_to_path(&config_file)
+            .expect("saves after leftover cleanup");
+
+        assert!(!dead.exists());
+        assert_eq!(
+            fs::read_to_string(&live).expect("reads live leftover"),
+            "live-secret = true\n"
+        );
+        assert!(!config_dir.join(".config.toml.tmp").exists());
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn is_stale_temp_name_keeps_live_pid_and_drops_dead_pid() {
+        let prefix = ".config.toml.tmp";
+        assert!(is_stale_temp_name(prefix, prefix));
+        assert!(is_stale_temp_name(
+            &format!(".config.toml.tmp-{}-0-1", unused_pid()),
+            prefix
+        ));
+        assert!(!is_stale_temp_name(
+            &format!(".config.toml.tmp-{}-0-1", std::process::id()),
+            prefix
+        ));
+        assert!(!is_stale_temp_name("config.toml", prefix));
+    }
+
+    fn unused_pid() -> u32 {
+        (2..u32::MAX)
+            .find(|pid| !process_exists(*pid))
+            .expect("finds a pid that is not running")
     }
 
     fn unique_temp_dir(prefix: &str) -> PathBuf {
