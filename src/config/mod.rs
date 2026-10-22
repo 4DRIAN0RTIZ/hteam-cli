@@ -347,6 +347,7 @@ fn write_private_file(path: &Path, content: &str) -> Result<()> {
     let parent = path.parent().filter(|dir| !dir.as_os_str().is_empty());
     if let Some(dir) = parent {
         ensure_private_dir(dir)?;
+        restrict_file_mode(dir, 0o700)?;
     }
 
     let tmp_path = private_temp_path(path);
@@ -403,6 +404,7 @@ fn write_temp_file(tmp_path: &Path, content: &str) -> Result<()> {
             tmp_path.display()
         )
     })?;
+    restrict_file_mode(tmp_path, 0o600)?;
     file.write_all(content.as_bytes()).with_context(|| {
         format!(
             "No se pudo escribir el archivo temporal de configuración {}",
@@ -650,6 +652,14 @@ mod tests {
         let root = unique_temp_dir("hteam-config-update");
         let config_dir = root.join("hteam");
         fs::create_dir_all(&config_dir).expect("creates existing config dir");
+        #[cfg(unix)]
+        {
+            let mut perms = fs::metadata(&config_dir)
+                .expect("reads existing dir metadata")
+                .permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions(&config_dir, perms).expect("sets world-readable existing dir");
+        }
         let config_file = config_dir.join("config.toml");
         fs::write(&config_file, "stale = true\n").expect("writes stale config");
         #[cfg(unix)]
@@ -682,7 +692,91 @@ mod tests {
         #[cfg(unix)]
         {
             assert_eq!(unix_mode(&config_file), 0o600);
+            assert_eq!(unix_mode(&config_dir), 0o700);
         }
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn save_replaces_stale_temp_file_and_keeps_it_private() {
+        let root = unique_temp_dir("hteam-config-stale-tmp");
+        let config_dir = root.join("hteam");
+        fs::create_dir_all(&config_dir).expect("creates config dir");
+        let config_file = config_dir.join("config.toml");
+        let tmp_file = config_dir.join(".config.toml.tmp");
+        fs::write(&tmp_file, "stale-secret = true\n").expect("writes leftover temp");
+        #[cfg(unix)]
+        {
+            let mut perms = fs::metadata(&tmp_file)
+                .expect("reads leftover temp metadata")
+                .permissions();
+            perms.set_mode(0o644);
+            fs::set_permissions(&tmp_file, perms).expect("sets world-readable leftover temp");
+        }
+
+        let mut config = Config::default();
+        config.auth.session_id = Some("sid".to_string());
+        config.auth.csrf_token = Some("csrf".to_string());
+
+        config
+            .save_to_path(&config_file)
+            .expect("replaces leftover temp");
+
+        assert!(!tmp_file.exists());
+        let loaded: Config =
+            toml::from_str(&fs::read_to_string(&config_file).expect("reads created config"))
+                .expect("parses created config");
+        assert_eq!(loaded.auth.session_id.as_deref(), Some("sid"));
+        #[cfg(unix)]
+        {
+            assert_eq!(unix_mode(&config_file), 0o600);
+            assert_eq!(unix_mode(&config_dir), 0o700);
+        }
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn write_temp_file_creates_owner_only_file() {
+        let root = unique_temp_dir("hteam-config-temp-mode");
+        let tmp_file = root.join(".config.toml.tmp");
+
+        write_temp_file(&tmp_file, "auth = true\n").expect("creates temp file");
+
+        assert_eq!(
+            fs::read_to_string(&tmp_file).expect("reads temp file"),
+            "auth = true\n"
+        );
+        #[cfg(unix)]
+        {
+            assert_eq!(unix_mode(&tmp_file), 0o600);
+        }
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn save_error_mentions_path_not_secret_values() {
+        let root = unique_temp_dir("hteam-config-error");
+        let blocked = root.join("blocked");
+        fs::write(&blocked, "not-a-directory").expect("creates blocking file");
+        let config_file = blocked.join("config.toml");
+
+        let mut config = Config::default();
+        config.auth.session_id = Some("sid".to_string());
+        config.auth.csrf_token = Some("csrf".to_string());
+
+        let err = config
+            .save_to_path(&config_file)
+            .expect_err("parent is a file");
+        let message = format!("{err:#}");
+
+        assert!(message.contains(&blocked.display().to_string()));
+        assert!(!message.contains("sid"));
+        assert!(!message.contains("csrf"));
+        assert!(!message.contains("session_id"));
+        assert!(!message.contains("csrf_token"));
 
         let _ = fs::remove_dir_all(&root);
     }
