@@ -6,7 +6,7 @@ CLI en Rust para gestionar boards de Hteam, con soporte nativo de MCP (Model Con
 
 - **Autenticación** con cookies de sesión (`sessionid` + `csrftoken`)
 - **Modo interactivo REPL** con historial persistente (`~/.hteam_history`)
-- **Servidor MCP** sobre stdio — expone 32 herramientas para IA (Claude, etc.)
+- **Servidor MCP** sobre stdio — expone 31 herramientas para IA (Claude, etc.)
 - **Multi-board** con persistencia de configuración
 - **Salida dual**: tablas formateadas + JSON raw (`--json`) para scripting
 
@@ -151,7 +151,7 @@ hteam completions zsh > _hteam            # bash, zsh, fish, elvish, powershell
 hteam mcp
 ```
 
-Inicia el servidor MCP sobre **stdio**. Se integra con Claude Desktop, Claude Code u cualquier cliente MCP compatible. Las 32 herramientas expuestas son:
+Inicia el servidor MCP sobre **stdio**. Se integra con Claude Desktop, Claude Code u cualquier cliente MCP compatible. Las 31 herramientas expuestas son:
 
 | Herramienta | Descripción |
 |---|---|
