@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug Fixes
 - *(login)* Validate session without hardcoded board
+- *(config)* Write credentials atomically with private permissions
+- *(config)* Tighten existing hteam dir and leftover temp files
+- *(config)* Use unique temp files when saving credentials
+- *(config)* Remove leftover temps from dead processes
 
 
 ### Documentation
