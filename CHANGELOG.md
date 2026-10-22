@@ -18,7 +18,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 - *(cli)* Add hteam doctor for config and session checks
 
-
 ## [0.10.0] - 2026-10-14
 
 ### Bug Fixes
@@ -162,7 +161,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MCP server y CLI para hteam
 - Obtener comentarios de un card via django-comments-xtd
 - *(daily-work)* Add daily work history to CLI and MCP
-
 
 ---
 
