@@ -7,6 +7,8 @@ use std::io::Write;
 #[cfg(unix)]
 use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::models::{WeeklyObjective, WeeklyObjectivesSet};
 
@@ -350,16 +352,12 @@ fn write_private_file(path: &Path, content: &str) -> Result<()> {
         restrict_file_mode(dir, 0o700)?;
     }
 
-    let tmp_path = private_temp_path(path);
-    if tmp_path.exists() {
-        fs::remove_file(&tmp_path).with_context(|| {
-            format!(
-                "No se pudo limpiar el archivo temporal {}",
-                tmp_path.display()
-            )
-        })?;
+    let legacy_tmp = well_known_temp_path(path);
+    if legacy_tmp.exists() {
+        let _ = fs::remove_file(&legacy_tmp);
     }
 
+    let tmp_path = private_temp_path(path);
     let write_result = write_temp_file(&tmp_path, content);
     if let Err(err) = write_result {
         let _ = fs::remove_file(&tmp_path);
@@ -374,14 +372,35 @@ fn write_private_file(path: &Path, content: &str) -> Result<()> {
     restrict_file_mode(path, 0o600)
 }
 
+fn well_known_temp_path(path: &Path) -> PathBuf {
+    temp_path_with_suffix(path, ".tmp")
+}
+
 fn private_temp_path(path: &Path) -> PathBuf {
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let suffix = format!(
+        ".tmp-{}-{}-{}",
+        std::process::id(),
+        COUNTER.fetch_add(1, Ordering::Relaxed),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    );
+    temp_path_with_suffix(path, &suffix)
+}
+
+fn temp_path_with_suffix(path: &Path, suffix: &str) -> PathBuf {
     let mut tmp_name = std::ffi::OsString::from(".");
     match path.file_name() {
         Some(name) => {
             tmp_name.push(name);
-            tmp_name.push(".tmp");
+            tmp_name.push(suffix);
         }
-        None => tmp_name.push("config.tmp"),
+        None => {
+            tmp_name.push("config");
+            tmp_name.push(suffix);
+        }
     }
 
     match path.parent() {
@@ -777,6 +796,55 @@ mod tests {
         assert!(!message.contains("csrf"));
         assert!(!message.contains("session_id"));
         assert!(!message.contains("csrf_token"));
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn private_temp_paths_do_not_collide() {
+        let path = PathBuf::from("/tmp/hteam/config.toml");
+        let first = private_temp_path(&path);
+        let second = private_temp_path(&path);
+
+        assert_ne!(first, second);
+        assert_eq!(first.parent(), second.parent());
+        assert!(first
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap()
+            .starts_with(".config.toml.tmp-"));
+    }
+
+    #[test]
+    fn save_failed_replace_keeps_existing_file() {
+        let root = unique_temp_dir("hteam-config-failed-replace");
+        let config_dir = root.join("hteam");
+        fs::create_dir_all(&config_dir).expect("creates config dir");
+        let config_file = config_dir.join("config.toml");
+        fs::create_dir(&config_file).expect("destination is a directory, not a file");
+
+        let mut config = Config::default();
+        config.auth.session_id = Some("sid".to_string());
+        config.auth.csrf_token = Some("csrf".to_string());
+
+        let err = config
+            .save_to_path(&config_file)
+            .expect_err("cannot replace a directory with a file");
+        let message = format!("{err:#}");
+
+        assert!(config_file.is_dir());
+        assert!(config_dir
+            .read_dir()
+            .expect("reads config dir")
+            .filter_map(|entry| entry.ok())
+            .all(|entry| {
+                let name = entry.file_name();
+                name != *".config.toml.tmp"
+                    && !name.to_string_lossy().starts_with(".config.toml.tmp-")
+            }));
+        assert!(message.contains(&config_file.display().to_string()));
+        assert!(!message.contains("sid"));
+        assert!(!message.contains("csrf"));
 
         let _ = fs::remove_dir_all(&root);
     }
