@@ -1,3 +1,3 @@
 # Files
 
-- [System overview](system-overview.md) - Architecture overview for the Hteam Rust binary. Defines the ownership boundaries between CLI, REPL, TUI, MCP, operations, client, config, and models, and explains the request path and session lifecycle.
+- [System overview](system-overview.md) - Architecture overview for the Hteam Rust binary. Explains how CLI, REPL, TUI, and MCP entrypoints share operations, and where configuration, session, and transport state are owned.
