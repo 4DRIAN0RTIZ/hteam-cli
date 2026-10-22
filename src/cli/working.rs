@@ -45,14 +45,14 @@ async fn list_working(json: bool) -> Result<()> {
     }
 
     if working.is_empty() {
-        println!("⚠️  No estás trabajando en ningún card.");
+        println!("No estás trabajando en ningún card.");
         return Ok(());
     }
 
     let mut table = Table::new(&working);
     table.with(Style::rounded());
 
-    println!("\n🔨 Working On It:\n");
+    println!("\nWorking On It:\n");
     println!("{}", table);
     println!();
 
@@ -69,7 +69,7 @@ async fn start_working(args: WorkingStartArgs, json: bool) -> Result<()> {
         return Ok(());
     }
 
-    println!("\n🔨 Ahora estás trabajando en el card {}", args.card_id);
+    println!("\nAhora estás trabajando en el card {}", args.card_id);
     println!();
 
     Ok(())
@@ -85,7 +85,7 @@ async fn stop_working(args: WorkingStopArgs, json: bool) -> Result<()> {
         return Ok(());
     }
 
-    println!("\n🛑 Dejaste de trabajar en el working {}", args.working_id);
+    println!("\nDejaste de trabajar en el working {}", args.working_id);
     println!();
 
     Ok(())

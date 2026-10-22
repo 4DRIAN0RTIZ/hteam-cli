@@ -24,7 +24,7 @@ pub struct LoginArgs {
 }
 
 pub async fn execute(args: LoginArgs) -> Result<()> {
-    println!("🔐 Iniciando sesión en Hteam...\n");
+    println!("Iniciando sesión en Hteam...\n");
 
     let session_id = match args.session_id {
         Some(s) => s,
@@ -48,16 +48,16 @@ pub async fn execute(args: LoginArgs) -> Result<()> {
     probe_config.auth.session_id = Some(session_id.clone());
     probe_config.auth.csrf_token = Some(csrf_token.clone());
 
-    println!("\n🔄 Verificando credenciales...");
+    println!("\nVerificando credenciales...");
     let client = HteamClient::new(probe_config)?;
 
     let boards = match check_auth(&client).await {
         Ok(AuthCheck::Ok { boards }) => boards,
         Ok(AuthCheck::Unauthorized) => {
-            bail!("❌ Sesión inválida (unauthorized). Verifica sessionid y csrftoken.");
+            bail!("Sesión inválida (unauthorized). Verifica sessionid y csrftoken.");
         }
         Err(e) => {
-            bail!("❌ Error de red al verificar autenticación: {e}");
+            bail!("Error de red al verificar autenticación: {e}");
         }
     };
 
@@ -71,26 +71,24 @@ pub async fn execute(args: LoginArgs) -> Result<()> {
 
     persist_login(&mut config, session_id, csrf_token, board_to_persist)?;
 
-    println!("✅ Autenticación exitosa!");
+    println!("Autenticación exitosa!");
 
     match resolution {
         LoginBoardResolution::Selected { id, name } => {
-            println!("📋 Board activo: {name} ({id})");
+            println!("Board activo: {name} ({id})");
         }
         LoginBoardResolution::NeedsSwitch { boards } => {
-            println!(
-                "📋 Hay varios boards disponibles. Elige uno con `hteam board switch <id>`:\n"
-            );
+            println!("Hay varios boards disponibles. Elige uno con `hteam board switch <id>`:\n");
             for (id, name) in boards {
                 println!("   {id} - {name}");
             }
         }
         LoginBoardResolution::NoneAvailable => {
-            println!("⚠️  La sesión es válida pero no hay boards en Execution visibles.");
+            println!("La sesión es válida pero no hay boards en Execution visibles.");
         }
         LoginBoardResolution::NotFound { requested } => {
             bail!(
-                "❌ Sesión guardada, pero el board {requested} no está en tu listado. \
+                "Sesión guardada, pero el board {requested} no está en tu listado. \
                  Usa `hteam board switch <id>` con un board visible."
             );
         }

@@ -42,7 +42,7 @@ fn list(json: bool) -> Result<()> {
         return Ok(());
     }
 
-    println!("\n🎨 Presets embebidos:\n");
+    println!("\nPresets embebidos:\n");
     for name in THEME_NAMES {
         if name == active {
             println!("  {} {}", "•".cyan(), name.bold());
@@ -98,7 +98,7 @@ fn set(args: ThemeSetArgs, json: bool) -> Result<()> {
     }
 
     println!(
-        "\n✅ Tema activo: {}. Se aplica la próxima vez que abras 'hteam tui'.\n",
+        "\nTema activo: {}. Se aplica la próxima vez que abras 'hteam tui'.\n",
         args.name.bold()
     );
     Ok(())

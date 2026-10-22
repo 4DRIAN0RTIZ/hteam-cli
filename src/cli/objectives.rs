@@ -67,7 +67,7 @@ async fn show(args: ObjectivesShowArgs, json: bool) -> Result<()> {
         return Ok(());
     }
 
-    println!("\n🎯 {}\n", view.set.title.bold());
+    println!("\n{}\n", view.set.title.bold());
 
     for objective in &view.set.objectives {
         println!("## {}", objective.name.bold());

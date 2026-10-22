@@ -33,16 +33,14 @@ pub async fn execute(json: bool) -> Result<()> {
 
     if !outcome.updated {
         println!(
-            "\n{} Ya estás en la última versión ({})\n",
-            "✅".green(),
+            "\nYa estás en la última versión ({})\n",
             outcome.version.bold()
         );
         return Ok(());
     }
 
     println!(
-        "\n{} hteam actualizado a la versión {} ({})\n",
-        "✅".green(),
+        "\nhteam actualizado a la versión {} ({})\n",
         outcome.version.bold(),
         outcome.binary_path.display()
     );
