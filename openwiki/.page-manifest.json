@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "pages": {
+    "/openwiki/architecture/system-overview.md": {
+      "pageVersion": "sha256:5faaec27c9cbb777f64c4c49b1426d5cd6d12e62ad277a25f2e252eab12d63ed",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "a853baf1-e9f6-4a5b-8c0e-7608b26c3235",
+      "gitHead": "8174f905bf92949f305d5e20e2a213361fff1552",
+      "sourceFingerprint": "sha256:d121670c7a5369c74fc201bc9ce6e784d49a5dc1f19bce0b9c0e17f40c6ab040"
+    },
+    "/openwiki/concepts/cards-and-board-state.md": {
+      "pageVersion": "sha256:e77ca6c7d6eb5f14101acd70367ca49e63c45656486c5ef848b1f13475b2c3ee",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "a853baf1-e9f6-4a5b-8c0e-7608b26c3235",
+      "gitHead": "8174f905bf92949f305d5e20e2a213361fff1552",
+      "sourceFingerprint": "sha256:d121670c7a5369c74fc201bc9ce6e784d49a5dc1f19bce0b9c0e17f40c6ab040"
+    },
+    "/openwiki/concepts/session-configuration.md": {
+      "pageVersion": "sha256:0f58e01cec7090a1297fc6a217e221520be150383e2c2c0fd32a55a622c12d88",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "a853baf1-e9f6-4a5b-8c0e-7608b26c3235",
+      "gitHead": "8174f905bf92949f305d5e20e2a213361fff1552",
+      "sourceFingerprint": "sha256:d121670c7a5369c74fc201bc9ce6e784d49a5dc1f19bce0b9c0e17f40c6ab040"
+    },
+    "/openwiki/integrations/hteam-api.md": {
+      "pageVersion": "sha256:f2c82e073264cd0ab218db31ba37f7d7ef53943ec1bdfb30c138f3be33ffe50f",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "a853baf1-e9f6-4a5b-8c0e-7608b26c3235",
+      "gitHead": "8174f905bf92949f305d5e20e2a213361fff1552",
+      "sourceFingerprint": "sha256:d121670c7a5369c74fc201bc9ce6e784d49a5dc1f19bce0b9c0e17f40c6ab040"
+    },
+    "/openwiki/integrations/mcp-server.md": {
+      "pageVersion": "sha256:2a3a1a8601c03631d79e58df5fa09d67f8925d557ff99cd164e9dc965f8136ea",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "a853baf1-e9f6-4a5b-8c0e-7608b26c3235",
+      "gitHead": "8174f905bf92949f305d5e20e2a213361fff1552",
+      "sourceFingerprint": "sha256:d121670c7a5369c74fc201bc9ce6e784d49a5dc1f19bce0b9c0e17f40c6ab040"
+    },
+    "/openwiki/operations/terminal-experiences.md": {
+      "pageVersion": "sha256:2f84f50491ba1fb05b47cd827d7fd81587aa1655a7d05b2d60898dc0e63382c3",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "a853baf1-e9f6-4a5b-8c0e-7608b26c3235",
+      "gitHead": "8174f905bf92949f305d5e20e2a213361fff1552",
+      "sourceFingerprint": "sha256:d121670c7a5369c74fc201bc9ce6e784d49a5dc1f19bce0b9c0e17f40c6ab040"
+    },
+    "/openwiki/quickstart.md": {
+      "pageVersion": "sha256:32435e92239dc4c59b77fde7b0942a0d722c8789727acee6525106611d3ef2e8",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "a853baf1-e9f6-4a5b-8c0e-7608b26c3235",
+      "gitHead": "8174f905bf92949f305d5e20e2a213361fff1552",
+      "sourceFingerprint": "sha256:d121670c7a5369c74fc201bc9ce6e784d49a5dc1f19bce0b9c0e17f40c6ab040"
+    }
+  }
+}

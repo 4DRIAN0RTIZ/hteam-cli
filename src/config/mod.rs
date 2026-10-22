@@ -2,8 +2,13 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs;
-use std::path::PathBuf;
+use std::fs::{self, OpenOptions};
+use std::io::Write;
+#[cfg(unix)]
+use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt};
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::models::{WeeklyObjective, WeeklyObjectivesSet};
 
@@ -276,21 +281,12 @@ impl Config {
     }
 
     pub fn save(&self) -> Result<()> {
-        let config_dir = Self::config_dir()?;
-        let config_file = Self::config_file()?;
+        self.save_to_path(&Self::config_file()?)
+    }
 
-        if !config_dir.exists() {
-            fs::create_dir_all(&config_dir).with_context(|| {
-                format!("No se pudo crear el directorio {}", config_dir.display())
-            })?;
-        }
-
+    fn save_to_path(&self, config_file: &Path) -> Result<()> {
         let content = toml::to_string_pretty(self).context("Error al serializar configuración")?;
-
-        fs::write(&config_file, content)
-            .with_context(|| format!("No se pudo escribir {}", config_file.display()))?;
-
-        Ok(())
+        write_private_file(config_file, &content)
     }
 
     pub fn is_authenticated(&self) -> bool {
@@ -347,6 +343,214 @@ impl Config {
         fs::write(&path, board_number.to_string())?;
         Ok(())
     }
+}
+
+fn write_private_file(path: &Path, content: &str) -> Result<()> {
+    let parent = path.parent().filter(|dir| !dir.as_os_str().is_empty());
+    if let Some(dir) = parent {
+        ensure_private_dir(dir)?;
+        restrict_file_mode(dir, 0o700)?;
+        cleanup_stale_temps(dir, path);
+    }
+
+    let tmp_path = private_temp_path(path);
+    let mut guard = TempFileGuard::new(tmp_path.clone());
+    write_temp_file(&tmp_path, content)?;
+    fs::rename(&tmp_path, path)
+        .with_context(|| format!("No se pudo reemplazar {}", path.display()))?;
+    guard.keep();
+    restrict_file_mode(path, 0o600)
+}
+
+struct TempFileGuard {
+    path: PathBuf,
+    keep: bool,
+}
+
+impl TempFileGuard {
+    fn new(path: PathBuf) -> Self {
+        Self { path, keep: false }
+    }
+
+    fn keep(&mut self) {
+        self.keep = true;
+    }
+}
+
+impl Drop for TempFileGuard {
+    fn drop(&mut self) {
+        if !self.keep {
+            let _ = fs::remove_file(&self.path);
+        }
+    }
+}
+
+fn cleanup_stale_temps(dir: &Path, dest: &Path) {
+    let Some(prefix) = temp_name_prefix(dest) else {
+        return;
+    };
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+
+    for entry in entries.filter_map(Result::ok) {
+        let name = entry.file_name();
+        let Some(name) = name.to_str() else {
+            continue;
+        };
+        if !is_stale_temp_name(name, &prefix) {
+            continue;
+        }
+        let _ = fs::remove_file(entry.path());
+    }
+}
+
+fn temp_name_prefix(path: &Path) -> Option<String> {
+    path.file_name()
+        .map(|name| format!(".{}{}", name.to_string_lossy(), ".tmp"))
+}
+
+fn is_stale_temp_name(name: &str, prefix: &str) -> bool {
+    if name == prefix {
+        return true;
+    }
+    let Some(rest) = name.strip_prefix(&format!("{prefix}-")) else {
+        return false;
+    };
+    let Some(pid_str) = rest.split('-').next() else {
+        return true;
+    };
+    let Ok(pid) = pid_str.parse::<u32>() else {
+        return true;
+    };
+    !process_exists(pid)
+}
+
+fn process_exists(pid: u32) -> bool {
+    #[cfg(unix)]
+    {
+        if pid == 0 {
+            return false;
+        }
+        let result = unsafe { libc::kill(pid as libc::pid_t, 0) };
+        if result == 0 {
+            return true;
+        }
+        std::io::Error::last_os_error().raw_os_error() != Some(libc::ESRCH)
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = pid;
+        true
+    }
+}
+
+fn private_temp_path(path: &Path) -> PathBuf {
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let suffix = format!(
+        ".tmp-{}-{}-{}",
+        std::process::id(),
+        COUNTER.fetch_add(1, Ordering::Relaxed),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    );
+    temp_path_with_suffix(path, &suffix)
+}
+
+fn temp_path_with_suffix(path: &Path, suffix: &str) -> PathBuf {
+    let mut tmp_name = std::ffi::OsString::from(".");
+    match path.file_name() {
+        Some(name) => {
+            tmp_name.push(name);
+            tmp_name.push(suffix);
+        }
+        None => {
+            tmp_name.push("config");
+            tmp_name.push(suffix);
+        }
+    }
+
+    match path.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => parent.join(tmp_name),
+        _ => PathBuf::from(tmp_name),
+    }
+}
+
+fn write_temp_file(tmp_path: &Path, content: &str) -> Result<()> {
+    let mut opts = OpenOptions::new();
+    opts.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        opts.mode(0o600);
+    }
+
+    let mut file = opts.open(tmp_path).with_context(|| {
+        format!(
+            "No se pudo crear el archivo temporal de configuración {}",
+            tmp_path.display()
+        )
+    })?;
+    restrict_file_mode(tmp_path, 0o600)?;
+    file.write_all(content.as_bytes()).with_context(|| {
+        format!(
+            "No se pudo escribir el archivo temporal de configuración {}",
+            tmp_path.display()
+        )
+    })?;
+    file.sync_all().with_context(|| {
+        format!(
+            "No se pudo sincronizar el archivo temporal de configuración {}",
+            tmp_path.display()
+        )
+    })?;
+    Ok(())
+}
+
+fn ensure_private_dir(dir: &Path) -> Result<()> {
+    if dir.exists() {
+        return Ok(());
+    }
+
+    if let Some(parent) = dir.parent().filter(|parent| !parent.as_os_str().is_empty()) {
+        if !parent.exists() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("No se pudo crear el directorio {}", parent.display()))?;
+        }
+    }
+
+    #[cfg(unix)]
+    {
+        fs::DirBuilder::new()
+            .mode(0o700)
+            .create(dir)
+            .with_context(|| format!("No se pudo crear el directorio {}", dir.display()))?;
+    }
+    #[cfg(not(unix))]
+    {
+        fs::create_dir(dir)
+            .with_context(|| format!("No se pudo crear el directorio {}", dir.display()))?;
+    }
+
+    Ok(())
+}
+
+fn restrict_file_mode(path: &Path, mode: u32) -> Result<()> {
+    #[cfg(unix)]
+    {
+        let mut perms = fs::metadata(path)
+            .with_context(|| format!("No se pudo leer permisos de {}", path.display()))?
+            .permissions();
+        perms.set_mode(mode);
+        fs::set_permissions(path, perms)
+            .with_context(|| format!("No se pudo ajustar permisos de {}", path.display()))?;
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = (path, mode);
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -499,6 +703,290 @@ mod tests {
             hours.remaining_display(NaiveTime::from_hms_opt(10, 0, 0).unwrap()),
             None
         );
+    }
+
+    #[test]
+    fn save_creates_config_file_atomically_with_private_permissions() {
+        let root = unique_temp_dir("hteam-config-create");
+        let config_dir = root.join("hteam");
+        let config_file = config_dir.join("config.toml");
+
+        let mut config = Config::default();
+        config.auth.session_id = Some("sid".to_string());
+        config.auth.csrf_token = Some("csrf".to_string());
+        config.auth.board_number = Some(7);
+
+        config
+            .save_to_path(&config_file)
+            .expect("creates config file");
+
+        let loaded: Config =
+            toml::from_str(&fs::read_to_string(&config_file).expect("reads created config"))
+                .expect("parses created config");
+        assert_eq!(loaded.auth.session_id.as_deref(), Some("sid"));
+        assert_eq!(loaded.auth.board_number, Some(7));
+        assert!(!config_dir.join(".config.toml.tmp").exists());
+        #[cfg(unix)]
+        {
+            assert_eq!(unix_mode(&config_file), 0o600);
+            assert_eq!(unix_mode(&config_dir), 0o700);
+        }
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn save_replaces_existing_config_without_leaving_temp_file() {
+        let root = unique_temp_dir("hteam-config-update");
+        let config_dir = root.join("hteam");
+        fs::create_dir_all(&config_dir).expect("creates existing config dir");
+        #[cfg(unix)]
+        {
+            let mut perms = fs::metadata(&config_dir)
+                .expect("reads existing dir metadata")
+                .permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions(&config_dir, perms).expect("sets world-readable existing dir");
+        }
+        let config_file = config_dir.join("config.toml");
+        fs::write(&config_file, "stale = true\n").expect("writes stale config");
+        #[cfg(unix)]
+        {
+            let mut perms = fs::metadata(&config_file)
+                .expect("reads stale file metadata")
+                .permissions();
+            perms.set_mode(0o644);
+            fs::set_permissions(&config_file, perms).expect("sets world-readable stale file");
+        }
+
+        let mut config = Config::default();
+        config.auth.session_id = Some("sid".to_string());
+        config.auth.csrf_token = Some("csrf".to_string());
+        config.set_board_number(11);
+
+        config
+            .save_to_path(&config_file)
+            .expect("updates existing config");
+
+        let loaded: Config =
+            toml::from_str(&fs::read_to_string(&config_file).expect("reads updated config"))
+                .expect("parses updated config");
+        assert_eq!(loaded.auth.session_id.as_deref(), Some("sid"));
+        assert_eq!(loaded.get_board_number(), Some(11));
+        assert!(!fs::read_to_string(&config_file)
+            .expect("reads updated config")
+            .contains("stale"));
+        assert!(!config_dir.join(".config.toml.tmp").exists());
+        #[cfg(unix)]
+        {
+            assert_eq!(unix_mode(&config_file), 0o600);
+            assert_eq!(unix_mode(&config_dir), 0o700);
+        }
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn save_replaces_stale_temp_file_and_keeps_it_private() {
+        let root = unique_temp_dir("hteam-config-stale-tmp");
+        let config_dir = root.join("hteam");
+        fs::create_dir_all(&config_dir).expect("creates config dir");
+        let config_file = config_dir.join("config.toml");
+        let tmp_file = config_dir.join(".config.toml.tmp");
+        fs::write(&tmp_file, "stale-secret = true\n").expect("writes leftover temp");
+        #[cfg(unix)]
+        {
+            let mut perms = fs::metadata(&tmp_file)
+                .expect("reads leftover temp metadata")
+                .permissions();
+            perms.set_mode(0o644);
+            fs::set_permissions(&tmp_file, perms).expect("sets world-readable leftover temp");
+        }
+
+        let mut config = Config::default();
+        config.auth.session_id = Some("sid".to_string());
+        config.auth.csrf_token = Some("csrf".to_string());
+
+        config
+            .save_to_path(&config_file)
+            .expect("replaces leftover temp");
+
+        assert!(!tmp_file.exists());
+        let loaded: Config =
+            toml::from_str(&fs::read_to_string(&config_file).expect("reads created config"))
+                .expect("parses created config");
+        assert_eq!(loaded.auth.session_id.as_deref(), Some("sid"));
+        #[cfg(unix)]
+        {
+            assert_eq!(unix_mode(&config_file), 0o600);
+            assert_eq!(unix_mode(&config_dir), 0o700);
+        }
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn write_temp_file_creates_owner_only_file() {
+        let root = unique_temp_dir("hteam-config-temp-mode");
+        let tmp_file = root.join(".config.toml.tmp");
+
+        write_temp_file(&tmp_file, "auth = true\n").expect("creates temp file");
+
+        assert_eq!(
+            fs::read_to_string(&tmp_file).expect("reads temp file"),
+            "auth = true\n"
+        );
+        #[cfg(unix)]
+        {
+            assert_eq!(unix_mode(&tmp_file), 0o600);
+        }
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn save_error_mentions_path_not_secret_values() {
+        let root = unique_temp_dir("hteam-config-error");
+        let blocked = root.join("blocked");
+        fs::write(&blocked, "not-a-directory").expect("creates blocking file");
+        let config_file = blocked.join("config.toml");
+
+        let mut config = Config::default();
+        config.auth.session_id = Some("sid".to_string());
+        config.auth.csrf_token = Some("csrf".to_string());
+
+        let err = config
+            .save_to_path(&config_file)
+            .expect_err("parent is a file");
+        let message = format!("{err:#}");
+
+        assert!(message.contains(&blocked.display().to_string()));
+        assert!(!message.contains("sid"));
+        assert!(!message.contains("csrf"));
+        assert!(!message.contains("session_id"));
+        assert!(!message.contains("csrf_token"));
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn private_temp_paths_do_not_collide() {
+        let path = PathBuf::from("/tmp/hteam/config.toml");
+        let first = private_temp_path(&path);
+        let second = private_temp_path(&path);
+
+        assert_ne!(first, second);
+        assert_eq!(first.parent(), second.parent());
+        assert!(first
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap()
+            .starts_with(".config.toml.tmp-"));
+    }
+
+    #[test]
+    fn save_failed_replace_keeps_existing_file() {
+        let root = unique_temp_dir("hteam-config-failed-replace");
+        let config_dir = root.join("hteam");
+        fs::create_dir_all(&config_dir).expect("creates config dir");
+        let config_file = config_dir.join("config.toml");
+        fs::create_dir(&config_file).expect("destination is a directory, not a file");
+
+        let mut config = Config::default();
+        config.auth.session_id = Some("sid".to_string());
+        config.auth.csrf_token = Some("csrf".to_string());
+
+        let err = config
+            .save_to_path(&config_file)
+            .expect_err("cannot replace a directory with a file");
+        let message = format!("{err:#}");
+
+        assert!(config_file.is_dir());
+        assert!(config_dir
+            .read_dir()
+            .expect("reads config dir")
+            .filter_map(|entry| entry.ok())
+            .all(|entry| {
+                let name = entry.file_name();
+                name != *".config.toml.tmp"
+                    && !name.to_string_lossy().starts_with(".config.toml.tmp-")
+            }));
+        assert!(message.contains(&config_file.display().to_string()));
+        assert!(!message.contains("sid"));
+        assert!(!message.contains("csrf"));
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn save_removes_dead_pid_temp_and_keeps_live_pid_temp() {
+        let root = unique_temp_dir("hteam-config-stale-pid");
+        let config_dir = root.join("hteam");
+        fs::create_dir_all(&config_dir).expect("creates config dir");
+        let config_file = config_dir.join("config.toml");
+        let dead = config_dir.join(format!(".config.toml.tmp-{}-0-1", unused_pid()));
+        let live = config_dir.join(format!(".config.toml.tmp-{}-0-1", std::process::id()));
+        fs::write(&dead, "dead-secret = true\n").expect("writes dead pid leftover");
+        fs::write(&live, "live-secret = true\n").expect("writes live pid leftover");
+
+        let mut config = Config::default();
+        config.auth.session_id = Some("sid".to_string());
+        config.auth.csrf_token = Some("csrf".to_string());
+        config
+            .save_to_path(&config_file)
+            .expect("saves after leftover cleanup");
+
+        assert!(!dead.exists());
+        assert_eq!(
+            fs::read_to_string(&live).expect("reads live leftover"),
+            "live-secret = true\n"
+        );
+        assert!(!config_dir.join(".config.toml.tmp").exists());
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn is_stale_temp_name_keeps_live_pid_and_drops_dead_pid() {
+        let prefix = ".config.toml.tmp";
+        assert!(is_stale_temp_name(prefix, prefix));
+        assert!(is_stale_temp_name(
+            &format!(".config.toml.tmp-{}-0-1", unused_pid()),
+            prefix
+        ));
+        assert!(!is_stale_temp_name(
+            &format!(".config.toml.tmp-{}-0-1", std::process::id()),
+            prefix
+        ));
+        assert!(!is_stale_temp_name("config.toml", prefix));
+    }
+
+    fn unused_pid() -> u32 {
+        (2..u32::MAX)
+            .find(|pid| !process_exists(*pid))
+            .expect("finds a pid that is not running")
+    }
+
+    fn unique_temp_dir(prefix: &str) -> PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "{prefix}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("system clock")
+                .as_nanos()
+        ));
+        fs::create_dir_all(&path).expect("creates unique temp dir");
+        path
+    }
+
+    #[cfg(unix)]
+    fn unix_mode(path: &Path) -> u32 {
+        fs::metadata(path)
+            .expect("reads metadata")
+            .permissions()
+            .mode()
+            & 0o777
     }
 
     #[test]

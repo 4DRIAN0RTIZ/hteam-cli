@@ -3,9 +3,6 @@ type: verification strategy
 title: Testing and change verification
 description: Executable validation gates and test patterns for safely changing the Hteam Rust client, operations, CLI, MCP server, and terminal interfaces. Covers mock HTTP isolation, behavior invariants, integration expectations, and interactive smoke tests.
 tags: [testing, verification, rust, mockito, cli, mcp, tui]
-verified:
-  - by: openwiki/0.4.3
-    at: 2026-08-29T04:08:29.740Z
 sources:
   - id: openwiki-source-d65d21957ad81ac3d84ad1a0
     resource: repo://CHECKPOINTS.md

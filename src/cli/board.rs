@@ -40,7 +40,7 @@ async fn list_boards(json: bool) -> Result<()> {
         return Ok(());
     }
 
-    println!("📋 Boards configurados:\n");
+    println!("Boards configurados:\n");
 
     if config.boards.is_empty() {
         println!("   No hay boards configurados.");
@@ -64,7 +64,7 @@ async fn switch_board(args: BoardSwitchArgs) -> Result<()> {
     let mut config = Config::load()?;
     let board_name = operations::boards::switch_board(&mut config, args.board_id, args.name)?;
 
-    println!("✅ Board cambiado a: {} ({})", board_name, args.board_id);
+    println!("Board cambiado a: {} ({})", board_name, args.board_id);
 
     Ok(())
 }
@@ -74,10 +74,10 @@ async fn show_current() -> Result<()> {
 
     match operations::boards::current_board(&config) {
         Some((board_id, name)) => {
-            println!("📋 Board actual: {} ({})", name, board_id);
+            println!("Board actual: {} ({})", name, board_id);
         }
         None => {
-            println!("⚠️  No hay board configurado. Usa 'hteam board switch <id>'");
+            println!("No hay board configurado. Usa 'hteam board switch <id>'");
         }
     }
 

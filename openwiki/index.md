@@ -4,7 +4,7 @@ okf_version: "0.2"
 
 # Files
 
-- [Hteam CLI orientation](quickstart.md) - Entry page for the Hteam Rust command-line application. Explains the executable surfaces, the ownership boundaries between adapters, operations, client, config, and models, and the required workflow before and after making changes.
+- [Quickstart](quickstart.md) - Concise onboarding for installing hteam, configuring credentials, authenticating, choosing a board, and entering the CLI, TUI, interactive REPL, or MCP server.
 
 # Directories
 

@@ -6,6 +6,7 @@ use crate::{client, operations};
 
 pub mod board;
 pub mod cards;
+pub mod doctor;
 pub mod interactive;
 pub mod login;
 pub mod objectives;
@@ -38,6 +39,9 @@ pub struct Cli {
 pub enum Commands {
     /// Iniciar sesión con cookies
     Login(login::LoginArgs),
+
+    /// Diagnosticar configuración, sesión y acceso al board
+    Doctor,
 
     /// Gestionar boards
     #[command(subcommand)]
@@ -143,10 +147,12 @@ pub async fn run() -> Result<()> {
             | Commands::Tui
             | Commands::Interactive
             | Commands::Update
+            | Commands::Doctor
     );
 
     let result = match cli.command {
         Commands::Login(args) => login::execute(args).await,
+        Commands::Doctor => doctor::execute(cli.json, cli.board).await,
         Commands::Board(cmd) => board::execute(cmd, cli.json).await,
         Commands::Lists => cards::lists(cli.board, cli.json).await,
         Commands::Cards(cmd) => cards::execute(cmd, cli.board, cli.json).await,
@@ -202,7 +208,7 @@ async fn maybe_notify_update() {
     ) {
         eprintln!(
             "\n{}\n{}",
-            "📦 hteam se actualizó — novedades:".bold(),
+            "hteam se actualizó — novedades:".bold(),
             changelog.trim_end()
         );
         dirty = true;
@@ -217,7 +223,7 @@ async fn maybe_notify_update() {
             eprintln!(
                 "{}",
                 format!(
-                    "⬆️  Nueva versión disponible: {} (actual: {}). Ejecuta `hteam update`.",
+                    "Nueva versión disponible: {} (actual: {}). Ejecuta `hteam update`.",
                     result.latest_version, result.current_version
                 )
                 .yellow()
@@ -241,7 +247,7 @@ async fn checkin(json: bool) -> Result<()> {
         return Ok(());
     }
 
-    println!("\n✅ Check in registrado.");
+    println!("\nCheck in registrado.");
     if let Some(time) = &result.check_in {
         println!("   Hora: {}", time);
     }
@@ -262,13 +268,13 @@ async fn reminders(json: bool) -> Result<()> {
     }
 
     if items.is_empty() {
-        println!("⚠️  No tienes recordatorios pendientes.");
+        println!("No tienes recordatorios pendientes.");
         return Ok(());
     }
 
     let mut table = Table::new(&items);
     table.with(Style::rounded());
-    println!("\n🔔 Recordatorios:\n");
+    println!("\nRecordatorios:\n");
     println!("{}", table);
     println!();
     Ok(())
@@ -293,13 +299,13 @@ async fn daily_work(args: DailyWorkArgs, json: bool) -> Result<()> {
     }
 
     if entries.is_empty() {
-        println!("⚠️  No hay actividad para mostrar.");
+        println!("No hay actividad para mostrar.");
         return Ok(());
     }
 
     let mut table = Table::new(&entries);
     table.with(Style::rounded());
-    println!("\n📅 Historial de trabajo diario:\n");
+    println!("\nHistorial de trabajo diario:\n");
     println!("{}", table);
     println!();
     Ok(())
@@ -318,13 +324,13 @@ async fn search_users(args: UsersArgs, json: bool) -> Result<()> {
     }
 
     if users.is_empty() {
-        println!("⚠️  No se encontraron usuarios para '{}'.", args.query);
+        println!("No se encontraron usuarios para '{}'.", args.query);
         return Ok(());
     }
 
     let mut table = Table::new(&users);
     table.with(Style::rounded());
-    println!("\n👤 Usuarios:\n");
+    println!("\nUsuarios:\n");
     println!("{}", table);
     println!();
     Ok(())
