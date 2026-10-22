@@ -6,6 +6,7 @@ use crate::{client, operations};
 
 pub mod board;
 pub mod cards;
+pub mod doctor;
 pub mod interactive;
 pub mod login;
 pub mod objectives;
@@ -38,6 +39,9 @@ pub struct Cli {
 pub enum Commands {
     /// Iniciar sesión con cookies
     Login(login::LoginArgs),
+
+    /// Diagnosticar configuración, sesión y acceso al board
+    Doctor,
 
     /// Gestionar boards
     #[command(subcommand)]
@@ -143,10 +147,12 @@ pub async fn run() -> Result<()> {
             | Commands::Tui
             | Commands::Interactive
             | Commands::Update
+            | Commands::Doctor
     );
 
     let result = match cli.command {
         Commands::Login(args) => login::execute(args).await,
+        Commands::Doctor => doctor::execute(cli.json, cli.board).await,
         Commands::Board(cmd) => board::execute(cmd, cli.json).await,
         Commands::Lists => cards::lists(cli.board, cli.json).await,
         Commands::Cards(cmd) => cards::execute(cmd, cli.board, cli.json).await,
