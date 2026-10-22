@@ -16,11 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(client)* Truncate start_date on task edit form
 - *(client)* Preserve form fields on partial task edit
 - *(tui)* Show and refresh priority from HTML edit form
+- *(login)* Validate session without hardcoded board
 
 
 ### Documentation
 - *(client)* Translate cards pagination comment to English
 - *(openwiki)* Document HTML task edit form contract
+- *(openwiki)* Refresh login probe and CLI session docs
 
 
 ### Features
