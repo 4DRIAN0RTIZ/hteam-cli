@@ -29,6 +29,11 @@ hteam login --board 483   # opcional: fijar board por defecto
 
 Solicita `sessionid` y `csrftoken` (prompts de texto). Valida la sesión listando tus boards (sin board hardcodeado). Después resuelve el board activo: `--board` si lo pasás y es visible, el de config si sigue en el listado, el único board si solo hay uno, o te deja en `hteam board switch` si hay varios. No guarda la config si la sesión es inválida.
 
+```bash
+hteam doctor          # config + sesión + board (sin mutar nada)
+hteam doctor --json   # mismo reporte estructurado
+```
+
 ## Comandos
 
 ### Board
