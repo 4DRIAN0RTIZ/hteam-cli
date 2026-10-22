@@ -41,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(cards)* Edit start and due dates
 - *(cards)* Record estimates and spent time
 - *(cards)* Record estimates and spent time
+- *(cli)* Add hteam doctor for config and session checks
 
 ## [0.9.1] - 2026-10-01
 
