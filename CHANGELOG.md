@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Bug Fixes
+- *(login)* Validate session without hardcoded board
+
+
+### Documentation
+- *(openwiki)* Refresh login probe and CLI session docs
+
+
+### Features
+- *(cli)* Add hteam doctor for config and session checks
+
+
+## [0.10.0] - 2026-10-14
+
+### Bug Fixes
 - *(client)* Fetch all cards when list exceeds default page size
 - *(i18n)* Use neutral Spanish in update prompts
 - *(tui)* Load times and labels from board-card into detail
@@ -16,13 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(client)* Truncate start_date on task edit form
 - *(client)* Preserve form fields on partial task edit
 - *(tui)* Show and refresh priority from HTML edit form
-- *(login)* Validate session without hardcoded board
 
 
 ### Documentation
 - *(client)* Translate cards pagination comment to English
 - *(openwiki)* Document HTML task edit form contract
-- *(openwiki)* Refresh login probe and CLI session docs
 
 
 ### Features
@@ -41,7 +53,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(cards)* Edit start and due dates
 - *(cards)* Record estimates and spent time
 - *(cards)* Record estimates and spent time
-- *(cli)* Add hteam doctor for config and session checks
 
 ## [0.9.1] - 2026-10-01
 
@@ -151,6 +162,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MCP server y CLI para hteam
 - Obtener comentarios de un card via django-comments-xtd
 - *(daily-work)* Add daily work history to CLI and MCP
+
 
 ---
 
