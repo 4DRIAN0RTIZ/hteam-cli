@@ -168,6 +168,8 @@ struct CommentParams {
         description = "Fecha del comentario, formato \"YYYY-MM-DD HH:MM\" en hora local (opcional; por defecto ahora)"
     )]
     date: Option<String>,
+    #[schemars(description = "ID del comentario al que responder (opcional)")]
+    reply_to: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -481,6 +483,7 @@ impl HteamMcpServer {
             board,
             follow,
             date,
+            reply_to,
         }): Parameters<CommentParams>,
     ) -> Result<CallToolResult, McpError> {
         operations::comments::post_comment(
@@ -490,6 +493,7 @@ impl HteamMcpServer {
             board,
             follow.unwrap_or(false),
             date.as_deref(),
+            reply_to,
         )
         .await
         .map_err(err)?;

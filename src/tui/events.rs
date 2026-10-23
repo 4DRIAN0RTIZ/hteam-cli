@@ -346,6 +346,8 @@ pub fn open_comments(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     app.comment_input.clear();
     app.mention_suggestions.clear();
     app.comments_scroll.reset();
+    app.comments_selected = None;
+    app.comment_reply_to = None;
     app.current_follow_up = None;
     app.comments.clear();
 
@@ -440,7 +442,43 @@ fn resolve_current_follow_up(client: Arc<HteamClient>, app: &mut App, jobs: &Job
     });
 }
 
+pub fn select_comment(app: &mut App, delta: isize) {
+    if app.comments.is_empty() {
+        app.comments_selected = None;
+        return;
+    }
+    let current = app
+        .comments_selected
+        .map(|i| i as isize)
+        .unwrap_or_else(|| {
+            if delta >= 0 {
+                -1
+            } else {
+                app.comments.len() as isize
+            }
+        });
+    let next = (current + delta).clamp(0, app.comments.len() as isize - 1);
+    app.comments_selected = Some(next as usize);
+}
+
+pub fn start_reply_comment(app: &mut App) {
+    let Some(index) = app.comments_selected else {
+        return;
+    };
+    let Some(comment) = app.comments.get(index) else {
+        return;
+    };
+    app.comment_reply_to = Some(comment.id);
+    app.composing_comment = true;
+    app.comment_input.clear();
+    app.comment_follow = false;
+    app.comment_date_input.clear();
+    app.comment_date_focused = false;
+    app.mention_suggestions.clear();
+}
+
 pub fn start_composing_comment(app: &mut App) {
+    app.comment_reply_to = None;
     app.composing_comment = true;
     app.comment_input.clear();
     app.comment_follow = false;
@@ -451,6 +489,7 @@ pub fn start_composing_comment(app: &mut App) {
 
 pub fn cancel_composing_comment(app: &mut App) {
     app.composing_comment = false;
+    app.comment_reply_to = None;
     app.comment_input.clear();
     app.comment_follow = false;
     app.comment_date_input.clear();
@@ -594,6 +633,7 @@ pub fn submit_comment(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
         Some(date_input)
     };
     let follow = app.comment_follow;
+    let reply_to = app.comment_reply_to;
     let board_number = app.board_number;
     let card_id = card.id;
     let id = app.requests.bump_comment_post();
@@ -607,6 +647,7 @@ pub fn submit_comment(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
             Some(board_number),
             follow,
             date.as_deref(),
+            reply_to,
         )
         .await
         {
@@ -1718,6 +1759,7 @@ pub fn toggle_projects_focus(app: &mut App) {
 mod tests {
     use super::*;
     use crate::config::WorkingHoursConfig;
+    use crate::models::Comment;
     use crate::tui::theme::Theme;
     use std::collections::HashSet;
     use std::time::Duration;
@@ -1742,6 +1784,28 @@ mod tests {
 
         assert!(app.mention_debounce_at.is_some());
         assert_eq!(app.requests.mentions, 1);
+    }
+
+    #[test]
+    fn reply_uses_selected_comment_id() {
+        let mut app = test_app();
+        app.comments = vec![Comment {
+            id: 12,
+            user_name: "ana".into(),
+            submit_date: String::new(),
+            comment: "first".into(),
+            level: 0,
+            parent_id: None,
+            is_removed: false,
+            permalink: None,
+        }];
+
+        select_comment(&mut app, 1);
+        start_reply_comment(&mut app);
+
+        assert_eq!(app.comments_selected, Some(0));
+        assert_eq!(app.comment_reply_to, Some(12));
+        assert!(app.composing_comment);
     }
 
     #[test]

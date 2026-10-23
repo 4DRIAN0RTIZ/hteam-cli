@@ -1148,6 +1148,7 @@ impl HteamClient {
         board_number: Option<u64>,
         follow: bool,
         date: chrono::NaiveDateTime,
+        reply_to: Option<u64>,
     ) -> Result<()> {
         let board = match board_number {
             Some(b) => b,
@@ -1204,7 +1205,7 @@ impl HteamClient {
             format!("object_pk={}", card_id),
             format!("timestamp={}", timestamp),
             format!("security_hash={}", security_hash),
-            "reply_to=0".to_string(),
+            format!("reply_to={}", reply_to.unwrap_or(0)),
             "honeypot=".to_string(),
             format!("comment={}", encode(comment)),
         ];
@@ -2047,6 +2048,40 @@ mod tests {
         };
         HteamClient::new_for_test(config, server_url.to_string(), server_url.to_string())
             .expect("test client")
+    }
+
+    #[tokio::test]
+    async fn test_post_comment_sends_reply_to_id() {
+        let mut server = mockito::Server::new_async().await;
+        let _page = server
+            .mock("GET", "/operations/483/tasks/42/")
+            .with_status(200)
+            .with_body(r#"<input name="timestamp" value="123"><input name="security_hash" value="hash"><input name="csrfmiddlewaretoken" value="csrf">"#)
+            .create_async()
+            .await;
+        let _post = server
+            .mock("POST", "/comments/post/")
+            .match_body(Matcher::UrlEncoded("reply_to".into(), "17".into()))
+            .match_body(Matcher::UrlEncoded("comment".into(), "respuesta".into()))
+            .with_status(302)
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        client
+            .post_comment(
+                42,
+                "respuesta",
+                Some(483),
+                false,
+                chrono::NaiveDate::from_ymd_opt(2026, 10, 23)
+                    .unwrap()
+                    .and_hms_opt(12, 0, 0)
+                    .unwrap(),
+                Some(17),
+            )
+            .await
+            .expect("reply comment");
     }
 
     #[tokio::test]

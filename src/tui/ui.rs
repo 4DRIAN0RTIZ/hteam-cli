@@ -952,7 +952,9 @@ fn detail_field_value(app: &App, detail: &crate::models::CardDetail, field: Deta
 fn draw_comments_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(72, 75, frame.area());
 
-    let title = if app.composing_comment {
+    let title = if app.composing_comment && app.comment_reply_to.is_some() {
+        " Responder comentario "
+    } else if app.composing_comment {
         " Comentario nuevo "
     } else {
         " Comentarios "
@@ -1020,6 +1022,7 @@ fn draw_comment_list(frame: &mut Frame, app: &App, area: Rect) {
         }
     } else {
         for (i, c) in app.comments.iter().enumerate() {
+            let selected = app.comments_selected == Some(i);
             if i > 0 {
                 lines.push(Line::from(Span::styled(
                     "  · · ·",
@@ -1027,12 +1030,20 @@ fn draw_comment_list(frame: &mut Frame, app: &App, area: Rect) {
                 )));
             }
             lines.push(Line::from(vec![
-                Span::styled("› ", Style::default().fg(app.theme.border_comments)),
+                Span::styled(
+                    if selected { "▶ " } else { "› " },
+                    Style::default().fg(app.theme.border_comments),
+                ),
                 Span::styled(
                     c.user_name.as_str(),
                     Style::default()
                         .fg(app.theme.highlight)
-                        .add_modifier(Modifier::BOLD),
+                        .add_modifier(Modifier::BOLD)
+                        .bg(if selected {
+                            app.theme.selection_bg
+                        } else {
+                            app.theme.background
+                        }),
                 ),
                 Span::styled(
                     format!("  {}", c.submit_date),
@@ -1067,7 +1078,10 @@ fn draw_comment_list(frame: &mut Frame, app: &App, area: Rect) {
             lines.push(Line::from(""));
         }
         if !app.composing_comment {
-            lines.push(muted_hint(app, "a nuevo · j/k scroll · ? · Esc"));
+            lines.push(muted_hint(
+                app,
+                "a nuevo · j/k seleccionar · r responder · ? · Esc",
+            ));
         }
     }
 
