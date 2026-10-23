@@ -3,6 +3,7 @@ use clap::{Args, Subcommand};
 use colored::Colorize;
 use tabled::{settings::Style, Table};
 
+use crate::client::TaskFamily;
 use crate::operations::{self, Session};
 
 #[derive(Subcommand, Debug)]
@@ -261,19 +262,24 @@ pub struct FollowUpIdArgs {
     pub follow_up_id: u64,
 }
 
-pub async fn execute(cmd: CardsCommands, board: Option<u64>, json: bool) -> Result<()> {
+pub async fn execute(
+    cmd: CardsCommands,
+    board: Option<u64>,
+    family: TaskFamily,
+    json: bool,
+) -> Result<()> {
     match cmd {
-        CardsCommands::Lists => lists(board, json).await,
-        CardsCommands::List(args) => list_cards(args, board, json).await,
-        CardsCommands::Search(args) => search_cards(args, board, json).await,
+        CardsCommands::Lists => lists(board, family, json).await,
+        CardsCommands::List(args) => list_cards(args, board, family, json).await,
+        CardsCommands::Search(args) => search_cards(args, board, family, json).await,
         CardsCommands::Detail(args) => card_detail(args, json).await,
-        CardsCommands::Link(args) => card_link(args, board, json).await,
+        CardsCommands::Link(args) => card_link(args, board, family, json).await,
         CardsCommands::Create(args) => create_card(args, json).await,
         CardsCommands::Move(args) => move_card(args, board, json).await,
         CardsCommands::Close(args) => close_card(args, json).await,
         CardsCommands::Reopen(args) => reopen_card(args, json).await,
-        CardsCommands::Dates(args) => set_dates(args, board, json).await,
-        CardsCommands::Time(args) => set_time(args, board, json).await,
+        CardsCommands::Dates(args) => set_dates(args, board, family, json).await,
+        CardsCommands::Time(args) => set_time(args, board, family, json).await,
         CardsCommands::UpdateDesc(args) => update_desc(args, json).await,
         CardsCommands::Comment(args) => post_comment(args, board, json).await,
         CardsCommands::Comments(args) => list_comments(args, json).await,
@@ -286,10 +292,10 @@ pub async fn execute(cmd: CardsCommands, board: Option<u64>, json: bool) -> Resu
     }
 }
 
-pub async fn lists(board: Option<u64>, json: bool) -> Result<()> {
+pub async fn lists(board: Option<u64>, family: TaskFamily, json: bool) -> Result<()> {
     let session = Session::open().await?;
 
-    let lists = operations::cards::list_lists(&session.client, board).await?;
+    let lists = operations::cards::list_lists_for(&session.client, board, family).await?;
 
     if json {
         println!("{}", serde_json::to_string_pretty(&lists)?);
@@ -311,10 +317,16 @@ pub async fn lists(board: Option<u64>, json: bool) -> Result<()> {
     Ok(())
 }
 
-async fn list_cards(args: ListCardsArgs, board: Option<u64>, json: bool) -> Result<()> {
+async fn list_cards(
+    args: ListCardsArgs,
+    board: Option<u64>,
+    family: TaskFamily,
+    json: bool,
+) -> Result<()> {
     let session = Session::open().await?;
 
-    let (cards, _) = operations::cards::list_cards(&session.client, args.list_id, board).await?;
+    let (cards, _) =
+        operations::cards::list_cards_for(&session.client, args.list_id, board, family).await?;
 
     if json {
         println!("{}", serde_json::to_string_pretty(&cards)?);
@@ -336,7 +348,12 @@ async fn list_cards(args: ListCardsArgs, board: Option<u64>, json: bool) -> Resu
     Ok(())
 }
 
-async fn search_cards(args: SearchArgs, board: Option<u64>, json: bool) -> Result<()> {
+async fn search_cards(
+    args: SearchArgs,
+    board: Option<u64>,
+    family: TaskFamily,
+    json: bool,
+) -> Result<()> {
     let session = Session::open().await?;
 
     let filters = operations::cards::CardSearchFilters {
@@ -354,6 +371,7 @@ async fn search_cards(args: SearchArgs, board: Option<u64>, json: bool) -> Resul
     let scope = operations::cards::CardSearchScope {
         board,
         list_id: args.list_id,
+        family,
     };
 
     let hits = operations::cards::search(&session.client, scope, filters).await?;
@@ -417,10 +435,10 @@ async fn search_cards(args: SearchArgs, board: Option<u64>, json: bool) -> Resul
     Ok(())
 }
 
-pub async fn open_cards(board: Option<u64>, json: bool) -> Result<()> {
+pub async fn open_cards(board: Option<u64>, family: TaskFamily, json: bool) -> Result<()> {
     let session = Session::open().await?;
 
-    let cards = operations::cards::open_cards(&session.client, board).await?;
+    let cards = operations::cards::open_cards_for(&session.client, board, family).await?;
 
     if json {
         println!("{}", serde_json::to_string_pretty(&cards)?);
@@ -442,10 +460,10 @@ pub async fn open_cards(board: Option<u64>, json: bool) -> Result<()> {
     Ok(())
 }
 
-pub async fn closed_cards(board: Option<u64>, json: bool) -> Result<()> {
+pub async fn closed_cards(board: Option<u64>, family: TaskFamily, json: bool) -> Result<()> {
     let session = Session::open().await?;
 
-    let cards = operations::cards::closed_cards(&session.client, board).await?;
+    let cards = operations::cards::closed_cards_for(&session.client, board, family).await?;
 
     if json {
         println!("{}", serde_json::to_string_pretty(&cards)?);
@@ -478,8 +496,24 @@ async fn card_detail(args: DetailArgs, json: bool) -> Result<()> {
     }
 
     println!("\nCard #{}: {}", detail.id, detail.name.bold());
+    if let Some(num) = detail.number {
+        println!("   Número: #{num}");
+    }
     if let Some(status) = &detail.status {
         println!("   Estado: {}", status);
+    }
+    if let Some(url) = detail.title_url.as_deref() {
+        if let Some((family, process_id)) = TaskFamily::from_title_url_parts(url) {
+            println!("   Familia: {} ({process_id})", family.as_str());
+        }
+    }
+    if let Some(name) = detail.milestone_name.as_deref() {
+        match detail.milestone {
+            Some(id) => println!("   Milestone: {name} ({id})"),
+            None => println!("   Milestone: {name}"),
+        }
+    } else if let Some(id) = detail.milestone {
+        println!("   Milestone: {id}");
     }
 
     if let Some(list) = detail.list {
@@ -504,10 +538,15 @@ async fn card_detail(args: DetailArgs, json: bool) -> Result<()> {
     Ok(())
 }
 
-async fn card_link(args: LinkArgs, board: Option<u64>, json: bool) -> Result<()> {
+async fn card_link(
+    args: LinkArgs,
+    board: Option<u64>,
+    family: TaskFamily,
+    json: bool,
+) -> Result<()> {
     let session = Session::open().await?;
 
-    let url = operations::cards::card_url(&session.client, args.card_id, board).await?;
+    let url = operations::cards::card_url_for(&session.client, args.card_id, board, family).await?;
 
     let copied = if args.no_copy {
         false
@@ -611,12 +650,18 @@ async fn reopen_card(args: LifecycleArgs, json: bool) -> Result<()> {
     Ok(())
 }
 
-async fn set_dates(args: DatesArgs, board: Option<u64>, json: bool) -> Result<()> {
+async fn set_dates(
+    args: DatesArgs,
+    board: Option<u64>,
+    family: TaskFamily,
+    json: bool,
+) -> Result<()> {
     let session = Session::open().await?;
-    let result = operations::cards::set_dates(
+    let result = operations::cards::set_dates_for(
         &session.client,
         args.card_id,
         board,
+        family,
         args.start.as_deref(),
         args.due.as_deref(),
     )
@@ -641,12 +686,18 @@ async fn set_dates(args: DatesArgs, board: Option<u64>, json: bool) -> Result<()
     Ok(())
 }
 
-async fn set_time(args: TimeArgs, board: Option<u64>, json: bool) -> Result<()> {
+async fn set_time(
+    args: TimeArgs,
+    board: Option<u64>,
+    family: TaskFamily,
+    json: bool,
+) -> Result<()> {
     let session = Session::open().await?;
-    let result = operations::cards::set_times(
+    let result = operations::cards::set_times_for(
         &session.client,
         args.card_id,
         board,
+        family,
         args.estimate.as_deref(),
         args.spent.as_deref(),
     )

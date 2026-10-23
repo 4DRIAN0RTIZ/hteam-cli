@@ -308,7 +308,7 @@ Prompt: `hteam> `. Un subconjunto del CLI (no cubre theme, update, follow-up, se
 | `help`, `h`, `?` | Ayuda |
 | `exit`, `quit`, `q` | Salir |
 
-## `--json` y `--board`
+## `--json`, `--board` y `--family`
 
 Clap los marca como flags globales, así que aparecen en `hteam <cmd> --help` aunque el comando no los use.
 
@@ -316,12 +316,17 @@ Clap los marca como flags globales, así que aparecen en `hteam <cmd> --help` au
 
 No aplica (siguen siendo UI o JSON-RPC): `tui`, `interactive`, `mcp`, `completions`. `login`, `board switch` y `board current` ignoran `--json` y escriben texto.
 
-`--board` elige el board para listas/cards, `doctor` y `tui`. No cambia `working`, `reminders`, `checkin`, `users`, `daily-work`, `objectives`, `theme`, `update`, `login`, `mcp`, `completions` ni `project *` (estos últimos van por `project_id`).
+`--board` elige el id de operación o de proyecto para listas/cards, `doctor` y `tui`. No cambia `working`, `reminders`, `checkin`, `users`, `daily-work`, `objectives`, `theme`, `update`, `login`, `mcp`, `completions` ni `project *` (estos últimos van por `project_id`).
+
+`--family` elige el árbol de API del Board bundle: `operation` (default) usa `/operation/care/operations/{id}/…`; `project` usa `/project-new/care/projects/{id}/…`. Con `project` hay que pasar `--board <project_id>`. El detalle de una task (`cards detail`) infiere la familia desde `title_url` y, en proyectos, trae milestone y el `board_id` interno del kanban.
 
 ```bash
 hteam lists --json
 hteam --board 500 lists
 hteam --board 500 open
+hteam --family project --board 469 lists
+hteam --family project --board 469 cards list 1
+hteam cards detail 10702
 ```
 
 ## Configuración

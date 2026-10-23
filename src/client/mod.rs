@@ -54,12 +54,71 @@ impl TaskFamily {
 
     /// Infer family from a task `title_url` (`/operations/…` vs `/projects/…`).
     pub fn from_title_url(title_url: &str) -> Option<Self> {
-        if title_url.contains("/projects/") {
-            Some(Self::Project)
-        } else if title_url.contains("/operations/") {
-            Some(Self::Operation)
-        } else {
-            None
+        Self::from_title_url_parts(title_url).map(|(family, _)| family)
+    }
+
+    /// Family plus process/project id from `title_url`
+    /// (`/operations/{id}/tasks/…` or `/projects/{id}/tasks/…`).
+    pub fn from_title_url_parts(title_url: &str) -> Option<(Self, u64)> {
+        for (family, marker) in [
+            (Self::Project, "/projects/"),
+            (Self::Operation, "/operations/"),
+        ] {
+            if let Some(rest) = title_url.split_once(marker).map(|(_, r)| r) {
+                let id_str = rest.split('/').next().unwrap_or("");
+                if let Ok(id) = id_str.parse::<u64>() {
+                    return Some((family, id));
+                }
+            }
+        }
+        None
+    }
+
+    /// Board bundle base: lists/cards hang off this prefix.
+    pub fn board_api_base(self, api_base: &str, process_id: u64) -> String {
+        match self {
+            Self::Operation => {
+                format!("{api_base}/operation/care/operations/{process_id}")
+            }
+            Self::Project => {
+                format!("{api_base}/project-new/care/projects/{process_id}")
+            }
+        }
+    }
+
+    pub fn task_detail_api(self, api_base: &str, task_id: u64) -> String {
+        match self {
+            Self::Operation => {
+                format!("{api_base}/operation/care/tasks/{task_id}/?format=json")
+            }
+            Self::Project => {
+                format!("{api_base}/project-new/care/tasks/{task_id}/?format=json")
+            }
+        }
+    }
+
+    pub fn site_task_path(self, process_id: u64, task_id: u64) -> String {
+        match self {
+            Self::Operation => format!("/operations/{process_id}/tasks/{task_id}/"),
+            Self::Project => format!("/projects/{process_id}/tasks/{task_id}/"),
+        }
+    }
+
+    pub fn site_task_edit_path(self, process_id: u64, task_id: u64) -> String {
+        match self {
+            Self::Operation => format!("/operations/{process_id}/tasks/{task_id}/edit/"),
+            Self::Project => format!("/projects/{process_id}/tasks/{task_id}/edit/"),
+        }
+    }
+
+    pub fn missing_board_error(self, process_id: u64) -> anyhow::Error {
+        match self {
+            Self::Project => anyhow::anyhow!(
+                "proyecto {process_id} no encontrado. Usa el id de `hteam project list` (columna #), no el board_id interno del kanban. Con --family project hay que pasar --board <project_id>."
+            ),
+            Self::Operation => anyhow::anyhow!(
+                "operación {process_id} no encontrada. Usa el número de `hteam board list` o --board con el id de operación."
+            ),
         }
     }
 }
@@ -332,18 +391,25 @@ impl HteamClient {
     }
 
     pub async fn get_lists(&self, board_number: Option<u64>) -> Result<Vec<List>> {
+        self.get_lists_for(board_number, TaskFamily::Operation)
+            .await
+    }
+
+    pub async fn get_lists_for(
+        &self,
+        board_number: Option<u64>,
+        family: TaskFamily,
+    ) -> Result<Vec<List>> {
         let board = match board_number {
             Some(b) => b,
             None => self.get_board_number().await?,
         };
 
-        // Build URL/headers under the config lock, then drop it before HTTP so
-        // parallel list/card fetches are not serialized on this mutex.
         let (url, headers) = {
             let config = self.config.lock().await;
             let url = format!(
-                "{}/operation/care/operations/{}/lists/?format=json",
-                self.api_base_url, board
+                "{}/lists/?format=json",
+                family.board_api_base(&self.api_base_url, board)
             );
             let headers = self.build_headers(&config)?;
             (url, headers)
@@ -358,11 +424,12 @@ impl HteamClient {
             .context("Error al obtener listas")?;
 
         if !response.status().is_success() {
-            anyhow::bail!(
-                "Error HTTP {}: {}",
-                response.status(),
-                response.text().await?
-            );
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            if status == reqwest::StatusCode::NOT_FOUND {
+                return Err(family.missing_board_error(board));
+            }
+            anyhow::bail!("Error HTTP {status}: {body}");
         }
 
         let lists: Vec<List> = response.json().await?;
@@ -374,22 +441,30 @@ impl HteamClient {
         list_id: u64,
         board_number: Option<u64>,
     ) -> Result<(Vec<Card>, Option<u64>)> {
+        self.get_cards_for(list_id, board_number, TaskFamily::Operation)
+            .await
+    }
+
+    pub async fn get_cards_for(
+        &self,
+        list_id: u64,
+        board_number: Option<u64>,
+        family: TaskFamily,
+    ) -> Result<(Vec<Card>, Option<u64>)> {
         let board = match board_number {
             Some(b) => b,
             None => self.get_board_number().await?,
         };
 
-        // Hteam returns only 10 cards by default and ignores page/offset/limit.
-        // If the list holds more (`total_board_cards`), request it again asking
-        // for all of them with `items_per_page`, as the Hteam web client does.
-        let mut card_response = self.fetch_card_list(board, list_id, None).await?;
+        let mut card_response = self.fetch_card_list(board, list_id, None, family).await?;
         if let Some(total) = card_response.total_board_cards {
             if total > card_response.cardlist_list.len() {
-                card_response = self.fetch_card_list(board, list_id, Some(total)).await?;
+                card_response = self
+                    .fetch_card_list(board, list_id, Some(total), family)
+                    .await?;
             }
         }
 
-        // Extract board_id from first entry if available
         let board_id = card_response
             .cardlist_list
             .first()
@@ -415,13 +490,13 @@ impl HteamClient {
         board: u64,
         list_id: u64,
         items_per_page: Option<usize>,
+        family: TaskFamily,
     ) -> Result<crate::models::CardListResponse> {
-        // Same pattern as get_lists: hold config only while copying headers.
         let (url, headers) = {
             let config = self.config.lock().await;
             let mut url = format!(
-                "{}/operation/care/operations/{}/lists/{}/cards/?format=json",
-                self.api_base_url, board, list_id
+                "{}/lists/{list_id}/cards/?format=json",
+                family.board_api_base(&self.api_base_url, board)
             );
             if let Some(n) = items_per_page {
                 url.push_str(&format!("&items_per_page={}", n));
@@ -439,32 +514,74 @@ impl HteamClient {
             .context("Error al obtener cards")?;
 
         if !response.status().is_success() {
-            anyhow::bail!(
-                "Error HTTP {}: {}",
-                response.status(),
-                response.text().await?
-            );
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            if status == reqwest::StatusCode::NOT_FOUND {
+                return Err(family.missing_board_error(board));
+            }
+            anyhow::bail!("Error HTTP {status}: {body}");
         }
 
         Ok(response.json().await?)
     }
 
+    #[expect(
+        dead_code,
+        reason = "operation-default wrapper; callers use get_open_cards_for"
+    )]
     pub async fn get_open_cards(&self, board_number: Option<u64>) -> Result<Vec<Card>> {
-        let (cards, _) = self.get_cards(1, board_number).await?;
+        self.get_open_cards_for(board_number, TaskFamily::Operation)
+            .await
+    }
+
+    pub async fn get_open_cards_for(
+        &self,
+        board_number: Option<u64>,
+        family: TaskFamily,
+    ) -> Result<Vec<Card>> {
+        let (cards, _) = self.get_cards_for(1, board_number, family).await?;
         Ok(cards)
     }
 
+    #[expect(
+        dead_code,
+        reason = "operation-default wrapper; callers use get_closed_cards_for"
+    )]
     pub async fn get_closed_cards(&self, board_number: Option<u64>) -> Result<Vec<Card>> {
-        let (cards, _) = self.get_cards(2, board_number).await?;
+        self.get_closed_cards_for(board_number, TaskFamily::Operation)
+            .await
+    }
+
+    pub async fn get_closed_cards_for(
+        &self,
+        board_number: Option<u64>,
+        family: TaskFamily,
+    ) -> Result<Vec<Card>> {
+        let (cards, _) = self.get_cards_for(2, board_number, family).await?;
         Ok(cards)
     }
 
     pub async fn get_card_detail(&self, card_id: u64) -> Result<CardDetail> {
+        let detail = self
+            .fetch_task_detail(TaskFamily::Operation, card_id)
+            .await?;
+        if matches!(
+            detail
+                .title_url
+                .as_deref()
+                .and_then(TaskFamily::from_title_url),
+            Some(TaskFamily::Project)
+        ) {
+            if let Ok(project_detail) = self.fetch_task_detail(TaskFamily::Project, card_id).await {
+                return Ok(project_detail);
+            }
+        }
+        Ok(detail)
+    }
+
+    async fn fetch_task_detail(&self, family: TaskFamily, card_id: u64) -> Result<CardDetail> {
         let config = self.config.lock().await;
-        let url = format!(
-            "{}/operation/care/tasks/{}/?format=json",
-            self.api_base_url, card_id
-        );
+        let url = family.task_detail_api(&self.api_base_url, card_id);
         let headers = self.build_headers(&config)?;
 
         let response = self
@@ -625,16 +742,29 @@ impl HteamClient {
         Ok(resp.results)
     }
 
-    /// URL pública de la página de detalle de una card, la misma que scrapea
-    /// `get_card_follow_up` — no requiere red, solo resuelve el board.
+    #[expect(
+        dead_code,
+        reason = "operation-default wrapper; operations::card_url_for prefers title_url"
+    )]
     pub async fn card_url(&self, card_id: u64, board_number: Option<u64>) -> Result<String> {
+        self.card_url_for(card_id, board_number, TaskFamily::Operation)
+            .await
+    }
+
+    pub async fn card_url_for(
+        &self,
+        card_id: u64,
+        board_number: Option<u64>,
+        family: TaskFamily,
+    ) -> Result<String> {
         let board = match board_number {
             Some(b) => b,
             None => self.get_board_number().await?,
         };
         Ok(format!(
-            "{}/operations/{}/tasks/{}/",
-            self.site_base_url, board, card_id
+            "{}{}",
+            self.site_base_url,
+            family.site_task_path(board, card_id)
         ))
     }
 
@@ -1385,6 +1515,10 @@ impl HteamClient {
         Ok(())
     }
 
+    pub fn site_base_url(&self) -> &str {
+        &self.site_base_url
+    }
+
     /// URL pública de la página de detalle de un proyecto (`/projects/{id}/`)
     /// — a diferencia de `card_url`, no depende del board, así que no
     /// necesita tocar la red ni el config.
@@ -1448,16 +1582,29 @@ impl HteamClient {
         Ok(resp)
     }
 
-    /// Load current HTML edit-form values (priority, dependence id, estimate, …).
-    /// Task JSON often leaves these null or as display labels only.
+    #[expect(
+        dead_code,
+        reason = "operation-default wrapper; enriched detail uses get_task_edit_form_for"
+    )]
     pub async fn get_task_edit_form(
         &self,
         board_number: u64,
         card_id: u64,
     ) -> Result<TaskEditFormBaseline> {
+        self.get_task_edit_form_for(board_number, card_id, TaskFamily::Operation)
+            .await
+    }
+
+    pub async fn get_task_edit_form_for(
+        &self,
+        board_number: u64,
+        card_id: u64,
+        family: TaskFamily,
+    ) -> Result<TaskEditFormBaseline> {
         let url = format!(
-            "{}/operations/{}/tasks/{}/edit/",
-            self.site_base_url, board_number, card_id
+            "{}{}",
+            self.site_base_url,
+            family.site_task_edit_path(board_number, card_id)
         );
         let headers = {
             let config = self.config.lock().await;
@@ -2394,6 +2541,97 @@ mod tests {
             .set_card_labels(483, 42, &[473, 315])
             .await
             .expect("set labels");
+    }
+
+    #[test]
+    fn task_family_parses_title_url_parts() {
+        assert_eq!(
+            TaskFamily::from_title_url_parts("/projects/469/tasks/10702/"),
+            Some((TaskFamily::Project, 469)),
+        );
+        assert_eq!(
+            TaskFamily::from_title_url_parts("/operations/447/tasks/10917/"),
+            Some((TaskFamily::Operation, 447)),
+        );
+        assert_eq!(TaskFamily::from_title_url_parts("/other/1/"), None);
+    }
+
+    #[tokio::test]
+    async fn test_get_card_detail_refetches_project_payload() {
+        let mut server = mockito::Server::new_async().await;
+        let _op = server
+            .mock("GET", "/operation/care/tasks/10702/")
+            .match_query(Matcher::UrlEncoded("format".into(), "json".into()))
+            .with_status(200)
+            .with_body(
+                r#"{"id":10702,"name":"Task","description":null,"labels":[],"title_url":"/projects/469/tasks/10702/"}"#,
+            )
+            .create_async()
+            .await;
+        let _proj = server
+            .mock("GET", "/project-new/care/tasks/10702/")
+            .match_query(Matcher::UrlEncoded("format".into(), "json".into()))
+            .with_status(200)
+            .with_body(
+                r#"{"id":10702,"name":"Task","description":null,"labels":[],"title_url":"/projects/469/tasks/10702/","milestone":872,"milestone_name":"IJC","time_estimated":86400}"#,
+            )
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        let detail = client.get_card_detail(10702).await.expect("detail");
+
+        assert_eq!(detail.milestone, Some(872));
+        assert_eq!(detail.milestone_name.as_deref(), Some("IJC"));
+        assert_eq!(detail.time_estimated.as_deref(), Some("86400"));
+    }
+
+    #[tokio::test]
+    async fn test_get_lists_for_project_path() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/project-new/care/projects/469/lists/")
+            .match_query(Matcher::UrlEncoded(
+                "format".to_string(),
+                "json".to_string(),
+            ))
+            .with_status(200)
+            .with_body(r#"[{"id":1,"name":"Open","total_board_cards":2}]"#)
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        let lists = client
+            .get_lists_for(Some(469), TaskFamily::Project)
+            .await
+            .expect("lists");
+
+        assert_eq!(lists[0].name, "Open");
+    }
+
+    #[tokio::test]
+    async fn test_get_lists_for_project_404_explains_id() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/project-new/care/projects/549/lists/")
+            .match_query(Matcher::UrlEncoded(
+                "format".to_string(),
+                "json".to_string(),
+            ))
+            .with_status(404)
+            .with_body(r#"{"detail":"Not found."}"#)
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        let err = client
+            .get_lists_for(Some(549), TaskFamily::Project)
+            .await
+            .expect_err("missing project");
+
+        let msg = err.to_string();
+        assert!(msg.contains("proyecto 549 no encontrado"), "{msg}");
+        assert!(!msg.contains("Not found"), "{msg}");
     }
 
     #[tokio::test]

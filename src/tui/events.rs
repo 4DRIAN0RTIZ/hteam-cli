@@ -2321,6 +2321,8 @@ mod tests {
             priority: Some(serde_json::json!(2)),
             closed: Some(false),
             title_url: None,
+            milestone: None,
+            milestone_name: None,
         });
 
         detail_move_field(&mut app, 1);

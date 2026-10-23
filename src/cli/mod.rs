@@ -31,9 +31,13 @@ pub struct Cli {
     #[arg(long, global = true)]
     pub json: bool,
 
-    /// ID del board a usar
+    /// ID del board a usar (operación o proyecto según --family)
     #[arg(short, long, global = true)]
     pub board: Option<u64>,
+
+    /// Familia del tablero: operation (default) o project
+    #[arg(long, global = true, default_value = "operation")]
+    pub family: String,
 }
 
 #[derive(Subcommand, Debug)]
@@ -163,15 +167,17 @@ pub async fn run() -> Result<()> {
             | Commands::Doctor
     );
 
+    let family = client::TaskFamily::parse(&cli.family)?;
+
     let result = match cli.command {
         Commands::Login(args) => login::execute(args).await,
         Commands::Doctor => doctor::execute(cli.json, cli.board).await,
         Commands::Dashboard => dashboard::execute(cli.json).await,
         Commands::Board(cmd) => board::execute(cmd, cli.json).await,
-        Commands::Lists => cards::lists(cli.board, cli.json).await,
-        Commands::Cards(cmd) => cards::execute(cmd, cli.board, cli.json).await,
-        Commands::Open => cards::open_cards(cli.board, cli.json).await,
-        Commands::Closed => cards::closed_cards(cli.board, cli.json).await,
+        Commands::Lists => cards::lists(cli.board, family, cli.json).await,
+        Commands::Cards(cmd) => cards::execute(cmd, cli.board, family, cli.json).await,
+        Commands::Open => cards::open_cards(cli.board, family, cli.json).await,
+        Commands::Closed => cards::closed_cards(cli.board, family, cli.json).await,
         Commands::Working(cmd) => working::execute(cmd, cli.json).await,
         Commands::Project(cmd) => project::execute(cmd, cli.json).await,
         Commands::Objectives(cmd) => objectives::execute(cmd, cli.json).await,

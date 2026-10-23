@@ -12,10 +12,22 @@ const SEARCH_LIST_CONCURRENCY: usize = 4;
 
 /// Where to look for cards. `list_id: None` means every list on the board.
 /// Wired from CLI/MCP (#51) and TUI (#52); kept public for those adapters.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CardSearchScope {
     pub board: Option<u64>,
     pub list_id: Option<u64>,
+    /// Operation vs project board API tree (Board bundle family).
+    pub family: TaskFamily,
+}
+
+impl Default for CardSearchScope {
+    fn default() -> Self {
+        Self {
+            board: None,
+            list_id: None,
+            family: TaskFamily::Operation,
+        }
+    }
 }
 
 /// Criteria combined with AND. Within `labels`, every name must match some
@@ -51,7 +63,15 @@ pub struct CardSearchHit {
 }
 
 pub async fn list_lists(client: &HteamClient, board: Option<u64>) -> Result<Vec<List>> {
-    client.get_lists(board).await
+    list_lists_for(client, board, TaskFamily::Operation).await
+}
+
+pub async fn list_lists_for(
+    client: &HteamClient,
+    board: Option<u64>,
+    family: TaskFamily,
+) -> Result<Vec<List>> {
+    client.get_lists_for(board, family).await
 }
 
 pub async fn list_cards(
@@ -59,15 +79,48 @@ pub async fn list_cards(
     list_id: u64,
     board: Option<u64>,
 ) -> Result<(Vec<Card>, Option<u64>)> {
-    client.get_cards(list_id, board).await
+    list_cards_for(client, list_id, board, TaskFamily::Operation).await
 }
 
+pub async fn list_cards_for(
+    client: &HteamClient,
+    list_id: u64,
+    board: Option<u64>,
+    family: TaskFamily,
+) -> Result<(Vec<Card>, Option<u64>)> {
+    client.get_cards_for(list_id, board, family).await
+}
+
+#[expect(
+    dead_code,
+    reason = "operation-default wrapper; CLI/MCP call open_cards_for with explicit family"
+)]
 pub async fn open_cards(client: &HteamClient, board: Option<u64>) -> Result<Vec<Card>> {
-    client.get_open_cards(board).await
+    open_cards_for(client, board, TaskFamily::Operation).await
 }
 
+pub async fn open_cards_for(
+    client: &HteamClient,
+    board: Option<u64>,
+    family: TaskFamily,
+) -> Result<Vec<Card>> {
+    client.get_open_cards_for(board, family).await
+}
+
+#[expect(
+    dead_code,
+    reason = "operation-default wrapper; CLI/MCP call closed_cards_for with explicit family"
+)]
 pub async fn closed_cards(client: &HteamClient, board: Option<u64>) -> Result<Vec<Card>> {
-    client.get_closed_cards(board).await
+    closed_cards_for(client, board, TaskFamily::Operation).await
+}
+
+pub async fn closed_cards_for(
+    client: &HteamClient,
+    board: Option<u64>,
+    family: TaskFamily,
+) -> Result<Vec<Card>> {
+    client.get_closed_cards_for(board, family).await
 }
 
 pub async fn card_detail(client: &HteamClient, card_id: u64) -> Result<CardDetail> {
@@ -77,16 +130,37 @@ pub async fn card_detail(client: &HteamClient, card_id: u64) -> Result<CardDetai
 /// Task detail + board-card merge. The operation-task endpoint lacks
 /// estimated/spent time and rich labels; the board-card endpoint supplies
 /// `estimated_time` / `time_spent` / `labels_list` / object responsible.
+/// For project tasks, resolves the project's internal board_id and edit form
+/// from `title_url` instead of the configured operation board.
 pub async fn card_detail_enriched(client: &HteamClient, card_id: u64) -> Result<CardDetail> {
     let mut detail = client.get_card_detail(card_id).await?;
-    if let Ok(board_id) = client.get_board_id().await {
+    let (family, process_id) = detail
+        .title_url
+        .as_deref()
+        .and_then(TaskFamily::from_title_url_parts)
+        .map(|(f, id)| (f, Some(id)))
+        .unwrap_or((TaskFamily::Operation, None));
+
+    let board_id = match process_id {
+        Some(pid) => resolve_board_id_for(client, Some(pid), family).await.ok(),
+        None => client.get_board_id().await.ok(),
+    };
+    if let Some(board_id) = board_id {
         if let Ok(raw) = client.get_board_card(board_id, card_id).await {
             merge_board_card_into_detail(&mut detail, &raw);
         }
     }
+
     // Priority (and the bare dependence id) live on the HTML edit form, not JSON.
-    if let Ok(board_number) = client.operation_board_number().await {
-        if let Ok(form) = client.get_task_edit_form(board_number, card_id).await {
+    let form_process = match process_id {
+        Some(pid) => Some(pid),
+        None => client.operation_board_number().await.ok(),
+    };
+    if let Some(process) = form_process {
+        if let Ok(form) = client
+            .get_task_edit_form_for(process, card_id, family)
+            .await
+        {
             merge_edit_form_into_detail(&mut detail, &form);
         }
     }
@@ -210,24 +284,40 @@ pub async fn board_id(client: &HteamClient) -> Result<u64> {
 /// `board` is the operation/process number (`--board` / config `board_number`),
 /// not the AJAX `board_id`. When omitted, uses the configured board.
 pub async fn resolve_board_id(client: &HteamClient, board: Option<u64>) -> Result<u64> {
+    resolve_board_id_for(client, board, TaskFamily::Operation).await
+}
+
+/// Like [`resolve_board_id`], but walks lists/cards on the given family tree
+/// (project ids use `/project-new/care/projects/{id}/…`).
+pub async fn resolve_board_id_for(
+    client: &HteamClient,
+    board: Option<u64>,
+    family: TaskFamily,
+) -> Result<u64> {
     match board {
-        None => client.get_board_id().await,
-        Some(operation) => {
-            let (_, bid) = client.get_cards(1, Some(operation)).await?;
+        None if family == TaskFamily::Operation => client.get_board_id().await,
+        None => anyhow::bail!(
+            "indica --board con el id del proyecto (familia project no usa el board de config)"
+        ),
+        Some(process_id) => {
+            let (_, bid) = client.get_cards_for(1, Some(process_id), family).await?;
             if let Some(id) = bid {
                 return Ok(id);
             }
-            for list in client.get_lists(Some(operation)).await? {
+            for list in client.get_lists_for(Some(process_id), family).await? {
                 if list.card_count.unwrap_or(0) == 0 {
                     continue;
                 }
-                let (_, bid) = client.get_cards(list.id, Some(operation)).await?;
+                let (_, bid) = client
+                    .get_cards_for(list.id, Some(process_id), family)
+                    .await?;
                 if let Some(id) = bid {
                     return Ok(id);
                 }
             }
             anyhow::bail!(
-                "no se pudo resolver board_id interno para el board/operación {operation}"
+                "no se pudo resolver board_id interno para {} {process_id}",
+                family.as_str()
             )
         }
     }
@@ -281,11 +371,34 @@ pub async fn set_times(
         anyhow::bail!("indica al menos --estimate o --spent");
     }
 
+    set_times_for(
+        client,
+        card_id,
+        board,
+        TaskFamily::Operation,
+        estimate,
+        spent,
+    )
+    .await
+}
+
+pub async fn set_times_for(
+    client: &HteamClient,
+    card_id: u64,
+    board: Option<u64>,
+    family: TaskFamily,
+    estimate: Option<&str>,
+    spent: Option<&str>,
+) -> Result<CardTimeResult> {
+    if estimate.is_none() && spent.is_none() {
+        anyhow::bail!("indica al menos --estimate o --spent");
+    }
+
     let estimate = estimate
         .map(|v| validate_duration(v, "estimate"))
         .transpose()?;
     let spent = spent.map(|v| validate_duration(v, "spent")).transpose()?;
-    let board_id = resolve_board_id(client, board).await?;
+    let board_id = resolve_board_id_for(client, board, family).await?;
     let mut latest = crate::models::CardTimesResult {
         detail: None,
         warnings: vec![],
@@ -361,13 +474,32 @@ pub async fn set_dates(
     start_date: Option<&str>,
     due_date: Option<&str>,
 ) -> Result<CardDatesResult> {
+    set_dates_for(
+        client,
+        card_id,
+        board,
+        TaskFamily::Operation,
+        start_date,
+        due_date,
+    )
+    .await
+}
+
+pub async fn set_dates_for(
+    client: &HteamClient,
+    card_id: u64,
+    board: Option<u64>,
+    family: TaskFamily,
+    start_date: Option<&str>,
+    due_date: Option<&str>,
+) -> Result<CardDatesResult> {
     if start_date.is_none() && due_date.is_none() {
         anyhow::bail!("indica al menos --start o --due (YYYY-MM-DD)");
     }
 
     let start = start_date.map(parse_date_yyyy_mm_dd).transpose()?;
     let due = due_date.map(parse_date_yyyy_mm_dd).transpose()?;
-    let board_id = resolve_board_id(client, board).await?;
+    let board_id = resolve_board_id_for(client, board, family).await?;
 
     if let Some(ref d) = start {
         client
@@ -392,7 +524,28 @@ pub async fn set_dates(
 
 /// URL pública de la página de detalle de una card (`/operations/{board}/tasks/{id}/`).
 pub async fn card_url(client: &HteamClient, card_id: u64, board: Option<u64>) -> Result<String> {
-    client.card_url(card_id, board).await
+    card_url_for(client, card_id, board, TaskFamily::Operation).await
+}
+
+pub async fn card_url_for(
+    client: &HteamClient,
+    card_id: u64,
+    board: Option<u64>,
+    family: TaskFamily,
+) -> Result<String> {
+    // Prefer the canonical title_url from the task payload when present.
+    if let Ok(detail) = client.get_card_detail(card_id).await {
+        if let Some(path) = detail.title_url.as_deref() {
+            if path.starts_with('/') {
+                return Ok(format!(
+                    "{}{}",
+                    client.site_base_url().trim_end_matches('/'),
+                    path
+                ));
+            }
+        }
+    }
+    client.card_url_for(card_id, board, family).await
 }
 
 pub async fn create_card(client: &HteamClient, name: &str, list_id: Option<u64>) -> Result<Card> {
@@ -709,13 +862,13 @@ pub async fn search(
 
     let lists = match scope.list_id {
         Some(list_id) => {
-            let all = list_lists(client, scope.board).await?;
+            let all = list_lists_for(client, scope.board, scope.family).await?;
             match all.into_iter().find(|l| l.id == list_id) {
                 Some(list) => vec![list],
                 None => anyhow::bail!("Lista {} no encontrada en el board", list_id),
             }
         }
-        None => list_lists(client, scope.board).await?,
+        None => list_lists_for(client, scope.board, scope.family).await?,
     };
 
     if lists.is_empty() {
@@ -723,6 +876,7 @@ pub async fn search(
     }
 
     let board = scope.board;
+    let family = scope.family;
     let semaphore = Arc::new(Semaphore::new(SEARCH_LIST_CONCURRENCY));
     let mut set = JoinSet::new();
 
@@ -734,7 +888,7 @@ pub async fn search(
                 .acquire()
                 .await
                 .expect("search list semaphore stays open");
-            let result = list_cards(&client, list.id, board).await;
+            let result = list_cards_for(&client, list.id, board, family).await;
             (list, result)
         });
     }
@@ -1184,6 +1338,50 @@ mod tests {
         assert_eq!(lists.len(), 1);
         assert_eq!(lists[0].name, "Open");
         assert_eq!(lists[0].card_count, Some(2));
+    }
+
+    #[tokio::test]
+    async fn test_list_lists_for_project_uses_project_path() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/project-new/care/projects/469/lists/")
+            .match_query(mockito::Matcher::UrlEncoded(
+                "format".to_string(),
+                "json".to_string(),
+            ))
+            .with_status(200)
+            .with_body(r#"[{"id":1,"name":"Open","total_board_cards":121}]"#)
+            .create_async()
+            .await;
+
+        let lists = list_lists_for(&client(&server.url()), Some(469), TaskFamily::Project)
+            .await
+            .expect("project lists");
+
+        assert_eq!(lists[0].card_count, Some(121));
+    }
+
+    #[tokio::test]
+    async fn test_resolve_board_id_for_project_from_cards() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/project-new/care/projects/469/lists/1/cards/")
+            .match_query(mockito::Matcher::UrlEncoded(
+                "format".to_string(),
+                "json".to_string(),
+            ))
+            .with_status(200)
+            .with_body(
+                r#"{"id":1,"name":"Open","cardlist_list":[{"id":10,"board_id":505,"card":{"id":10702,"title":"t","subtitle":"","labels_list":[]},"is_closed":false,"card_type":0,"time_status":0,"get_time_status":"","position":1}]}"#,
+            )
+            .create_async()
+            .await;
+
+        let bid = resolve_board_id_for(&client(&server.url()), Some(469), TaskFamily::Project)
+            .await
+            .expect("board id");
+
+        assert_eq!(bid, 505);
     }
 
     #[tokio::test]
@@ -1794,6 +1992,7 @@ mod tests {
             CardSearchScope {
                 board: Some(483),
                 list_id: None,
+                ..Default::default()
             },
             CardSearchFilters {
                 text: Some("alpha".into()),
@@ -1900,6 +2099,8 @@ mod tests {
             priority: None,
             closed: None,
             title_url: None,
+            milestone: None,
+            milestone_name: None,
         };
         let form = crate::client::TaskEditFormBaseline {
             priority: "5".into(),
@@ -2113,6 +2314,7 @@ mod tests {
             CardSearchScope {
                 board: Some(483),
                 list_id: Some(999),
+                ..Default::default()
             },
             CardSearchFilters::default(),
         )
