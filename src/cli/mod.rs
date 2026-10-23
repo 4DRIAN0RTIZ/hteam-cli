@@ -6,6 +6,7 @@ use crate::{client, operations};
 
 pub mod board;
 pub mod cards;
+pub mod dashboard;
 pub mod doctor;
 pub mod interactive;
 pub mod login;
@@ -42,6 +43,9 @@ pub enum Commands {
 
     /// Diagnosticar configuración, sesión y acceso al board
     Doctor,
+
+    /// Resumen personal: working-on-it, recordatorios y objetivos semanales
+    Dashboard,
 
     /// Gestionar boards
     #[command(subcommand)]
@@ -153,6 +157,7 @@ pub async fn run() -> Result<()> {
     let result = match cli.command {
         Commands::Login(args) => login::execute(args).await,
         Commands::Doctor => doctor::execute(cli.json, cli.board).await,
+        Commands::Dashboard => dashboard::execute(cli.json).await,
         Commands::Board(cmd) => board::execute(cmd, cli.json).await,
         Commands::Lists => cards::lists(cli.board, cli.json).await,
         Commands::Cards(cmd) => cards::execute(cmd, cli.board, cli.json).await,

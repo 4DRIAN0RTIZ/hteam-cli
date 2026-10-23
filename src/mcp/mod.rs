@@ -623,6 +623,22 @@ impl HteamMcpServer {
         ok(items)
     }
 
+    #[tool(
+        description = "Resumen personal: working-on-it, recordatorios y objetivos semanales. Si una sección falla, las demás se devuelven igual; from_cache indica si los objetivos vinieron del cache local."
+    )]
+    async fn dashboard(&self) -> Result<CallToolResult, McpError> {
+        let mut config = crate::config::Config::load().map_err(err)?;
+        let snapshot = operations::dashboard::load(&self.client, &mut config).await;
+        if snapshot.objectives.is_ok() {
+            if let Some(objectives) = snapshot.objectives.as_ok() {
+                if !objectives.from_cache {
+                    config.save().map_err(err)?;
+                }
+            }
+        }
+        ok(snapshot)
+    }
+
     #[tool(description = "Registrar entrada del día (check in)")]
     async fn check_in(&self) -> Result<CallToolResult, McpError> {
         let result = operations::checkin::check_in(&self.client)

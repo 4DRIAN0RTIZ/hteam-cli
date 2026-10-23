@@ -94,6 +94,9 @@ async fn process_command(line: &str) -> Result<()> {
         "board" => {
             handle_board_command(args).await?;
         }
+        "dashboard" | "dash" => {
+            cli::dashboard::execute(false).await?;
+        }
         "lists" | "ls" => {
             cli::cards::lists(None, false).await?;
         }
@@ -182,6 +185,10 @@ fn print_help() {
     println!("  time <id> --estimate|--spent  Estimado / tiempo gastado");
     println!("  detail, show <id>       Ver detalle de un card");
     println!("  comment, co <id> <txt>  Agregar comentario");
+    println!();
+
+    println!("{}", "Resumen:".bold());
+    println!("  dashboard, dash         Working on it, recordatorios y objetivos");
     println!();
 
     println!("{}", "Working On It:".bold());

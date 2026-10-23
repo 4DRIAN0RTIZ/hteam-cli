@@ -6,7 +6,7 @@ CLI en Rust para gestionar boards de Hteam, con soporte nativo de MCP (Model Con
 
 - **Autenticación** con cookies de sesión (`sessionid` + `csrftoken`)
 - **Modo interactivo REPL** con historial persistente (`~/.hteam_history`)
-- **Servidor MCP** sobre stdio — expone 20 herramientas para IA (Claude, etc.)
+- **Servidor MCP** sobre stdio — expone 31 herramientas para IA (Claude, etc.)
 - **Multi-board** con persistencia de configuración
 - **Salida dual**: tablas formateadas + JSON raw (`--json`) para scripting
 
@@ -32,7 +32,11 @@ Solicita `sessionid` y `csrftoken` (prompts de texto). Valida la sesión listand
 ```bash
 hteam doctor          # config + sesión + board (sin mutar nada)
 hteam doctor --json   # mismo reporte estructurado
+hteam dashboard       # working-on-it + recordatorios + objetivos
+hteam dashboard --json
 ```
+
+`hteam dashboard` reúne trabajo activo, recordatorios y objetivos semanales. Si una sección falla, las demás se muestran igual y el error queda en esa sección. Los objetivos indican si vinieron de cache o de SharePad.
 
 ## Comandos
 
@@ -121,6 +125,7 @@ hteam project tasks 99                    # Tasks del proyecto
 ```bash
 hteam users "juan"                        # Buscar usuarios por nombre/username
 hteam reminders                           # Ver recordatorios pendientes
+hteam dashboard                           # Working on it + recordatorios + objetivos
 hteam checkin                             # Registrar entrada del día
 hteam daily-work                          # Historial de trabajo diario del equipo (hoy)
 hteam daily-work --user juan --type time --range this_week
@@ -146,12 +151,13 @@ hteam completions zsh > _hteam            # bash, zsh, fish, elvish, powershell
 hteam mcp
 ```
 
-Inicia el servidor MCP sobre **stdio**. Se integra con Claude Desktop, Claude Code u cualquier cliente MCP compatible. Las 22 herramientas expuestas son:
+Inicia el servidor MCP sobre **stdio**. Se integra con Claude Desktop, Claude Code u cualquier cliente MCP compatible. Las 31 herramientas expuestas son:
 
 | Herramienta | Descripción |
 |---|---|
 | `lists` | Listas del board activo |
 | `cards_list` | Cards de una lista |
+| `cards_search` | Buscar y filtrar cards del board |
 | `cards_open` | Cards abiertos |
 | `cards_closed` | Cards cerrados |
 | `card_close` | Cerrar task (API close/, familia operation/project) |
@@ -167,6 +173,9 @@ Inicia el servidor MCP sobre **stdio**. Se integra con Claude Desktop, Claude Co
 | `card_comments` | Obtener comentarios de un card |
 | `card_comment` | Agregar comentario |
 | `card_remind` | Crear recordatorio |
+| `card_follow_up` | Seguimiento agendado de un card |
+| `card_follow_up_complete` | Completar un seguimiento |
+| `card_follow_up_cancel` | Cancelar un seguimiento |
 | `working_list` | Working On It activo |
 | `working_start` | Empezar a trabajar en un card |
 | `working_stop` | Dejar de trabajar |
@@ -174,6 +183,7 @@ Inicia el servidor MCP sobre **stdio**. Se integra con Claude Desktop, Claude Co
 | `project_tasks` | Tasks de un proyecto |
 | `users_search` | Buscar usuarios |
 | `reminders` | Recordatorios pendientes |
+| `dashboard` | Resumen personal (working, reminders, objetivos) |
 | `check_in` | Registrar entrada del día |
 | `daily_work` | Historial de trabajo diario del equipo |
 
@@ -222,6 +232,7 @@ Prompt: `hteam> `
 | `move <id> --to <n>`, `mv` | Mover card |
 | `detail <id>`, `show <id>` | Detalle de card |
 | `comment <id> <texto>`, `co` | Agregar comentario |
+| `dashboard`, `dash` | Resumen personal |
 | `working list`, `w list` | Working On It |
 | `working start <card_id>` | Empezar a trabajar |
 | `working stop <working_id>` | Dejar de trabajar |

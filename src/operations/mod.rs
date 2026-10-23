@@ -11,6 +11,7 @@ pub mod checkin;
 pub mod clipboard;
 pub mod comments;
 pub mod daily_work;
+pub mod dashboard;
 pub mod doctor;
 pub mod objectives;
 pub mod projects;
