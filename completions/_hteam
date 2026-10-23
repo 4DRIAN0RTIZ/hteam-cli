@@ -1,0 +1,2198 @@
+#compdef hteam
+
+autoload -U is-at-least
+
+_hteam() {
+    typeset -A opt_args
+    typeset -a _arguments_options
+    local ret=1
+
+    if is-at-least 5.2; then
+        _arguments_options=(-s -S -C)
+    else
+        _arguments_options=(-s -C)
+    fi
+
+    local context curcontext="$curcontext" state line
+    _arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'-V[Print version]' \
+'--version[Print version]' \
+":: :_hteam_commands" \
+"*::: :->hteam" \
+&& ret=0
+    case $state in
+    (hteam)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-command-$line[1]:"
+        case $line[1] in
+            (login)
+_arguments "${_arguments_options[@]}" : \
+'-s+[Session ID (cookie)]:SESSION_ID:_default' \
+'--session-id=[Session ID (cookie)]:SESSION_ID:_default' \
+'-c+[CSRF Token (cookie)]:CSRF_TOKEN:_default' \
+'--csrf-token=[CSRF Token (cookie)]:CSRF_TOKEN:_default' \
+'-b+[Board number por defecto]:BOARD:_default' \
+'--board=[Board number por defecto]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(doctor)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(dashboard)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(board)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+":: :_hteam__subcmd__board_commands" \
+"*::: :->board" \
+&& ret=0
+
+    case $state in
+    (board)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-board-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(switch)
+_arguments "${_arguments_options[@]}" : \
+'-n+[Nombre del board (opcional)]:NAME:_default' \
+'--name=[Nombre del board (opcional)]:NAME:_default' \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':board_id -- ID del board:_default' \
+&& ret=0
+;;
+(current)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_hteam__subcmd__board__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-board-help-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(switch)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(current)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(lists)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(cards)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+":: :_hteam__subcmd__cards_commands" \
+"*::: :->cards" \
+&& ret=0
+
+    case $state in
+    (cards)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-cards-command-$line[1]:"
+        case $line[1] in
+            (lists)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(list)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':list_id -- ID de la lista:_default' \
+&& ret=0
+;;
+(search)
+_arguments "${_arguments_options[@]}" : \
+'-q+[Texto libre (nombre o descripción, case-insensitive)]:QUERY:_default' \
+'--query=[Texto libre (nombre o descripción, case-insensitive)]:QUERY:_default' \
+'--responsible=[Filtrar por responsable (username/email o id numérico)]:RESPONSIBLE:_default' \
+'--priority=[Filtrar por prioridad (1=alta, 2=media, 3=baja u otro valor del API)]:PRIORITY:_default' \
+'*--label=[Label requerida (repetible; AND entre labels)]:LABELS:_default' \
+'--list-id=[Limitar a una lista del board]:LIST_ID:_default' \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(detail)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':card_id -- ID del card:_default' \
+&& ret=0
+;;
+(link)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--no-copy[Solo imprimir el link, sin copiarlo al portapapeles]' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':card_id -- ID del card:_default' \
+&& ret=0
+;;
+(create)
+_arguments "${_arguments_options[@]}" : \
+'-n+[Nombre del card]:NAME:_default' \
+'--name=[Nombre del card]:NAME:_default' \
+'-l+[ID de la lista donde crear el card]:LIST_ID:_default' \
+'--list-id=[ID de la lista donde crear el card]:LIST_ID:_default' \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(move)
+_arguments "${_arguments_options[@]}" : \
+'-t+[Lista destino]:TO:_default' \
+'--to=[Lista destino]:TO:_default' \
+'-f+[Lista origen (opcional)]:FROM:_default' \
+'--from=[Lista origen (opcional)]:FROM:_default' \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':card_id -- ID del card:_default' \
+&& ret=0
+;;
+(close)
+_arguments "${_arguments_options[@]}" : \
+'--family=[Familia API\: \`operation\` o \`project\`. Si se omite, se infiere del \`title_url\` de la task]:FAMILY:_default' \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':card_id -- ID de la task / card:_default' \
+&& ret=0
+;;
+(reopen)
+_arguments "${_arguments_options[@]}" : \
+'--family=[Familia API\: \`operation\` o \`project\`. Si se omite, se infiere del \`title_url\` de la task]:FAMILY:_default' \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':card_id -- ID de la task / card:_default' \
+&& ret=0
+;;
+(dates)
+_arguments "${_arguments_options[@]}" : \
+'--start=[Fecha de inicio (YYYY-MM-DD)]:START:_default' \
+'--due=[Fecha de vencimiento (YYYY-MM-DD)]:DUE:_default' \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':card_id -- ID de la task / card:_default' \
+&& ret=0
+;;
+(time)
+_arguments "${_arguments_options[@]}" : \
+'--estimate=[Estimado (ej. 1h 30m)]:ESTIMATE:_default' \
+'--spent=[Tiempo gastado (ej. 45m; +30m suma al acumulado)]:SPENT:_default' \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':card_id -- ID de la task / card:_default' \
+&& ret=0
+;;
+(update-desc)
+_arguments "${_arguments_options[@]}" : \
+'-d+[Nueva descripción]:DESCRIPTION:_default' \
+'--description=[Nueva descripción]:DESCRIPTION:_default' \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':card_id -- ID del card:_default' \
+&& ret=0
+;;
+(comment)
+_arguments "${_arguments_options[@]}" : \
+'-t+[Comentario]:TEXT:_default' \
+'--text=[Comentario]:TEXT:_default' \
+'-b+[Board number (si no está configurado)]:BOARD:_default' \
+'--board=[Board number (si no está configurado)]:BOARD:_default' \
+'-d+[Fecha del comentario, formato "YYYY-MM-DD HH\:MM" en hora local (opcional; por defecto ahora)]:DATE:_default' \
+'--date=[Fecha del comentario, formato "YYYY-MM-DD HH\:MM" en hora local (opcional; por defecto ahora)]:DATE:_default' \
+'-f[Marcar el comentario para seguimiento (recibir notificaciones de respuestas)]' \
+'--follow[Marcar el comentario para seguimiento (recibir notificaciones de respuestas)]' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':card_id -- ID del card:_default' \
+&& ret=0
+;;
+(comments)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':card_id -- ID del card:_default' \
+&& ret=0
+;;
+(labels)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':card_id -- ID del card:_default' \
+&& ret=0
+;;
+(update)
+_arguments "${_arguments_options[@]}" : \
+'-n+[Nuevo nombre]:NAME:_default' \
+'--name=[Nuevo nombre]:NAME:_default' \
+'-d+[Nueva descripción]:DESCRIPTION:_default' \
+'--description=[Nueva descripción]:DESCRIPTION:_default' \
+'-p+[Prioridad (1=alta, 2=media, 3=baja)]:PRIORITY:_default' \
+'--priority=[Prioridad (1=alta, 2=media, 3=baja)]:PRIORITY:_default' \
+'-r+[Responsable (username)]:RESPONSIBLE:_default' \
+'--responsible=[Responsable (username)]:RESPONSIBLE:_default' \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':card_id -- ID del card:_default' \
+&& ret=0
+;;
+(remind)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':card_id -- ID del card:_default' \
+&& ret=0
+;;
+(follow-up)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':card_id -- ID del card:_default' \
+&& ret=0
+;;
+(follow-up-complete)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':follow_up_id -- ID del seguimiento (no el id del card ni el número visible — se obtiene con `hteam cards follow-up <card_id>`):_default' \
+&& ret=0
+;;
+(follow-up-cancel)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':follow_up_id -- ID del seguimiento (no el id del card ni el número visible — se obtiene con `hteam cards follow-up <card_id>`):_default' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_hteam__subcmd__cards__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-cards-help-command-$line[1]:"
+        case $line[1] in
+            (lists)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(search)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(detail)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(link)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(create)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(move)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(close)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(reopen)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(dates)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(time)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(update-desc)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(comment)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(comments)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(labels)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(update)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(remind)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(follow-up)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(follow-up-complete)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(follow-up-cancel)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(open)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(closed)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(working)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+":: :_hteam__subcmd__working_commands" \
+"*::: :->working" \
+&& ret=0
+
+    case $state in
+    (working)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-working-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(start)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':card_id -- ID del card:_default' \
+&& ret=0
+;;
+(stop)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':working_id -- ID del registro working on it:_default' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_hteam__subcmd__working__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-working-help-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(start)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(stop)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(project)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+":: :_hteam__subcmd__project_commands" \
+"*::: :->project" \
+&& ret=0
+
+    case $state in
+    (project)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-project-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+'-s+[Estado a filtrar\: All, Planning, Execution (default), Finished, Cancelled]:STATUS:_default' \
+'--status=[Estado a filtrar\: All, Planning, Execution (default), Finished, Cancelled]:STATUS:_default' \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(milestones)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':project_id -- ID del proyecto:_default' \
+&& ret=0
+;;
+(tasks)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':project_id -- ID del proyecto:_default' \
+&& ret=0
+;;
+(link)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--no-copy[Solo imprimir el link, sin copiarlo al portapapeles]' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':project_id -- ID del proyecto:_default' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_hteam__subcmd__project__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-project-help-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(milestones)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(tasks)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(link)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(objectives)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+":: :_hteam__subcmd__objectives_commands" \
+"*::: :->objectives" \
+&& ret=0
+
+    case $state in
+    (objectives)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-objectives-command-$line[1]:"
+        case $line[1] in
+            (show)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--force[Ignorar el cache local y volver a scrapear SharePad]' \
+'-v[Mostrar además el origen del resultado (cache/red) y hace cuánto se sincronizó]' \
+'--verbose[Mostrar además el origen del resultado (cache/red) y hace cuánto se sincronizó]' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_hteam__subcmd__objectives__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-objectives-help-command-$line[1]:"
+        case $line[1] in
+            (show)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(checkin)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(reminders)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(daily-work)
+_arguments "${_arguments_options[@]}" : \
+'-u+[Filtrar por usuario (username)]:USER:_default' \
+'--user=[Filtrar por usuario (username)]:USER:_default' \
+'-t+[Tipo de actividad\: time, tracking, objectives]:ACTIVITY_TYPE:_default' \
+'--type=[Tipo de actividad\: time, tracking, objectives]:ACTIVITY_TYPE:_default' \
+'-r+[Rango de tiempo\: today, this_week, this_month]:RANGE:_default' \
+'--range=[Rango de tiempo\: today, this_week, this_month]:RANGE:_default' \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(users)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':query -- Texto a buscar:_default' \
+&& ret=0
+;;
+(interactive)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(tui)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(theme)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+":: :_hteam__subcmd__theme_commands" \
+"*::: :->theme" \
+&& ret=0
+
+    case $state in
+    (theme)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-theme-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(set)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':name -- Nombre del preset (default, solarized, high-contrast) o de un tema personalizado ya creado en ~/.config/hteam/themes/<name>.toml:_default' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_hteam__subcmd__theme__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-theme-help-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(set)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(mcp)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(update)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(completions)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':shell -- Shell destino\: bash, zsh, fish, elvish, powershell:(bash elvish fish powershell zsh)' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_hteam__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-help-command-$line[1]:"
+        case $line[1] in
+            (login)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(doctor)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(dashboard)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(board)
+_arguments "${_arguments_options[@]}" : \
+":: :_hteam__subcmd__help__subcmd__board_commands" \
+"*::: :->board" \
+&& ret=0
+
+    case $state in
+    (board)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-help-board-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(switch)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(current)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(lists)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(cards)
+_arguments "${_arguments_options[@]}" : \
+":: :_hteam__subcmd__help__subcmd__cards_commands" \
+"*::: :->cards" \
+&& ret=0
+
+    case $state in
+    (cards)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-help-cards-command-$line[1]:"
+        case $line[1] in
+            (lists)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(search)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(detail)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(link)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(create)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(move)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(close)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(reopen)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(dates)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(time)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(update-desc)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(comment)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(comments)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(labels)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(update)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(remind)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(follow-up)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(follow-up-complete)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(follow-up-cancel)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(open)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(closed)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(working)
+_arguments "${_arguments_options[@]}" : \
+":: :_hteam__subcmd__help__subcmd__working_commands" \
+"*::: :->working" \
+&& ret=0
+
+    case $state in
+    (working)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-help-working-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(start)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(stop)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(project)
+_arguments "${_arguments_options[@]}" : \
+":: :_hteam__subcmd__help__subcmd__project_commands" \
+"*::: :->project" \
+&& ret=0
+
+    case $state in
+    (project)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-help-project-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(milestones)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(tasks)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(link)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(objectives)
+_arguments "${_arguments_options[@]}" : \
+":: :_hteam__subcmd__help__subcmd__objectives_commands" \
+"*::: :->objectives" \
+&& ret=0
+
+    case $state in
+    (objectives)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-help-objectives-command-$line[1]:"
+        case $line[1] in
+            (show)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(checkin)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(reminders)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(daily-work)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(users)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(interactive)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(tui)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(theme)
+_arguments "${_arguments_options[@]}" : \
+":: :_hteam__subcmd__help__subcmd__theme_commands" \
+"*::: :->theme" \
+&& ret=0
+
+    case $state in
+    (theme)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-help-theme-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(set)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(mcp)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(update)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(completions)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+}
+
+(( $+functions[_hteam_commands] )) ||
+_hteam_commands() {
+    local commands; commands=(
+'login:Iniciar sesión con cookies' \
+'doctor:Diagnosticar configuración, sesión y acceso al board' \
+'dashboard:Resumen personal\: working-on-it, recordatorios y objetivos semanales' \
+'board:Gestionar boards' \
+'lists:Listar listas del board' \
+'cards:Operaciones con cards' \
+'open:Ver cards abiertos' \
+'closed:Ver cards cerrados' \
+'working:Gestionar working on it' \
+'project:Gestionar proyectos' \
+'objectives:Objetivos semanales (scraping de SharePad, sólo lectura)' \
+'checkin:Registrar entrada del día (check in)' \
+'reminders:Ver recordatorios pendientes' \
+'daily-work:Ver historial de trabajo diario del equipo' \
+'users:Buscar usuarios por nombre' \
+'interactive:Modo interactivo REPL' \
+'tui:Board visual tipo kanban (TUI)' \
+'theme:Gestionar el tema de color del TUI' \
+'mcp:Iniciar servidor MCP (Model Context Protocol) sobre stdio' \
+'update:Descargar e instalar la última versión publicada de hteam-cli' \
+'completions:Generar script de autocompletado para la shell indicada' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'hteam commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__board_commands] )) ||
+_hteam__subcmd__board_commands() {
+    local commands; commands=(
+'list:Listar boards configurados' \
+'switch:Cambiar board activo' \
+'current:Mostrar board actual' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'hteam board commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__board__subcmd__current_commands] )) ||
+_hteam__subcmd__board__subcmd__current_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam board current commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__board__subcmd__help_commands] )) ||
+_hteam__subcmd__board__subcmd__help_commands() {
+    local commands; commands=(
+'list:Listar boards configurados' \
+'switch:Cambiar board activo' \
+'current:Mostrar board actual' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'hteam board help commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__board__subcmd__help__subcmd__current_commands] )) ||
+_hteam__subcmd__board__subcmd__help__subcmd__current_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam board help current commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__board__subcmd__help__subcmd__help_commands] )) ||
+_hteam__subcmd__board__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam board help help commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__board__subcmd__help__subcmd__list_commands] )) ||
+_hteam__subcmd__board__subcmd__help__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam board help list commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__board__subcmd__help__subcmd__switch_commands] )) ||
+_hteam__subcmd__board__subcmd__help__subcmd__switch_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam board help switch commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__board__subcmd__list_commands] )) ||
+_hteam__subcmd__board__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam board list commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__board__subcmd__switch_commands] )) ||
+_hteam__subcmd__board__subcmd__switch_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam board switch commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards_commands] )) ||
+_hteam__subcmd__cards_commands() {
+    local commands; commands=(
+'lists:Listar todas las listas' \
+'list:Ver cards de una lista' \
+'search:Buscar y filtrar cards del board (texto, responsable, prioridad, labels)' \
+'detail:Ver detalle de un card' \
+'link:Copiar el link de un card al portapapeles' \
+'create:Crear un nuevo card' \
+'move:Mover un card' \
+'close:Cerrar una task (POST close/ de la familia operation o project)' \
+'reopen:Reabrir una task (POST reopen/ de la familia operation o project)' \
+'dates:Editar fechas de inicio y/o vencimiento (board-card dates/, YYYY-MM-DD)' \
+'time:Fijar estimado y/o registrar tiempo gastado (board-card times/)' \
+'update-desc:Actualizar descripción' \
+'comment:Comentar en un card' \
+'comments:Ver comentarios de un card' \
+'labels:Ver labels disponibles de un card' \
+'update:Actualizar campos de un card (nombre, descripción, prioridad)' \
+'remind:Crear un recordatorio para un card' \
+'follow-up:Ver el seguimiento agendado de un card, si tiene uno' \
+'follow-up-complete:Completar un seguimiento agendado' \
+'follow-up-cancel:Cancelar (eliminar) un seguimiento agendado' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'hteam cards commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__close_commands] )) ||
+_hteam__subcmd__cards__subcmd__close_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards close commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__comment_commands] )) ||
+_hteam__subcmd__cards__subcmd__comment_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards comment commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__comments_commands] )) ||
+_hteam__subcmd__cards__subcmd__comments_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards comments commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__create_commands] )) ||
+_hteam__subcmd__cards__subcmd__create_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards create commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__dates_commands] )) ||
+_hteam__subcmd__cards__subcmd__dates_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards dates commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__detail_commands] )) ||
+_hteam__subcmd__cards__subcmd__detail_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards detail commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__follow-up_commands] )) ||
+_hteam__subcmd__cards__subcmd__follow-up_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards follow-up commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__follow-up-cancel_commands] )) ||
+_hteam__subcmd__cards__subcmd__follow-up-cancel_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards follow-up-cancel commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__follow-up-complete_commands] )) ||
+_hteam__subcmd__cards__subcmd__follow-up-complete_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards follow-up-complete commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help_commands] )) ||
+_hteam__subcmd__cards__subcmd__help_commands() {
+    local commands; commands=(
+'lists:Listar todas las listas' \
+'list:Ver cards de una lista' \
+'search:Buscar y filtrar cards del board (texto, responsable, prioridad, labels)' \
+'detail:Ver detalle de un card' \
+'link:Copiar el link de un card al portapapeles' \
+'create:Crear un nuevo card' \
+'move:Mover un card' \
+'close:Cerrar una task (POST close/ de la familia operation o project)' \
+'reopen:Reabrir una task (POST reopen/ de la familia operation o project)' \
+'dates:Editar fechas de inicio y/o vencimiento (board-card dates/, YYYY-MM-DD)' \
+'time:Fijar estimado y/o registrar tiempo gastado (board-card times/)' \
+'update-desc:Actualizar descripción' \
+'comment:Comentar en un card' \
+'comments:Ver comentarios de un card' \
+'labels:Ver labels disponibles de un card' \
+'update:Actualizar campos de un card (nombre, descripción, prioridad)' \
+'remind:Crear un recordatorio para un card' \
+'follow-up:Ver el seguimiento agendado de un card, si tiene uno' \
+'follow-up-complete:Completar un seguimiento agendado' \
+'follow-up-cancel:Cancelar (eliminar) un seguimiento agendado' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'hteam cards help commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__close_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__close_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help close commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__comment_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__comment_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help comment commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__comments_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__comments_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help comments commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__create_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__create_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help create commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__dates_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__dates_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help dates commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__detail_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__detail_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help detail commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__follow-up_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__follow-up_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help follow-up commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__follow-up-cancel_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__follow-up-cancel_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help follow-up-cancel commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__follow-up-complete_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__follow-up-complete_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help follow-up-complete commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__help_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help help commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__labels_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__labels_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help labels commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__link_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__link_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help link commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__list_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help list commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__lists_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__lists_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help lists commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__move_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__move_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help move commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__remind_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__remind_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help remind commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__reopen_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__reopen_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help reopen commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__search_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__search_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help search commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__time_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__time_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help time commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__update_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__update_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help update commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__update-desc_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__update-desc_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help update-desc commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__labels_commands] )) ||
+_hteam__subcmd__cards__subcmd__labels_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards labels commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__link_commands] )) ||
+_hteam__subcmd__cards__subcmd__link_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards link commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__list_commands] )) ||
+_hteam__subcmd__cards__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards list commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__lists_commands] )) ||
+_hteam__subcmd__cards__subcmd__lists_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards lists commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__move_commands] )) ||
+_hteam__subcmd__cards__subcmd__move_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards move commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__remind_commands] )) ||
+_hteam__subcmd__cards__subcmd__remind_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards remind commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__reopen_commands] )) ||
+_hteam__subcmd__cards__subcmd__reopen_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards reopen commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__search_commands] )) ||
+_hteam__subcmd__cards__subcmd__search_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards search commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__time_commands] )) ||
+_hteam__subcmd__cards__subcmd__time_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards time commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__update_commands] )) ||
+_hteam__subcmd__cards__subcmd__update_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards update commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__update-desc_commands] )) ||
+_hteam__subcmd__cards__subcmd__update-desc_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards update-desc commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__checkin_commands] )) ||
+_hteam__subcmd__checkin_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam checkin commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__closed_commands] )) ||
+_hteam__subcmd__closed_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam closed commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__completions_commands] )) ||
+_hteam__subcmd__completions_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam completions commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__daily-work_commands] )) ||
+_hteam__subcmd__daily-work_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam daily-work commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__dashboard_commands] )) ||
+_hteam__subcmd__dashboard_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam dashboard commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__doctor_commands] )) ||
+_hteam__subcmd__doctor_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam doctor commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help_commands] )) ||
+_hteam__subcmd__help_commands() {
+    local commands; commands=(
+'login:Iniciar sesión con cookies' \
+'doctor:Diagnosticar configuración, sesión y acceso al board' \
+'dashboard:Resumen personal\: working-on-it, recordatorios y objetivos semanales' \
+'board:Gestionar boards' \
+'lists:Listar listas del board' \
+'cards:Operaciones con cards' \
+'open:Ver cards abiertos' \
+'closed:Ver cards cerrados' \
+'working:Gestionar working on it' \
+'project:Gestionar proyectos' \
+'objectives:Objetivos semanales (scraping de SharePad, sólo lectura)' \
+'checkin:Registrar entrada del día (check in)' \
+'reminders:Ver recordatorios pendientes' \
+'daily-work:Ver historial de trabajo diario del equipo' \
+'users:Buscar usuarios por nombre' \
+'interactive:Modo interactivo REPL' \
+'tui:Board visual tipo kanban (TUI)' \
+'theme:Gestionar el tema de color del TUI' \
+'mcp:Iniciar servidor MCP (Model Context Protocol) sobre stdio' \
+'update:Descargar e instalar la última versión publicada de hteam-cli' \
+'completions:Generar script de autocompletado para la shell indicada' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'hteam help commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__board_commands] )) ||
+_hteam__subcmd__help__subcmd__board_commands() {
+    local commands; commands=(
+'list:Listar boards configurados' \
+'switch:Cambiar board activo' \
+'current:Mostrar board actual' \
+    )
+    _describe -t commands 'hteam help board commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__board__subcmd__current_commands] )) ||
+_hteam__subcmd__help__subcmd__board__subcmd__current_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help board current commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__board__subcmd__list_commands] )) ||
+_hteam__subcmd__help__subcmd__board__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help board list commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__board__subcmd__switch_commands] )) ||
+_hteam__subcmd__help__subcmd__board__subcmd__switch_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help board switch commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards_commands] )) ||
+_hteam__subcmd__help__subcmd__cards_commands() {
+    local commands; commands=(
+'lists:Listar todas las listas' \
+'list:Ver cards de una lista' \
+'search:Buscar y filtrar cards del board (texto, responsable, prioridad, labels)' \
+'detail:Ver detalle de un card' \
+'link:Copiar el link de un card al portapapeles' \
+'create:Crear un nuevo card' \
+'move:Mover un card' \
+'close:Cerrar una task (POST close/ de la familia operation o project)' \
+'reopen:Reabrir una task (POST reopen/ de la familia operation o project)' \
+'dates:Editar fechas de inicio y/o vencimiento (board-card dates/, YYYY-MM-DD)' \
+'time:Fijar estimado y/o registrar tiempo gastado (board-card times/)' \
+'update-desc:Actualizar descripción' \
+'comment:Comentar en un card' \
+'comments:Ver comentarios de un card' \
+'labels:Ver labels disponibles de un card' \
+'update:Actualizar campos de un card (nombre, descripción, prioridad)' \
+'remind:Crear un recordatorio para un card' \
+'follow-up:Ver el seguimiento agendado de un card, si tiene uno' \
+'follow-up-complete:Completar un seguimiento agendado' \
+'follow-up-cancel:Cancelar (eliminar) un seguimiento agendado' \
+    )
+    _describe -t commands 'hteam help cards commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__close_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__close_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards close commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__comment_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__comment_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards comment commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__comments_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__comments_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards comments commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__create_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__create_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards create commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__dates_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__dates_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards dates commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__detail_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__detail_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards detail commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__follow-up_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__follow-up_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards follow-up commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__follow-up-cancel_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__follow-up-cancel_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards follow-up-cancel commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__follow-up-complete_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__follow-up-complete_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards follow-up-complete commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__labels_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__labels_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards labels commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__link_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__link_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards link commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__list_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards list commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__lists_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__lists_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards lists commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__move_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__move_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards move commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__remind_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__remind_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards remind commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__reopen_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__reopen_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards reopen commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__search_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__search_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards search commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__time_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__time_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards time commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__update_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__update_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards update commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__update-desc_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__update-desc_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards update-desc commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__checkin_commands] )) ||
+_hteam__subcmd__help__subcmd__checkin_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help checkin commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__closed_commands] )) ||
+_hteam__subcmd__help__subcmd__closed_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help closed commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__completions_commands] )) ||
+_hteam__subcmd__help__subcmd__completions_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help completions commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__daily-work_commands] )) ||
+_hteam__subcmd__help__subcmd__daily-work_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help daily-work commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__dashboard_commands] )) ||
+_hteam__subcmd__help__subcmd__dashboard_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help dashboard commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__doctor_commands] )) ||
+_hteam__subcmd__help__subcmd__doctor_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help doctor commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__help_commands] )) ||
+_hteam__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help help commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__interactive_commands] )) ||
+_hteam__subcmd__help__subcmd__interactive_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help interactive commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__lists_commands] )) ||
+_hteam__subcmd__help__subcmd__lists_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help lists commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__login_commands] )) ||
+_hteam__subcmd__help__subcmd__login_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help login commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__mcp_commands] )) ||
+_hteam__subcmd__help__subcmd__mcp_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help mcp commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__objectives_commands] )) ||
+_hteam__subcmd__help__subcmd__objectives_commands() {
+    local commands; commands=(
+'show:Mostrar los objetivos semanales del notebook de SharePad' \
+    )
+    _describe -t commands 'hteam help objectives commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__objectives__subcmd__show_commands] )) ||
+_hteam__subcmd__help__subcmd__objectives__subcmd__show_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help objectives show commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__open_commands] )) ||
+_hteam__subcmd__help__subcmd__open_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help open commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__project_commands] )) ||
+_hteam__subcmd__help__subcmd__project_commands() {
+    local commands; commands=(
+'list:Listar proyectos (por defecto, en estado "Execution")' \
+'milestones:Ver progreso de milestones de un proyecto' \
+'tasks:Ver tasks de un proyecto' \
+'link:Copiar el link de un proyecto al portapapeles' \
+    )
+    _describe -t commands 'hteam help project commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__project__subcmd__link_commands] )) ||
+_hteam__subcmd__help__subcmd__project__subcmd__link_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help project link commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__project__subcmd__list_commands] )) ||
+_hteam__subcmd__help__subcmd__project__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help project list commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__project__subcmd__milestones_commands] )) ||
+_hteam__subcmd__help__subcmd__project__subcmd__milestones_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help project milestones commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__project__subcmd__tasks_commands] )) ||
+_hteam__subcmd__help__subcmd__project__subcmd__tasks_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help project tasks commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__reminders_commands] )) ||
+_hteam__subcmd__help__subcmd__reminders_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help reminders commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__theme_commands] )) ||
+_hteam__subcmd__help__subcmd__theme_commands() {
+    local commands; commands=(
+'list:Listar los presets embebidos y los temas personalizados, marcando el activo' \
+'set:Cambiar el tema activo del TUI (preset embebido o personalizado)' \
+    )
+    _describe -t commands 'hteam help theme commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__theme__subcmd__list_commands] )) ||
+_hteam__subcmd__help__subcmd__theme__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help theme list commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__theme__subcmd__set_commands] )) ||
+_hteam__subcmd__help__subcmd__theme__subcmd__set_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help theme set commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__tui_commands] )) ||
+_hteam__subcmd__help__subcmd__tui_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help tui commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__update_commands] )) ||
+_hteam__subcmd__help__subcmd__update_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help update commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__users_commands] )) ||
+_hteam__subcmd__help__subcmd__users_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help users commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__working_commands] )) ||
+_hteam__subcmd__help__subcmd__working_commands() {
+    local commands; commands=(
+'list:Ver cards en los que estoy trabajando' \
+'start:Empezar a trabajar en un card' \
+'stop:Dejar de trabajar en un card' \
+    )
+    _describe -t commands 'hteam help working commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__working__subcmd__list_commands] )) ||
+_hteam__subcmd__help__subcmd__working__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help working list commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__working__subcmd__start_commands] )) ||
+_hteam__subcmd__help__subcmd__working__subcmd__start_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help working start commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__working__subcmd__stop_commands] )) ||
+_hteam__subcmd__help__subcmd__working__subcmd__stop_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help working stop commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__interactive_commands] )) ||
+_hteam__subcmd__interactive_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam interactive commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__lists_commands] )) ||
+_hteam__subcmd__lists_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam lists commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__login_commands] )) ||
+_hteam__subcmd__login_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam login commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__mcp_commands] )) ||
+_hteam__subcmd__mcp_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam mcp commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__objectives_commands] )) ||
+_hteam__subcmd__objectives_commands() {
+    local commands; commands=(
+'show:Mostrar los objetivos semanales del notebook de SharePad' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'hteam objectives commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__objectives__subcmd__help_commands] )) ||
+_hteam__subcmd__objectives__subcmd__help_commands() {
+    local commands; commands=(
+'show:Mostrar los objetivos semanales del notebook de SharePad' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'hteam objectives help commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__objectives__subcmd__help__subcmd__help_commands] )) ||
+_hteam__subcmd__objectives__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam objectives help help commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__objectives__subcmd__help__subcmd__show_commands] )) ||
+_hteam__subcmd__objectives__subcmd__help__subcmd__show_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam objectives help show commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__objectives__subcmd__show_commands] )) ||
+_hteam__subcmd__objectives__subcmd__show_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam objectives show commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__open_commands] )) ||
+_hteam__subcmd__open_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam open commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__project_commands] )) ||
+_hteam__subcmd__project_commands() {
+    local commands; commands=(
+'list:Listar proyectos (por defecto, en estado "Execution")' \
+'milestones:Ver progreso de milestones de un proyecto' \
+'tasks:Ver tasks de un proyecto' \
+'link:Copiar el link de un proyecto al portapapeles' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'hteam project commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__project__subcmd__help_commands] )) ||
+_hteam__subcmd__project__subcmd__help_commands() {
+    local commands; commands=(
+'list:Listar proyectos (por defecto, en estado "Execution")' \
+'milestones:Ver progreso de milestones de un proyecto' \
+'tasks:Ver tasks de un proyecto' \
+'link:Copiar el link de un proyecto al portapapeles' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'hteam project help commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__project__subcmd__help__subcmd__help_commands] )) ||
+_hteam__subcmd__project__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam project help help commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__project__subcmd__help__subcmd__link_commands] )) ||
+_hteam__subcmd__project__subcmd__help__subcmd__link_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam project help link commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__project__subcmd__help__subcmd__list_commands] )) ||
+_hteam__subcmd__project__subcmd__help__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam project help list commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__project__subcmd__help__subcmd__milestones_commands] )) ||
+_hteam__subcmd__project__subcmd__help__subcmd__milestones_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam project help milestones commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__project__subcmd__help__subcmd__tasks_commands] )) ||
+_hteam__subcmd__project__subcmd__help__subcmd__tasks_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam project help tasks commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__project__subcmd__link_commands] )) ||
+_hteam__subcmd__project__subcmd__link_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam project link commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__project__subcmd__list_commands] )) ||
+_hteam__subcmd__project__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam project list commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__project__subcmd__milestones_commands] )) ||
+_hteam__subcmd__project__subcmd__milestones_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam project milestones commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__project__subcmd__tasks_commands] )) ||
+_hteam__subcmd__project__subcmd__tasks_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam project tasks commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__reminders_commands] )) ||
+_hteam__subcmd__reminders_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam reminders commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__theme_commands] )) ||
+_hteam__subcmd__theme_commands() {
+    local commands; commands=(
+'list:Listar los presets embebidos y los temas personalizados, marcando el activo' \
+'set:Cambiar el tema activo del TUI (preset embebido o personalizado)' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'hteam theme commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__theme__subcmd__help_commands] )) ||
+_hteam__subcmd__theme__subcmd__help_commands() {
+    local commands; commands=(
+'list:Listar los presets embebidos y los temas personalizados, marcando el activo' \
+'set:Cambiar el tema activo del TUI (preset embebido o personalizado)' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'hteam theme help commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__theme__subcmd__help__subcmd__help_commands] )) ||
+_hteam__subcmd__theme__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam theme help help commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__theme__subcmd__help__subcmd__list_commands] )) ||
+_hteam__subcmd__theme__subcmd__help__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam theme help list commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__theme__subcmd__help__subcmd__set_commands] )) ||
+_hteam__subcmd__theme__subcmd__help__subcmd__set_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam theme help set commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__theme__subcmd__list_commands] )) ||
+_hteam__subcmd__theme__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam theme list commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__theme__subcmd__set_commands] )) ||
+_hteam__subcmd__theme__subcmd__set_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam theme set commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__tui_commands] )) ||
+_hteam__subcmd__tui_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam tui commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__update_commands] )) ||
+_hteam__subcmd__update_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam update commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__users_commands] )) ||
+_hteam__subcmd__users_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam users commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__working_commands] )) ||
+_hteam__subcmd__working_commands() {
+    local commands; commands=(
+'list:Ver cards en los que estoy trabajando' \
+'start:Empezar a trabajar en un card' \
+'stop:Dejar de trabajar en un card' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'hteam working commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__working__subcmd__help_commands] )) ||
+_hteam__subcmd__working__subcmd__help_commands() {
+    local commands; commands=(
+'list:Ver cards en los que estoy trabajando' \
+'start:Empezar a trabajar en un card' \
+'stop:Dejar de trabajar en un card' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'hteam working help commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__working__subcmd__help__subcmd__help_commands] )) ||
+_hteam__subcmd__working__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam working help help commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__working__subcmd__help__subcmd__list_commands] )) ||
+_hteam__subcmd__working__subcmd__help__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam working help list commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__working__subcmd__help__subcmd__start_commands] )) ||
+_hteam__subcmd__working__subcmd__help__subcmd__start_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam working help start commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__working__subcmd__help__subcmd__stop_commands] )) ||
+_hteam__subcmd__working__subcmd__help__subcmd__stop_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam working help stop commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__working__subcmd__list_commands] )) ||
+_hteam__subcmd__working__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam working list commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__working__subcmd__start_commands] )) ||
+_hteam__subcmd__working__subcmd__start_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam working start commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__working__subcmd__stop_commands] )) ||
+_hteam__subcmd__working__subcmd__stop_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam working stop commands' commands "$@"
+}
+
+if [ "$funcstack[1]" = "_hteam" ]; then
+    _hteam "$@"
+else
+    compdef _hteam hteam
+fi
