@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- *(readme)* Count 31 MCP tools after dashboard
+- *(readme)* Document clap commands and snapshot completions
+- *(cli)* Merge dashboard into completions and README
+
+
+### Features
+- *(cli)* Add personal dashboard command
+
+## [0.11.0] - 2026-10-22
+
 ### Bug Fixes
 - *(login)* Validate session without hardcoded board
 - *(config)* Write credentials atomically with private permissions
@@ -17,14 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 - *(openwiki)* Refresh login probe and CLI session docs
-- *(readme)* Count 31 MCP tools after dashboard
-- *(readme)* Document clap commands and snapshot completions
-- *(cli)* Merge dashboard into completions and README
 
 
 ### Features
 - *(cli)* Add hteam doctor for config and session checks
-- *(cli)* Add personal dashboard command
 
 ## [0.10.0] - 2026-10-14
 
