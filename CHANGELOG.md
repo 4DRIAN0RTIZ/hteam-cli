@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 - *(openwiki)* Refresh login probe and CLI session docs
 - *(readme)* Count 31 MCP tools after dashboard
+- *(readme)* Document clap commands and snapshot completions
+- *(cli)* Merge dashboard into completions and README
 
 
 ### Features
