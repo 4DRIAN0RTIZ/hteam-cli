@@ -40,7 +40,7 @@ complete -c hteam -n "__fish_hteam_needs_command" -f -a "working" -d 'Gestionar 
 complete -c hteam -n "__fish_hteam_needs_command" -f -a "project" -d 'Gestionar proyectos'
 complete -c hteam -n "__fish_hteam_needs_command" -f -a "objectives" -d 'Objetivos semanales (scraping de SharePad, sólo lectura)'
 complete -c hteam -n "__fish_hteam_needs_command" -f -a "checkin" -d 'Registrar entrada del día (check in)'
-complete -c hteam -n "__fish_hteam_needs_command" -f -a "reminders" -d 'Ver recordatorios pendientes'
+complete -c hteam -n "__fish_hteam_needs_command" -f -a "reminders" -d 'Ver y gestionar reminders'
 complete -c hteam -n "__fish_hteam_needs_command" -f -a "daily-work" -d 'Ver historial de trabajo diario del equipo'
 complete -c hteam -n "__fish_hteam_needs_command" -f -a "users" -d 'Buscar usuarios por nombre'
 complete -c hteam -n "__fish_hteam_needs_command" -f -a "interactive" -d 'Modo interactivo REPL'
@@ -283,9 +283,16 @@ complete -c hteam -n "__fish_hteam_using_subcommand objectives; and __fish_seen_
 complete -c hteam -n "__fish_hteam_using_subcommand checkin" -s b -l board -d 'ID del board a usar' -r
 complete -c hteam -n "__fish_hteam_using_subcommand checkin" -l json -d 'Mostrar salida en formato JSON'
 complete -c hteam -n "__fish_hteam_using_subcommand checkin" -s h -l help -d 'Print help'
-complete -c hteam -n "__fish_hteam_using_subcommand reminders" -s b -l board -d 'ID del board a usar' -r
-complete -c hteam -n "__fish_hteam_using_subcommand reminders" -l json -d 'Mostrar salida en formato JSON'
-complete -c hteam -n "__fish_hteam_using_subcommand reminders" -s h -l help -d 'Print help'
+complete -c hteam -n "__fish_hteam_using_subcommand reminders; and not __fish_seen_subcommand_from cancel help" -s b -l board -d 'ID del board a usar' -r
+complete -c hteam -n "__fish_hteam_using_subcommand reminders; and not __fish_seen_subcommand_from cancel help" -l json -d 'Mostrar salida en formato JSON'
+complete -c hteam -n "__fish_hteam_using_subcommand reminders; and not __fish_seen_subcommand_from cancel help" -s h -l help -d 'Print help'
+complete -c hteam -n "__fish_hteam_using_subcommand reminders; and not __fish_seen_subcommand_from cancel help" -f -a "cancel" -d 'Cancelar un reminder por su ID'
+complete -c hteam -n "__fish_hteam_using_subcommand reminders; and not __fish_seen_subcommand_from cancel help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c hteam -n "__fish_hteam_using_subcommand reminders; and __fish_seen_subcommand_from cancel" -s b -l board -d 'ID del board a usar' -r
+complete -c hteam -n "__fish_hteam_using_subcommand reminders; and __fish_seen_subcommand_from cancel" -l json -d 'Mostrar salida en formato JSON'
+complete -c hteam -n "__fish_hteam_using_subcommand reminders; and __fish_seen_subcommand_from cancel" -s h -l help -d 'Print help'
+complete -c hteam -n "__fish_hteam_using_subcommand reminders; and __fish_seen_subcommand_from help" -f -a "cancel" -d 'Cancelar un reminder por su ID'
+complete -c hteam -n "__fish_hteam_using_subcommand reminders; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c hteam -n "__fish_hteam_using_subcommand daily-work" -s u -l user -d 'Filtrar por usuario (username)' -r
 complete -c hteam -n "__fish_hteam_using_subcommand daily-work" -s t -l type -d 'Tipo de actividad: time, tracking, objectives' -r
 complete -c hteam -n "__fish_hteam_using_subcommand daily-work" -s r -l range -d 'Rango de tiempo: today, this_week, this_month' -r
@@ -337,7 +344,7 @@ complete -c hteam -n "__fish_hteam_using_subcommand help; and not __fish_seen_su
 complete -c hteam -n "__fish_hteam_using_subcommand help; and not __fish_seen_subcommand_from login doctor dashboard board lists cards open closed working project objectives checkin reminders daily-work users interactive tui theme mcp update completions help" -f -a "project" -d 'Gestionar proyectos'
 complete -c hteam -n "__fish_hteam_using_subcommand help; and not __fish_seen_subcommand_from login doctor dashboard board lists cards open closed working project objectives checkin reminders daily-work users interactive tui theme mcp update completions help" -f -a "objectives" -d 'Objetivos semanales (scraping de SharePad, sólo lectura)'
 complete -c hteam -n "__fish_hteam_using_subcommand help; and not __fish_seen_subcommand_from login doctor dashboard board lists cards open closed working project objectives checkin reminders daily-work users interactive tui theme mcp update completions help" -f -a "checkin" -d 'Registrar entrada del día (check in)'
-complete -c hteam -n "__fish_hteam_using_subcommand help; and not __fish_seen_subcommand_from login doctor dashboard board lists cards open closed working project objectives checkin reminders daily-work users interactive tui theme mcp update completions help" -f -a "reminders" -d 'Ver recordatorios pendientes'
+complete -c hteam -n "__fish_hteam_using_subcommand help; and not __fish_seen_subcommand_from login doctor dashboard board lists cards open closed working project objectives checkin reminders daily-work users interactive tui theme mcp update completions help" -f -a "reminders" -d 'Ver y gestionar reminders'
 complete -c hteam -n "__fish_hteam_using_subcommand help; and not __fish_seen_subcommand_from login doctor dashboard board lists cards open closed working project objectives checkin reminders daily-work users interactive tui theme mcp update completions help" -f -a "daily-work" -d 'Ver historial de trabajo diario del equipo'
 complete -c hteam -n "__fish_hteam_using_subcommand help; and not __fish_seen_subcommand_from login doctor dashboard board lists cards open closed working project objectives checkin reminders daily-work users interactive tui theme mcp update completions help" -f -a "users" -d 'Buscar usuarios por nombre'
 complete -c hteam -n "__fish_hteam_using_subcommand help; and not __fish_seen_subcommand_from login doctor dashboard board lists cards open closed working project objectives checkin reminders daily-work users interactive tui theme mcp update completions help" -f -a "interactive" -d 'Modo interactivo REPL'
@@ -378,5 +385,6 @@ complete -c hteam -n "__fish_hteam_using_subcommand help; and __fish_seen_subcom
 complete -c hteam -n "__fish_hteam_using_subcommand help; and __fish_seen_subcommand_from project" -f -a "tasks" -d 'Ver tasks de un proyecto'
 complete -c hteam -n "__fish_hteam_using_subcommand help; and __fish_seen_subcommand_from project" -f -a "link" -d 'Copiar el link de un proyecto al portapapeles'
 complete -c hteam -n "__fish_hteam_using_subcommand help; and __fish_seen_subcommand_from objectives" -f -a "show" -d 'Mostrar los objetivos semanales del notebook de SharePad'
+complete -c hteam -n "__fish_hteam_using_subcommand help; and __fish_seen_subcommand_from reminders" -f -a "cancel" -d 'Cancelar un reminder por su ID'
 complete -c hteam -n "__fish_hteam_using_subcommand help; and __fish_seen_subcommand_from theme" -f -a "list" -d 'Listar los presets embebidos y los temas personalizados, marcando el activo'
 complete -c hteam -n "__fish_hteam_using_subcommand help; and __fish_seen_subcommand_from theme" -f -a "set" -d 'Cambiar el tema activo del TUI (preset embebido o personalizado)'

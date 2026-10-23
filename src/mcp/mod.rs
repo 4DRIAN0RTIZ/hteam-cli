@@ -181,6 +181,12 @@ struct FollowUpIdParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+struct ReminderIdParams {
+    #[schemars(description = "ID del reminder a cancelar")]
+    reminder_id: u64,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 struct WorkingStopParams {
     #[schemars(description = "ID del registro working-on-it")]
     working_id: u64,
@@ -625,6 +631,17 @@ impl HteamMcpServer {
             .await
             .map_err(err)?;
         ok(items)
+    }
+
+    #[tool(description = "Cancelar un reminder por su ID")]
+    async fn reminders_cancel(
+        &self,
+        Parameters(ReminderIdParams { reminder_id }): Parameters<ReminderIdParams>,
+    ) -> Result<CallToolResult, McpError> {
+        operations::reminders::cancel(&self.client, reminder_id)
+            .await
+            .map_err(err)?;
+        ok(serde_json::json!({"success": true, "reminder_id": reminder_id}))
     }
 
     #[tool(

@@ -211,6 +211,7 @@ pub fn move_active_card(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs, de
 pub fn open_reminders(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     app.show_reminders = true;
     app.reminders_scroll.reset();
+    app.selected_reminder = None;
     let id = app.requests.bump_reminders();
     app.begin_busy("Cargando reminders...");
     jobs.spawn(async move {
@@ -223,6 +224,51 @@ pub fn open_reminders(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
 
 pub fn close_reminders(app: &mut App) {
     app.show_reminders = false;
+    app.selected_reminder = None;
+}
+
+pub fn select_reminder(app: &mut App, delta: isize) {
+    if app.reminders.is_empty() {
+        app.selected_reminder = None;
+        return;
+    }
+    let current = app
+        .selected_reminder
+        .map(|i| i as isize)
+        .unwrap_or_else(|| {
+            if delta >= 0 {
+                -1
+            } else {
+                app.reminders.len() as isize
+            }
+        });
+    let next = (current + delta).clamp(0, app.reminders.len() as isize - 1);
+    app.selected_reminder = Some(next as usize);
+}
+
+pub fn cancel_selected_reminder(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    let Some(index) = app.selected_reminder else {
+        return;
+    };
+    let Some(reminder) = app.reminders.get(index) else {
+        return;
+    };
+    let reminder_id = reminder.id;
+    let id = app.requests.bump_reminders();
+    app.begin_busy("Cancelando reminder...");
+    jobs.spawn(async move {
+        let result = match operations::reminders::cancel(&client, reminder_id).await {
+            Ok(()) => operations::reminders::list(&client)
+                .await
+                .map_err(|e| e.to_string()),
+            Err(e) => Err(e.to_string()),
+        };
+        JobOutcome::ReminderCanceled {
+            id,
+            reminder_id,
+            result,
+        }
+    });
 }
 
 pub fn open_weekly_objectives(app: &mut App, jobs: &Jobs, force: bool) {
@@ -1759,7 +1805,7 @@ pub fn toggle_projects_focus(app: &mut App) {
 mod tests {
     use super::*;
     use crate::config::WorkingHoursConfig;
-    use crate::models::Comment;
+    use crate::models::{Comment, Reminder};
     use crate::tui::theme::Theme;
     use std::collections::HashSet;
     use std::time::Duration;
@@ -1806,6 +1852,32 @@ mod tests {
         assert_eq!(app.comments_selected, Some(0));
         assert_eq!(app.comment_reply_to, Some(12));
         assert!(app.composing_comment);
+    }
+
+    #[test]
+    fn selecting_reminder_tracks_selected_index() {
+        let mut app = test_app();
+        app.reminders = vec![
+            Reminder {
+                id: 5,
+                object_id: 10,
+                reminder_type: Some(1),
+                reminder_date: None,
+                content_object: None,
+            },
+            Reminder {
+                id: 8,
+                object_id: 12,
+                reminder_type: Some(1),
+                reminder_date: None,
+                content_object: None,
+            },
+        ];
+
+        select_reminder(&mut app, 1);
+        assert_eq!(app.selected_reminder, Some(0));
+        select_reminder(&mut app, 1);
+        assert_eq!(app.selected_reminder, Some(1));
     }
 
     #[test]

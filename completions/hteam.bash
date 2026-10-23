@@ -382,6 +382,9 @@ _hteam() {
             hteam__subcmd__help__subcmd__project,tasks)
                 cmd="hteam__subcmd__help__subcmd__project__subcmd__tasks"
                 ;;
+            hteam__subcmd__help__subcmd__reminders,cancel)
+                cmd="hteam__subcmd__help__subcmd__reminders__subcmd__cancel"
+                ;;
             hteam__subcmd__help__subcmd__theme,list)
                 cmd="hteam__subcmd__help__subcmd__theme__subcmd__list"
                 ;;
@@ -438,6 +441,18 @@ _hteam() {
                 ;;
             hteam__subcmd__project__subcmd__help,tasks)
                 cmd="hteam__subcmd__project__subcmd__help__subcmd__tasks"
+                ;;
+            hteam__subcmd__reminders,cancel)
+                cmd="hteam__subcmd__reminders__subcmd__cancel"
+                ;;
+            hteam__subcmd__reminders,help)
+                cmd="hteam__subcmd__reminders__subcmd__help"
+                ;;
+            hteam__subcmd__reminders__subcmd__help,cancel)
+                cmd="hteam__subcmd__reminders__subcmd__help__subcmd__cancel"
+                ;;
+            hteam__subcmd__reminders__subcmd__help,help)
+                cmd="hteam__subcmd__reminders__subcmd__help__subcmd__help"
                 ;;
             hteam__subcmd__theme,help)
                 cmd="hteam__subcmd__theme__subcmd__help"
@@ -2372,8 +2387,22 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__help__subcmd__reminders)
-            opts=""
+            opts="cancel"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__help__subcmd__reminders__subcmd__cancel)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
@@ -2940,7 +2969,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__reminders)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --help cancel help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2954,6 +2983,70 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__reminders__subcmd__cancel)
+            opts="-b -h --json --board --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --board)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__reminders__subcmd__help)
+            opts="cancel help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__reminders__subcmd__help__subcmd__cancel)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__reminders__subcmd__help__subcmd__help)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
                 *)
                     COMPREPLY=()
                     ;;

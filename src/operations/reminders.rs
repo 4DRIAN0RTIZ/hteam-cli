@@ -11,6 +11,10 @@ pub async fn create(client: &HteamClient, card_id: u64) -> Result<()> {
     client.set_reminder(card_id).await
 }
 
+pub async fn cancel(client: &HteamClient, reminder_id: u64) -> Result<()> {
+    client.cancel_reminder(reminder_id).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -41,6 +45,31 @@ mod tests {
 
         assert_eq!(reminders.len(), 1);
         assert_eq!(reminders[0].object_id, 42);
+    }
+
+    #[tokio::test]
+    async fn test_cancel_patches_reminder() {
+        let mut server = mockito::Server::new_async().await;
+        let _detail = server
+            .mock("GET", "/tr/reminders/123/")
+            .with_status(200)
+            .with_body(r#"{"id":123,"user":{"username":"ana"},"customer":21,"object_id":42,"content_type":99,"canceled":null}"#)
+            .create_async()
+            .await;
+        let _m = server
+            .mock("PUT", "/tr/reminders/123/")
+            .match_body(mockito::Matcher::Json(serde_json::json!({
+                "canceled": true,
+                "object_id": 42,
+                "content_type": 99
+            })))
+            .with_status(200)
+            .create_async()
+            .await;
+
+        cancel(&client(&server.url()), 123)
+            .await
+            .expect("cancel reminder");
     }
 
     #[tokio::test]

@@ -120,6 +120,7 @@ pub struct App {
     status_set_at: Option<Instant>,
     /// Pending reminders, loaded when the 'R' popup is opened.
     pub reminders: Vec<Reminder>,
+    pub selected_reminder: Option<usize>,
     pub show_reminders: bool,
     /// True while the description popup ('Enter') is open, editing the
     /// currently selected card's description inline.
@@ -351,6 +352,7 @@ impl App {
             status: None,
             status_set_at: None,
             reminders: Vec::new(),
+            selected_reminder: None,
             show_reminders: false,
             show_description: false,
             description_input: TextInput::default(),

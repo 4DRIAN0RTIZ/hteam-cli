@@ -6,7 +6,7 @@ CLI en Rust para gestionar boards de Hteam, con REPL, TUI tipo kanban y servidor
 
 - Autenticación con cookies de sesión (`sessionid` + `csrftoken`)
 - REPL interactivo con historial (`~/.hteam_history`)
-- Servidor MCP sobre stdio: 31 tools
+- Servidor MCP sobre stdio: 32 tools
 - Multi-board, temas del TUI y self-update
 - `--json` en la mayoría de los comandos (ver abajo: no es universal)
 
@@ -163,6 +163,7 @@ En otras plataformas falla con un error claro. `--board` no aplica.
 ```bash
 hteam users "juan"
 hteam reminders
+hteam reminders cancel 123                # cancelar por ID del reminder
 hteam dashboard                              # working-on-it + recordatorios + objetivos
 hteam checkin
 hteam daily-work
@@ -203,7 +204,7 @@ cp completions/hteam.fish ~/.config/fish/completions/hteam.fish
 
 ## MCP
 
-31 tools, una por `#[tool]` en `src/mcp/mod.rs`:
+32 tools, una por `#[tool]` en `src/mcp/mod.rs`:
 
 | Herramienta | Descripción |
 |---|---|
@@ -235,6 +236,7 @@ cp completions/hteam.fish ~/.config/fish/completions/hteam.fish
 | `project_tasks` | Tasks de un proyecto |
 | `users_search` | Buscar usuarios |
 | `reminders` | Recordatorios pendientes |
+| `reminders_cancel` | Cancelar un reminder por ID |
 | `dashboard` | Resumen personal (working, reminders, objetivos) |
 | `check_in` | Check in |
 | `daily_work` | Historial de trabajo diario |

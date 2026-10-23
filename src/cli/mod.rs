@@ -79,8 +79,11 @@ pub enum Commands {
     /// Registrar entrada del día (check in)
     Checkin,
 
-    /// Ver recordatorios pendientes
-    Reminders,
+    /// Ver y gestionar reminders
+    Reminders {
+        #[command(subcommand)]
+        command: Option<ReminderCommands>,
+    },
 
     /// Ver historial de trabajo diario del equipo
     DailyWork(DailyWorkArgs),
@@ -109,6 +112,12 @@ pub enum Commands {
         /// Shell destino: bash, zsh, fish, elvish, powershell
         shell: Shell,
     },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ReminderCommands {
+    /// Cancelar un reminder por su ID
+    Cancel { reminder_id: u64 },
 }
 
 #[derive(clap::Args, Debug)]
@@ -167,7 +176,7 @@ pub async fn run() -> Result<()> {
         Commands::Project(cmd) => project::execute(cmd, cli.json).await,
         Commands::Objectives(cmd) => objectives::execute(cmd, cli.json).await,
         Commands::Checkin => checkin(cli.json).await,
-        Commands::Reminders => reminders(cli.json).await,
+        Commands::Reminders { command } => reminders(command, cli.json).await,
         Commands::DailyWork(args) => daily_work(args, cli.json).await,
         Commands::Users(args) => search_users(args, cli.json).await,
         Commands::Interactive => interactive::run().await,
@@ -260,11 +269,21 @@ async fn checkin(json: bool) -> Result<()> {
     Ok(())
 }
 
-async fn reminders(json: bool) -> Result<()> {
+async fn reminders(command: Option<ReminderCommands>, json: bool) -> Result<()> {
     use crate::operations::{self, Session};
     use tabled::{settings::Style, Table};
 
     let session = Session::open().await?;
+    if let Some(ReminderCommands::Cancel { reminder_id }) = command {
+        operations::reminders::cancel(&session.client, reminder_id).await?;
+        if json {
+            println!("{{\"success\": true, \"reminder_id\": {reminder_id}}}");
+        } else {
+            println!("Reminder {reminder_id} cancelado.");
+        }
+        return Ok(());
+    }
+
     let items = operations::reminders::list(&session.client).await?;
 
     if json {
@@ -358,6 +377,24 @@ mod tests {
     fn committed(path: &str) -> String {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
         std::fs::read_to_string(root.join(path)).unwrap_or_else(|e| panic!("missing {path}: {e}"))
+    }
+
+    #[test]
+    fn reminders_command_preserves_list_and_parses_cancel() {
+        let list = Cli::try_parse_from(["hteam", "reminders"]).expect("list reminders");
+        assert!(matches!(
+            list.command,
+            Commands::Reminders { command: None }
+        ));
+
+        let cancel =
+            Cli::try_parse_from(["hteam", "reminders", "cancel", "123"]).expect("cancel reminder");
+        assert!(matches!(
+            cancel.command,
+            Commands::Reminders {
+                command: Some(ReminderCommands::Cancel { reminder_id: 123 })
+            }
+        ));
     }
 
     #[test]
