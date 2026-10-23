@@ -17,10 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 - *(openwiki)* Refresh login probe and CLI session docs
+- *(readme)* Count 31 MCP tools after dashboard
 
 
 ### Features
 - *(cli)* Add hteam doctor for config and session checks
+- *(cli)* Add personal dashboard command
 
 ## [0.10.0] - 2026-10-14
 
