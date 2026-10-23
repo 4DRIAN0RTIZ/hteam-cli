@@ -416,8 +416,15 @@ async fn run_loop(
                 match key.code {
                     KeyCode::Esc | KeyCode::Char('q') => events::close_comments(app),
                     KeyCode::Char('a') => events::start_composing_comment(app),
-                    KeyCode::Char('j') | KeyCode::Down => app.comments_scroll.by(1),
-                    KeyCode::Char('k') | KeyCode::Up => app.comments_scroll.by(-1),
+                    KeyCode::Char('r') => events::start_reply_comment(app),
+                    KeyCode::Char('j') | KeyCode::Down => {
+                        events::select_comment(app, 1);
+                        app.comments_scroll.by(1);
+                    }
+                    KeyCode::Char('k') | KeyCode::Up => {
+                        events::select_comment(app, -1);
+                        app.comments_scroll.by(-1);
+                    }
                     KeyCode::Char('v') if app.current_follow_up.is_some() => {
                         events::complete_current_follow_up(client.clone(), app, &jobs);
                     }

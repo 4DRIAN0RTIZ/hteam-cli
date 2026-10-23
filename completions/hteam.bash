@@ -724,7 +724,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__comment)
-            opts="-t -b -f -d -h --text --board --follow --date --json --help"
+            opts="-t -b -f -d -h --text --board --follow --date --reply-to --json --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -751,6 +751,10 @@ _hteam() {
                     return 0
                     ;;
                 -d)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --reply-to)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;

@@ -187,6 +187,10 @@ pub struct CommentArgs {
     /// Fecha del comentario, formato "YYYY-MM-DD HH:MM" en hora local (opcional; por defecto ahora)
     #[arg(short, long)]
     pub date: Option<String>,
+
+    /// ID del comentario al que responder
+    #[arg(long)]
+    pub reply_to: Option<u64>,
 }
 
 #[derive(Args, Debug)]
@@ -680,6 +684,7 @@ async fn post_comment(args: CommentArgs, board: Option<u64>, json: bool) -> Resu
         board,
         args.follow,
         args.date.as_deref(),
+        args.reply_to,
     )
     .await?;
 

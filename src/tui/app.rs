@@ -148,6 +148,8 @@ pub struct App {
     pub detail_edit_input: TextInput,
     /// Comments of the card that was selected when 'C' was pressed.
     pub comments: Vec<Comment>,
+    pub comments_selected: Option<usize>,
+    pub comment_reply_to: Option<u64>,
     pub show_comments: bool,
     /// Seguimiento agendado de la card que está detrás del popup de
     /// comentarios (`None` si no tiene uno agendado). Se scrapea aparte
@@ -368,6 +370,8 @@ impl App {
             editing_detail_field: false,
             detail_edit_input: TextInput::default(),
             comments: Vec::new(),
+            comments_selected: None,
+            comment_reply_to: None,
             show_comments: false,
             current_follow_up: None,
             composing_comment: false,

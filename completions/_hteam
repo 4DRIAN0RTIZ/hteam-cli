@@ -319,6 +319,7 @@ _arguments "${_arguments_options[@]}" : \
 '--board=[Board number (si no está configurado)]:BOARD:_default' \
 '-d+[Fecha del comentario, formato "YYYY-MM-DD HH\:MM" en hora local (opcional; por defecto ahora)]:DATE:_default' \
 '--date=[Fecha del comentario, formato "YYYY-MM-DD HH\:MM" en hora local (opcional; por defecto ahora)]:DATE:_default' \
+'--reply-to=[ID del comentario al que responder]:REPLY_TO:_default' \
 '-f[Marcar el comentario para seguimiento (recibir notificaciones de respuestas)]' \
 '--follow[Marcar el comentario para seguimiento (recibir notificaciones de respuestas)]' \
 '--json[Mostrar salida en formato JSON]' \

@@ -165,6 +165,7 @@ complete -c hteam -n "__fish_hteam_using_subcommand cards; and __fish_seen_subco
 complete -c hteam -n "__fish_hteam_using_subcommand cards; and __fish_seen_subcommand_from comment" -s t -l text -d 'Comentario' -r
 complete -c hteam -n "__fish_hteam_using_subcommand cards; and __fish_seen_subcommand_from comment" -s b -l board -d 'Board number (si no está configurado)' -r
 complete -c hteam -n "__fish_hteam_using_subcommand cards; and __fish_seen_subcommand_from comment" -s d -l date -d 'Fecha del comentario, formato "YYYY-MM-DD HH:MM" en hora local (opcional; por defecto ahora)' -r
+complete -c hteam -n "__fish_hteam_using_subcommand cards; and __fish_seen_subcommand_from comment" -l reply-to -d 'ID del comentario al que responder' -r
 complete -c hteam -n "__fish_hteam_using_subcommand cards; and __fish_seen_subcommand_from comment" -s f -l follow -d 'Marcar el comentario para seguimiento (recibir notificaciones de respuestas)'
 complete -c hteam -n "__fish_hteam_using_subcommand cards; and __fish_seen_subcommand_from comment" -l json -d 'Mostrar salida en formato JSON'
 complete -c hteam -n "__fish_hteam_using_subcommand cards; and __fish_seen_subcommand_from comment" -s h -l help -d 'Print help'
