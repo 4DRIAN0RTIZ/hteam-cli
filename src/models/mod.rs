@@ -156,10 +156,12 @@ pub struct CardDetail {
     pub created_at: Option<String>,
     #[serde(default)]
     pub updated_at: Option<String>,
-    #[serde(default)]
+    /// Operation detail often sends a human string; project detail may send
+    /// seconds as a number. Both become a display string here.
+    #[serde(default, deserialize_with = "deserialize_opt_stringish")]
     pub time_estimated: Option<String>,
     /// Present on some board-card payloads after a times POST; not always on detail.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_opt_stringish")]
     pub time_spend: Option<String>,
     #[serde(default)]
     pub start_date: Option<String>,
@@ -177,6 +179,12 @@ pub struct CardDetail {
     /// Used to pick the close/reopen API family.
     #[serde(default)]
     pub title_url: Option<String>,
+    /// Project-task milestone id (absent on operation tasks).
+    #[serde(default)]
+    pub milestone: Option<u64>,
+    /// Project-task milestone display name.
+    #[serde(default)]
+    pub milestone_name: Option<String>,
 }
 
 /// Response from `POST .../card/{id}/times/`.
@@ -194,6 +202,28 @@ pub struct CardTimesResult {
     pub estimated_time: Option<String>,
     #[serde(default)]
     pub time_spend: Option<String>,
+}
+
+/// Accept string or number (or null) as `Option<String>` for mixed Hteam payloads.
+fn deserialize_opt_stringish<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::Deserialize;
+
+    let value = Option::<serde_json::Value>::deserialize(deserializer)?;
+    Ok(match value {
+        None | Some(serde_json::Value::Null) => None,
+        Some(serde_json::Value::String(s)) => {
+            if s.is_empty() {
+                None
+            } else {
+                Some(s)
+            }
+        }
+        Some(serde_json::Value::Number(n)) => Some(n.to_string()),
+        Some(other) => Some(other.to_string()),
+    })
 }
 
 fn deserialize_labels<'de, D>(deserializer: D) -> Result<Vec<Label>, D::Error>

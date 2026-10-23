@@ -30,16 +30,24 @@ fn err(e: anyhow::Error) -> McpError {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 struct BoardParam {
-    #[schemars(description = "ID del board (usa el configurado por defecto si se omite)")]
+    #[schemars(
+        description = "ID de operación o proyecto (usa el board configurado si se omite; con family=project es obligatorio)"
+    )]
     board: Option<u64>,
+    #[schemars(
+        description = "Familia del tablero: operation (default) o project. project usa /project-new/care/projects/{id}/…"
+    )]
+    family: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 struct ListCardsParams {
     #[schemars(description = "ID de la lista")]
     list_id: u64,
-    #[schemars(description = "ID del board (opcional)")]
+    #[schemars(description = "ID de operación o proyecto (opcional)")]
     board: Option<u64>,
+    #[schemars(description = "Familia del tablero: operation (default) o project")]
+    family: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -54,8 +62,19 @@ struct SearchCardsParams {
     labels: Option<Vec<String>>,
     #[schemars(description = "Limitar a una lista del board (opcional)")]
     list_id: Option<u64>,
-    #[schemars(description = "ID del board (opcional; usa el configurado si se omite)")]
+    #[schemars(
+        description = "ID de operación o proyecto (opcional; usa el configurado si se omite)"
+    )]
     board: Option<u64>,
+    #[schemars(description = "Familia del tablero: operation (default) o project")]
+    family: Option<String>,
+}
+
+fn mcp_family(family: Option<&str>) -> Result<crate::client::TaskFamily, McpError> {
+    match family {
+        None => Ok(crate::client::TaskFamily::Operation),
+        Some(s) => crate::client::TaskFamily::parse(s).map_err(err),
+    }
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -247,12 +266,15 @@ impl HteamMcpServer {
 impl HteamMcpServer {
     // ── boards / listas ──────────────────────────────────────────────────
 
-    #[tool(description = "Obtener las listas del board activo")]
+    #[tool(
+        description = "Obtener las listas del board activo (operation) o de un proyecto (family=project + board=project_id)"
+    )]
     async fn lists(
         &self,
-        Parameters(BoardParam { board }): Parameters<BoardParam>,
+        Parameters(BoardParam { board, family }): Parameters<BoardParam>,
     ) -> Result<CallToolResult, McpError> {
-        let lists = operations::cards::list_lists(&self.client, board)
+        let family = mcp_family(family.as_deref())?;
+        let lists = operations::cards::list_lists_for(&self.client, board, family)
             .await
             .map_err(err)?;
         ok(lists)
@@ -260,19 +282,24 @@ impl HteamMcpServer {
 
     // ── cards ────────────────────────────────────────────────────────────
 
-    #[tool(description = "Obtener cards de una lista específica")]
+    #[tool(description = "Obtener cards de una lista específica (soporta family=project)")]
     async fn cards_list(
         &self,
-        Parameters(ListCardsParams { list_id, board }): Parameters<ListCardsParams>,
+        Parameters(ListCardsParams {
+            list_id,
+            board,
+            family,
+        }): Parameters<ListCardsParams>,
     ) -> Result<CallToolResult, McpError> {
-        let (cards, _) = operations::cards::list_cards(&self.client, list_id, board)
+        let family = mcp_family(family.as_deref())?;
+        let (cards, _) = operations::cards::list_cards_for(&self.client, list_id, board, family)
             .await
             .map_err(err)?;
         ok(cards)
     }
 
     #[tool(
-        description = "Buscar y filtrar cards del board por texto, responsable, prioridad y/o labels. Devuelve hits con list_id, list_name y card."
+        description = "Buscar y filtrar cards del board por texto, responsable, prioridad y/o labels. Devuelve hits con list_id, list_name y card. Soporta family=project."
     )]
     async fn cards_search(
         &self,
@@ -283,49 +310,63 @@ impl HteamMcpServer {
             labels,
             list_id,
             board,
+            family,
         }): Parameters<SearchCardsParams>,
     ) -> Result<CallToolResult, McpError> {
+        let family = mcp_family(family.as_deref())?;
         let filters = operations::cards::CardSearchFilters {
             text: query,
             responsible,
             priority,
             labels: labels.unwrap_or_default(),
         };
-        let scope = operations::cards::CardSearchScope { board, list_id };
+        let scope = operations::cards::CardSearchScope {
+            board,
+            list_id,
+            family,
+        };
         let hits = operations::cards::search(&self.client, scope, filters)
             .await
             .map_err(err)?;
         ok(hits)
     }
 
-    #[tool(description = "Obtener cards abiertos (lista 1)")]
+    #[tool(
+        description = "Obtener cards abiertos (lista 1); family=project para tableros de proyecto"
+    )]
     async fn cards_open(
         &self,
-        Parameters(BoardParam { board }): Parameters<BoardParam>,
+        Parameters(BoardParam { board, family }): Parameters<BoardParam>,
     ) -> Result<CallToolResult, McpError> {
-        let cards = operations::cards::open_cards(&self.client, board)
+        let family = mcp_family(family.as_deref())?;
+        let cards = operations::cards::open_cards_for(&self.client, board, family)
             .await
             .map_err(err)?;
         ok(cards)
     }
 
-    #[tool(description = "Obtener cards cerrados (lista 2)")]
+    #[tool(
+        description = "Obtener cards cerrados (lista 2); family=project para tableros de proyecto"
+    )]
     async fn cards_closed(
         &self,
-        Parameters(BoardParam { board }): Parameters<BoardParam>,
+        Parameters(BoardParam { board, family }): Parameters<BoardParam>,
     ) -> Result<CallToolResult, McpError> {
-        let cards = operations::cards::closed_cards(&self.client, board)
+        let family = mcp_family(family.as_deref())?;
+        let cards = operations::cards::closed_cards_for(&self.client, board, family)
             .await
             .map_err(err)?;
         ok(cards)
     }
 
-    #[tool(description = "Obtener el detalle completo de un card por su ID")]
+    #[tool(
+        description = "Obtener el detalle completo de un card por su ID (infiere operation vs project desde title_url)"
+    )]
     async fn card_detail(
         &self,
         Parameters(CardParams { card_id }): Parameters<CardParams>,
     ) -> Result<CallToolResult, McpError> {
-        let detail = operations::cards::card_detail(&self.client, card_id)
+        let detail = operations::cards::card_detail_enriched(&self.client, card_id)
             .await
             .map_err(err)?;
         ok(detail)
