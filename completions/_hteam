@@ -346,7 +346,81 @@ _arguments "${_arguments_options[@]}" : \
 '-h[Print help]' \
 '--help[Print help]' \
 ':card_id -- ID del card:_default' \
+":: :_hteam__subcmd__cards__subcmd__labels_commands" \
+"*::: :->labels" \
 && ret=0
+
+    case $state in
+    (labels)
+        words=($line[2] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-cards-labels-command-$line[2]:"
+        case $line[2] in
+            (set)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::label_ids:_default' \
+&& ret=0
+;;
+(add)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::label_ids:_default' \
+&& ret=0
+;;
+(remove)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::label_ids:_default' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_hteam__subcmd__cards__subcmd__labels__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-cards-labels-help-command-$line[1]:"
+        case $line[1] in
+            (set)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(add)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(remove)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
 ;;
 (update)
 _arguments "${_arguments_options[@]}" : \
@@ -476,7 +550,31 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (labels)
 _arguments "${_arguments_options[@]}" : \
+":: :_hteam__subcmd__cards__subcmd__help__subcmd__labels_commands" \
+"*::: :->labels" \
 && ret=0
+
+    case $state in
+    (labels)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-cards-help-labels-command-$line[1]:"
+        case $line[1] in
+            (set)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(add)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(remove)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
 ;;
 (update)
 _arguments "${_arguments_options[@]}" : \
@@ -1095,7 +1193,31 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (labels)
 _arguments "${_arguments_options[@]}" : \
+":: :_hteam__subcmd__help__subcmd__cards__subcmd__labels_commands" \
+"*::: :->labels" \
 && ret=0
+
+    case $state in
+    (labels)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-help-cards-labels-command-$line[1]:"
+        case $line[1] in
+            (set)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(add)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(remove)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
 ;;
 (update)
 _arguments "${_arguments_options[@]}" : \
@@ -1532,8 +1654,27 @@ _hteam__subcmd__cards__subcmd__help__subcmd__help_commands() {
 }
 (( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__labels_commands] )) ||
 _hteam__subcmd__cards__subcmd__help__subcmd__labels_commands() {
-    local commands; commands=()
+    local commands; commands=(
+'set:Reemplazar todas las labels asignadas' \
+'add:Agregar labels sin quitar las existentes' \
+'remove:Quitar labels indicadas' \
+    )
     _describe -t commands 'hteam cards help labels commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__labels__subcmd__add_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__labels__subcmd__add_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help labels add commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__labels__subcmd__remove_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__labels__subcmd__remove_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help labels remove commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__labels__subcmd__set_commands] )) ||
+_hteam__subcmd__cards__subcmd__help__subcmd__labels__subcmd__set_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards help labels set commands' commands "$@"
 }
 (( $+functions[_hteam__subcmd__cards__subcmd__help__subcmd__link_commands] )) ||
 _hteam__subcmd__cards__subcmd__help__subcmd__link_commands() {
@@ -1587,8 +1728,58 @@ _hteam__subcmd__cards__subcmd__help__subcmd__update-desc_commands() {
 }
 (( $+functions[_hteam__subcmd__cards__subcmd__labels_commands] )) ||
 _hteam__subcmd__cards__subcmd__labels_commands() {
-    local commands; commands=()
+    local commands; commands=(
+'set:Reemplazar todas las labels asignadas' \
+'add:Agregar labels sin quitar las existentes' \
+'remove:Quitar labels indicadas' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
     _describe -t commands 'hteam cards labels commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__labels__subcmd__add_commands] )) ||
+_hteam__subcmd__cards__subcmd__labels__subcmd__add_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards labels add commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__labels__subcmd__help_commands] )) ||
+_hteam__subcmd__cards__subcmd__labels__subcmd__help_commands() {
+    local commands; commands=(
+'set:Reemplazar todas las labels asignadas' \
+'add:Agregar labels sin quitar las existentes' \
+'remove:Quitar labels indicadas' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'hteam cards labels help commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__labels__subcmd__help__subcmd__add_commands] )) ||
+_hteam__subcmd__cards__subcmd__labels__subcmd__help__subcmd__add_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards labels help add commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__labels__subcmd__help__subcmd__help_commands] )) ||
+_hteam__subcmd__cards__subcmd__labels__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards labels help help commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__labels__subcmd__help__subcmd__remove_commands] )) ||
+_hteam__subcmd__cards__subcmd__labels__subcmd__help__subcmd__remove_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards labels help remove commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__labels__subcmd__help__subcmd__set_commands] )) ||
+_hteam__subcmd__cards__subcmd__labels__subcmd__help__subcmd__set_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards labels help set commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__labels__subcmd__remove_commands] )) ||
+_hteam__subcmd__cards__subcmd__labels__subcmd__remove_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards labels remove commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__cards__subcmd__labels__subcmd__set_commands] )) ||
+_hteam__subcmd__cards__subcmd__labels__subcmd__set_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam cards labels set commands' commands "$@"
 }
 (( $+functions[_hteam__subcmd__cards__subcmd__link_commands] )) ||
 _hteam__subcmd__cards__subcmd__link_commands() {
@@ -1795,8 +1986,27 @@ _hteam__subcmd__help__subcmd__cards__subcmd__follow-up-complete_commands() {
 }
 (( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__labels_commands] )) ||
 _hteam__subcmd__help__subcmd__cards__subcmd__labels_commands() {
-    local commands; commands=()
+    local commands; commands=(
+'set:Reemplazar todas las labels asignadas' \
+'add:Agregar labels sin quitar las existentes' \
+'remove:Quitar labels indicadas' \
+    )
     _describe -t commands 'hteam help cards labels commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__labels__subcmd__add_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__labels__subcmd__add_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards labels add commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__labels__subcmd__remove_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__labels__subcmd__remove_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards labels remove commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__labels__subcmd__set_commands] )) ||
+_hteam__subcmd__help__subcmd__cards__subcmd__labels__subcmd__set_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help cards labels set commands' commands "$@"
 }
 (( $+functions[_hteam__subcmd__help__subcmd__cards__subcmd__link_commands] )) ||
 _hteam__subcmd__help__subcmd__cards__subcmd__link_commands() {

@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use crate::config::WorkingHoursConfig;
 use crate::models::{
-    BoardEntry, Card, CardDetail, Comment, FollowUp, List, ProjectMilestone, ProjectSummary,
+    BoardEntry, Card, CardDetail, Comment, FollowUp, Label, List, ProjectMilestone, ProjectSummary,
     ProjectTask, Reminder, UserSuggestion, WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
 };
 use crate::operations::cards::CardSearchFilters;
@@ -143,6 +143,14 @@ pub struct App {
     pub dependence_picker_filter: TextInput,
     /// Cached board tasks for the picker: (id, number, name).
     pub dependence_picker_items: Vec<(u64, Option<u64>, String)>,
+    /// Multi-select label picker inside the task-detail popup.
+    pub picking_labels: bool,
+    pub label_picker_loading: bool,
+    pub label_catalog_loaded: bool,
+    pub label_picker_idx: usize,
+    pub label_picker_filter: TextInput,
+    pub label_picker_items: Vec<Label>,
+    pub label_picker_selected: HashSet<u64>,
     pub task_detail_scroll: Scroll,
     /// Editing one field inside the detail popup.
     pub editing_detail_field: bool,
@@ -267,6 +275,7 @@ pub struct RequestIds {
     pub follow_up: u64,
     pub card_link: u64,
     pub task_detail: u64,
+    pub label_picker: u64,
 }
 
 impl RequestIds {
@@ -323,6 +332,9 @@ impl RequestIds {
     pub fn bump_task_detail(&mut self) -> u64 {
         Self::bump(&mut self.task_detail)
     }
+    pub fn bump_label_picker(&mut self) -> u64 {
+        Self::bump(&mut self.label_picker)
+    }
 
     pub fn is_current_board_refresh(&self, id: u64, job_board: u64, app_board: u64) -> bool {
         self.board_refresh == id && job_board == app_board
@@ -368,6 +380,13 @@ impl App {
             dependence_picker_idx: 0,
             dependence_picker_filter: TextInput::default(),
             dependence_picker_items: Vec::new(),
+            picking_labels: false,
+            label_picker_loading: false,
+            label_catalog_loaded: false,
+            label_picker_idx: 0,
+            label_picker_filter: TextInput::default(),
+            label_picker_items: Vec::new(),
+            label_picker_selected: HashSet::new(),
             task_detail_scroll: Scroll::default(),
             editing_detail_field: false,
             detail_edit_input: TextInput::default(),

@@ -6,7 +6,7 @@ CLI en Rust para gestionar boards de Hteam, con REPL, TUI tipo kanban y servidor
 
 - Autenticación con cookies de sesión (`sessionid` + `csrftoken`)
 - REPL interactivo con historial (`~/.hteam_history`)
-- Servidor MCP sobre stdio: 32 tools
+- Servidor MCP sobre stdio: 35 tools
 - Multi-board, temas del TUI y self-update
 - `--json` en la mayoría de los comandos (ver abajo: no es universal)
 
@@ -54,11 +54,16 @@ hteam closed                              # Cards cerrados (lista 2)
 hteam cards list 1                        # Cards de una lista
 hteam cards search -q login --priority 1  # Texto, responsable, prioridad, labels
 hteam cards detail 12345
-hteam cards labels 12345                  # Labels disponibles (solo lectura)
+hteam cards labels 12345                  # Labels asignadas al card
+hteam cards labels 12345 set 473 315      # Reemplazar el conjunto de labels
+hteam cards labels 12345 add 473          # Agregar sin quitar las existentes
+hteam cards labels 12345 remove 315       # Quitar una label
 hteam cards comments 12345
 hteam cards link 12345                    # Copia el URL al portapapeles
 hteam cards link 12345 --no-copy          # Solo imprime el URL
 ```
+
+El detalle del TUI permite editar labels con un picker multi-select; también puedes usar CLI o MCP.
 
 ### Crear y modificar cards
 
@@ -204,7 +209,7 @@ cp completions/hteam.fish ~/.config/fish/completions/hteam.fish
 
 ## MCP
 
-32 tools, una por `#[tool]` en `src/mcp/mod.rs`:
+35 tools, una por `#[tool]` en `src/mcp/mod.rs`:
 
 | Herramienta | Descripción |
 |---|---|
@@ -214,7 +219,10 @@ cp completions/hteam.fish ~/.config/fish/completions/hteam.fish
 | `cards_open` | Cards abiertos |
 | `cards_closed` | Cards cerrados |
 | `card_detail` | Detalle de un card |
-| `card_labels` | Labels disponibles |
+| `card_labels` | Labels asignadas |
+| `card_labels_set` | Reemplazar labels |
+| `card_labels_add` | Agregar labels |
+| `card_labels_remove` | Quitar labels |
 | `card_create` | Crear card |
 | `card_move` | Mover card |
 | `card_close` | Cerrar task |

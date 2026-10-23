@@ -68,8 +68,22 @@ struct CardParams {
 struct CardLabelsParams {
     #[schemars(description = "ID del card")]
     card_id: u64,
-    #[schemars(description = "ID del board (opcional)")]
+    #[schemars(
+        description = "Número de operación/board (opcional; usa el configurado si se omite)"
+    )]
     board: Option<u64>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct CardLabelsMutationParams {
+    #[schemars(description = "ID del card")]
+    card_id: u64,
+    #[schemars(
+        description = "Número de operación/board (opcional; usa el configurado si se omite)"
+    )]
+    board: Option<u64>,
+    #[schemars(description = "IDs de labels")]
+    label_ids: Vec<u64>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -317,7 +331,7 @@ impl HteamMcpServer {
         ok(detail)
     }
 
-    #[tool(description = "Obtener los labels disponibles de un card")]
+    #[tool(description = "Obtener las labels asignadas a un card")]
     async fn card_labels(
         &self,
         Parameters(CardLabelsParams { card_id, board }): Parameters<CardLabelsParams>,
@@ -326,6 +340,54 @@ impl HteamMcpServer {
             .await
             .map_err(err)?;
         ok(labels)
+    }
+
+    #[tool(description = "Reemplazar las labels asignadas a un card")]
+    async fn card_labels_set(
+        &self,
+        Parameters(CardLabelsMutationParams {
+            card_id,
+            board,
+            label_ids,
+        }): Parameters<CardLabelsMutationParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let label_ids =
+            operations::cards::set_card_labels(&self.client, card_id, board, &label_ids)
+                .await
+                .map_err(err)?;
+        ok(serde_json::json!({"success": true, "card_id": card_id, "label_ids": label_ids}))
+    }
+
+    #[tool(description = "Agregar labels a un card sin quitar las existentes")]
+    async fn card_labels_add(
+        &self,
+        Parameters(CardLabelsMutationParams {
+            card_id,
+            board,
+            label_ids,
+        }): Parameters<CardLabelsMutationParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let label_ids =
+            operations::cards::add_card_labels(&self.client, card_id, board, &label_ids)
+                .await
+                .map_err(err)?;
+        ok(serde_json::json!({"success": true, "card_id": card_id, "label_ids": label_ids}))
+    }
+
+    #[tool(description = "Quitar labels de un card")]
+    async fn card_labels_remove(
+        &self,
+        Parameters(CardLabelsMutationParams {
+            card_id,
+            board,
+            label_ids,
+        }): Parameters<CardLabelsMutationParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let label_ids =
+            operations::cards::remove_card_labels(&self.client, card_id, board, &label_ids)
+                .await
+                .map_err(err)?;
+        ok(serde_json::json!({"success": true, "card_id": card_id, "label_ids": label_ids}))
     }
 
     #[tool(description = "Crear un nuevo card en el board")]

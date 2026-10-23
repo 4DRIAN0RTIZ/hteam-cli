@@ -1267,8 +1267,122 @@ impl HteamClient {
             );
         }
 
-        let labels: Vec<Label> = response.json().await?;
+        #[derive(serde::Deserialize)]
+        #[serde(untagged)]
+        enum LabelsResponse {
+            Wrapped {
+                #[serde(default)]
+                labels: Vec<Label>,
+            },
+            Plain(Vec<Label>),
+        }
+
+        let response: LabelsResponse = response.json().await?;
+        Ok(match response {
+            LabelsResponse::Wrapped { labels } | LabelsResponse::Plain(labels) => labels,
+        })
+    }
+
+    /// Load the paginated label catalog used by the web label selector.
+    pub async fn get_label_catalog(&self) -> Result<Vec<Label>> {
+        #[derive(serde::Deserialize)]
+        struct LabelCatalogPage {
+            #[serde(default)]
+            count: usize,
+            #[serde(default)]
+            results: Vec<Label>,
+        }
+
+        let (url, headers) = {
+            let config = self.config.lock().await;
+            (
+                format!("{}/boards/care/labels/", self.api_base_url),
+                self.build_headers(&config)?,
+            )
+        };
+        let mut labels = Vec::new();
+        let mut page = 1usize;
+        loop {
+            let response = self
+                .client
+                .get(&url)
+                .query(&[
+                    ("format", "json"),
+                    ("page_size", "50"),
+                    ("page", &page.to_string()),
+                ])
+                .headers(headers.clone())
+                .send()
+                .await
+                .context("Error al obtener catálogo de labels")?;
+            if !response.status().is_success() {
+                anyhow::bail!(
+                    "Error HTTP {}: {}",
+                    response.status(),
+                    response.text().await?
+                );
+            }
+            let result: LabelCatalogPage = response
+                .json()
+                .await
+                .context("Error al interpretar catálogo de labels")?;
+            let previous_count = labels.len();
+            labels.extend(result.results);
+            if labels.len() >= result.count || labels.len() == previous_count {
+                break;
+            }
+            page += 1;
+            if page > 100 {
+                anyhow::bail!("El catálogo de labels excede el límite de páginas");
+            }
+        }
         Ok(labels)
+    }
+
+    pub async fn set_card_labels(
+        &self,
+        board_id: u64,
+        card_id: u64,
+        label_ids: &[u64],
+    ) -> Result<()> {
+        let (url, headers) = {
+            let config = self.config.lock().await;
+            let url = format!(
+                "{}/boards/care/boards/{}/card/{}/labels/",
+                self.api_base_url, board_id, card_id
+            );
+            let headers = self.build_headers(&config)?;
+            (url, headers)
+        };
+        let body = label_ids
+            .iter()
+            .map(|id| format!("labels={id}"))
+            .collect::<Vec<_>>()
+            .join("&");
+
+        let response = self
+            .client
+            .post(&url)
+            .headers(headers)
+            .header(
+                CONTENT_TYPE,
+                "application/x-www-form-urlencoded; charset=UTF-8",
+            )
+            .header("Origin", self.site_base_url.as_str())
+            .body(body)
+            .send()
+            .await
+            .context("Error al actualizar labels de la card")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+
+        Ok(())
     }
 
     /// URL pública de la página de detalle de un proyecto (`/projects/{id}/`)
@@ -2190,6 +2304,96 @@ mod tests {
             .expect("client");
 
         client.cancel_reminder(123).await.expect("cancel reminder");
+    }
+
+    #[tokio::test]
+    async fn test_get_card_labels_parses_wrapped_response() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/boards/care/boards/483/card/42/labels/")
+            .match_query(Matcher::UrlEncoded("format".into(), "json".into()))
+            .with_status(200)
+            .with_body(r##"{"label":"Labels","labels":[{"id":473,"name":"Bug","color":"#fff"}]}"##)
+            .create_async()
+            .await;
+        let client = HteamClient::new_for_test(Config::default(), server.url(), server.url())
+            .expect("client");
+
+        let labels = client.get_card_labels(42, Some(483)).await.expect("labels");
+
+        assert_eq!(labels.len(), 1);
+        assert_eq!(labels[0].id, 473);
+        assert_eq!(labels[0].name, "Bug");
+    }
+
+    #[tokio::test]
+    async fn test_get_card_labels_accepts_array_response() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/boards/care/boards/483/card/43/labels/")
+            .match_query(Matcher::UrlEncoded("format".into(), "json".into()))
+            .with_status(200)
+            .with_body(r##"[{"id":315,"name":"Feature","color":"#abc"}]"##)
+            .create_async()
+            .await;
+        let client = HteamClient::new_for_test(Config::default(), server.url(), server.url())
+            .expect("client");
+
+        let labels = client.get_card_labels(43, Some(483)).await.expect("labels");
+
+        assert_eq!(labels[0].id, 315);
+    }
+
+    #[tokio::test]
+    async fn test_get_label_catalog_follows_pages() {
+        let mut server = mockito::Server::new_async().await;
+        let _page_one = server
+            .mock("GET", "/boards/care/labels/")
+            .match_query(Matcher::UrlEncoded("page".into(), "1".into()))
+            .with_status(200)
+            .with_body(r##"{"count":2,"next":"?page=2","results":[{"id":473,"name":"Proceso","color":"#f00"}]}"##)
+            .create_async()
+            .await;
+        let _page_two = server
+            .mock("GET", "/boards/care/labels/")
+            .match_query(Matcher::UrlEncoded("page".into(), "2".into()))
+            .with_status(200)
+            .with_body(
+                r##"{"count":2,"next":null,"results":[{"id":315,"name":"DOING","color":"#0f0"}]}"##,
+            )
+            .create_async()
+            .await;
+        let client = HteamClient::new_for_test(Config::default(), server.url(), server.url())
+            .expect("client");
+
+        let labels = client.get_label_catalog().await.expect("catalog");
+
+        assert_eq!(
+            labels.iter().map(|label| label.id).collect::<Vec<_>>(),
+            vec![473, 315]
+        );
+    }
+
+    #[tokio::test]
+    async fn test_set_card_labels_posts_repeated_label_ids() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("POST", "/boards/care/boards/483/card/42/labels/")
+            .match_header(
+                "content-type",
+                "application/x-www-form-urlencoded; charset=UTF-8",
+            )
+            .match_body("labels=473&labels=315")
+            .with_status(200)
+            .create_async()
+            .await;
+        let client = HteamClient::new_for_test(Config::default(), server.url(), server.url())
+            .expect("client");
+
+        client
+            .set_card_labels(483, 42, &[473, 315])
+            .await
+            .expect("set labels");
     }
 
     #[tokio::test]
