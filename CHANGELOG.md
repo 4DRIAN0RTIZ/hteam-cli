@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(comments)* Support replying to card comments
 - *(reminders)* Support reminder cancellation
 - *(cards)* Support card label mutations
+- *(cards)* Support project board lists and task detail
 
 ## [0.11.0] - 2026-10-22
 
