@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 - *(cli)* Add personal dashboard command
 - *(comments)* Support replying to card comments
+- *(reminders)* Support reminder cancellation
 
 ## [0.11.0] - 2026-10-22
 
