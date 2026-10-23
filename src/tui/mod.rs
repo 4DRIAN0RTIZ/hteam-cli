@@ -307,7 +307,36 @@ async fn run_loop(
         }
 
         if app.show_task_detail {
-            if app.picking_dependence {
+            if app.picking_labels {
+                if app.label_picker_loading {
+                    if key.code == KeyCode::Esc {
+                        events::cancel_label_picker(app);
+                    }
+                } else {
+                    match key.code {
+                        KeyCode::Esc => events::cancel_label_picker(app),
+                        KeyCode::Enter => events::confirm_label_picker(client.clone(), app, &jobs),
+                        KeyCode::Char(' ') => events::toggle_label_picker_selection(app),
+                        KeyCode::Char('j') | KeyCode::Down => events::label_picker_move(app, 1),
+                        KeyCode::Char('k') | KeyCode::Up => events::label_picker_move(app, -1),
+                        KeyCode::Backspace => {
+                            app.label_picker_filter.backspace();
+                            let indices = events::filtered_label_picker_indices(app);
+                            if !indices.is_empty() && !indices.contains(&app.label_picker_idx) {
+                                app.label_picker_idx = indices[0];
+                            }
+                        }
+                        KeyCode::Char(c) if !c.is_control() => {
+                            app.label_picker_filter.push(c);
+                            let indices = events::filtered_label_picker_indices(app);
+                            if !indices.is_empty() {
+                                app.label_picker_idx = indices[0];
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            } else if app.picking_dependence {
                 match key.code {
                     KeyCode::Esc => events::cancel_edit_detail_field(app),
                     KeyCode::Enter => events::confirm_dependence_picker(client.clone(), app, &jobs),
@@ -347,6 +376,7 @@ async fn run_loop(
                     KeyCode::Char('j') | KeyCode::Down => events::detail_move_field(app, 1),
                     KeyCode::Char('k') | KeyCode::Up => events::detail_move_field(app, -1),
                     KeyCode::Char('e') => events::start_edit_detail_field(app),
+                    KeyCode::Char('l') => events::open_label_picker(client.clone(), app, &jobs),
                     KeyCode::Enter => {
                         use app::DetailField;
                         let field = DetailField::ALL

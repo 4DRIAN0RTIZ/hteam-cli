@@ -175,6 +175,10 @@ complete -c hteam -n "__fish_hteam_using_subcommand cards; and __fish_seen_subco
 complete -c hteam -n "__fish_hteam_using_subcommand cards; and __fish_seen_subcommand_from labels" -s b -l board -d 'ID del board a usar' -r
 complete -c hteam -n "__fish_hteam_using_subcommand cards; and __fish_seen_subcommand_from labels" -l json -d 'Mostrar salida en formato JSON'
 complete -c hteam -n "__fish_hteam_using_subcommand cards; and __fish_seen_subcommand_from labels" -s h -l help -d 'Print help'
+complete -c hteam -n "__fish_hteam_using_subcommand cards; and __fish_seen_subcommand_from labels" -a "set" -d 'Reemplazar todas las labels asignadas'
+complete -c hteam -n "__fish_hteam_using_subcommand cards; and __fish_seen_subcommand_from labels" -a "add" -d 'Agregar labels sin quitar las existentes'
+complete -c hteam -n "__fish_hteam_using_subcommand cards; and __fish_seen_subcommand_from labels" -a "remove" -d 'Quitar labels indicadas'
+complete -c hteam -n "__fish_hteam_using_subcommand cards; and __fish_seen_subcommand_from labels" -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c hteam -n "__fish_hteam_using_subcommand cards; and __fish_seen_subcommand_from update" -s n -l name -d 'Nuevo nombre' -r
 complete -c hteam -n "__fish_hteam_using_subcommand cards; and __fish_seen_subcommand_from update" -s d -l description -d 'Nueva descripción' -r
 complete -c hteam -n "__fish_hteam_using_subcommand cards; and __fish_seen_subcommand_from update" -s p -l priority -d 'Prioridad (1=alta, 2=media, 3=baja)' -r

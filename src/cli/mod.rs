@@ -380,6 +380,59 @@ mod tests {
     }
 
     #[test]
+    fn cards_labels_preserves_listing_and_parses_mutations() {
+        let list =
+            Cli::try_parse_from(["hteam", "cards", "labels", "123"]).expect("list card labels");
+        assert!(matches!(
+            list.command,
+            Commands::Cards(cards::CardsCommands::Labels(cards::LabelsArgs {
+                card_id: 123,
+                command: None
+            }))
+        ));
+
+        let set = Cli::try_parse_from(["hteam", "cards", "labels", "123", "set", "473", "315"])
+            .expect("set card labels");
+        assert!(matches!(
+            set.command,
+            Commands::Cards(cards::CardsCommands::Labels(cards::LabelsArgs {
+                card_id: 123,
+                command: Some(cards::CardLabelsCommand::Set { label_ids })
+            })) if label_ids == vec![473, 315]
+        ));
+
+        let clear = Cli::try_parse_from(["hteam", "cards", "labels", "123", "set"])
+            .expect("clear card labels");
+        assert!(matches!(
+            clear.command,
+            Commands::Cards(cards::CardsCommands::Labels(cards::LabelsArgs {
+                command: Some(cards::CardLabelsCommand::Set { label_ids }),
+                ..
+            })) if label_ids.is_empty()
+        ));
+
+        let add = Cli::try_parse_from(["hteam", "cards", "labels", "123", "add", "473"])
+            .expect("add card label");
+        assert!(matches!(
+            add.command,
+            Commands::Cards(cards::CardsCommands::Labels(cards::LabelsArgs {
+                command: Some(cards::CardLabelsCommand::Add { label_ids }),
+                ..
+            })) if label_ids == vec![473]
+        ));
+
+        let remove = Cli::try_parse_from(["hteam", "cards", "labels", "123", "remove", "315"])
+            .expect("remove card label");
+        assert!(matches!(
+            remove.command,
+            Commands::Cards(cards::CardsCommands::Labels(cards::LabelsArgs {
+                command: Some(cards::CardLabelsCommand::Remove { label_ids }),
+                ..
+            })) if label_ids == vec![315]
+        ));
+    }
+
+    #[test]
     fn reminders_command_preserves_list_and_parses_cancel() {
         let list = Cli::try_parse_from(["hteam", "reminders"]).expect("list reminders");
         assert!(matches!(

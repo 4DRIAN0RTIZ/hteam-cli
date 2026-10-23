@@ -232,6 +232,39 @@ _hteam() {
             hteam__subcmd__cards__subcmd__help,update-desc)
                 cmd="hteam__subcmd__cards__subcmd__help__subcmd__update__subcmd__desc"
                 ;;
+            hteam__subcmd__cards__subcmd__help__subcmd__labels,add)
+                cmd="hteam__subcmd__cards__subcmd__help__subcmd__labels__subcmd__add"
+                ;;
+            hteam__subcmd__cards__subcmd__help__subcmd__labels,remove)
+                cmd="hteam__subcmd__cards__subcmd__help__subcmd__labels__subcmd__remove"
+                ;;
+            hteam__subcmd__cards__subcmd__help__subcmd__labels,set)
+                cmd="hteam__subcmd__cards__subcmd__help__subcmd__labels__subcmd__set"
+                ;;
+            hteam__subcmd__cards__subcmd__labels,add)
+                cmd="hteam__subcmd__cards__subcmd__labels__subcmd__add"
+                ;;
+            hteam__subcmd__cards__subcmd__labels,help)
+                cmd="hteam__subcmd__cards__subcmd__labels__subcmd__help"
+                ;;
+            hteam__subcmd__cards__subcmd__labels,remove)
+                cmd="hteam__subcmd__cards__subcmd__labels__subcmd__remove"
+                ;;
+            hteam__subcmd__cards__subcmd__labels,set)
+                cmd="hteam__subcmd__cards__subcmd__labels__subcmd__set"
+                ;;
+            hteam__subcmd__cards__subcmd__labels__subcmd__help,add)
+                cmd="hteam__subcmd__cards__subcmd__labels__subcmd__help__subcmd__add"
+                ;;
+            hteam__subcmd__cards__subcmd__labels__subcmd__help,help)
+                cmd="hteam__subcmd__cards__subcmd__labels__subcmd__help__subcmd__help"
+                ;;
+            hteam__subcmd__cards__subcmd__labels__subcmd__help,remove)
+                cmd="hteam__subcmd__cards__subcmd__labels__subcmd__help__subcmd__remove"
+                ;;
+            hteam__subcmd__cards__subcmd__labels__subcmd__help,set)
+                cmd="hteam__subcmd__cards__subcmd__labels__subcmd__help__subcmd__set"
+                ;;
             hteam__subcmd__help,board)
                 cmd="hteam__subcmd__help__subcmd__board"
                 ;;
@@ -366,6 +399,15 @@ _hteam() {
                 ;;
             hteam__subcmd__help__subcmd__cards,update-desc)
                 cmd="hteam__subcmd__help__subcmd__cards__subcmd__update__subcmd__desc"
+                ;;
+            hteam__subcmd__help__subcmd__cards__subcmd__labels,add)
+                cmd="hteam__subcmd__help__subcmd__cards__subcmd__labels__subcmd__add"
+                ;;
+            hteam__subcmd__help__subcmd__cards__subcmd__labels,remove)
+                cmd="hteam__subcmd__help__subcmd__cards__subcmd__labels__subcmd__remove"
+                ;;
+            hteam__subcmd__help__subcmd__cards__subcmd__labels,set)
+                cmd="hteam__subcmd__help__subcmd__cards__subcmd__labels__subcmd__set"
                 ;;
             hteam__subcmd__help__subcmd__objectives,show)
                 cmd="hteam__subcmd__help__subcmd__objectives__subcmd__show"
@@ -1113,8 +1155,50 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__help__subcmd__labels)
-            opts=""
+            opts="set add remove"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__cards__subcmd__help__subcmd__labels__subcmd__add)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 5 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__cards__subcmd__help__subcmd__labels__subcmd__remove)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 5 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__cards__subcmd__help__subcmd__labels__subcmd__set)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 5 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
@@ -1267,8 +1351,144 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__labels)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --help set add remove help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --board)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__cards__subcmd__labels__subcmd__add)
+            opts="-b -h --json --board --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --board)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__cards__subcmd__labels__subcmd__help)
+            opts="set add remove help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__cards__subcmd__labels__subcmd__help__subcmd__add)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 5 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__cards__subcmd__labels__subcmd__help__subcmd__help)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 5 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__cards__subcmd__labels__subcmd__help__subcmd__remove)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 5 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__cards__subcmd__labels__subcmd__help__subcmd__set)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 5 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__cards__subcmd__labels__subcmd__remove)
+            opts="-b -h --json --board --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --board)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__cards__subcmd__labels__subcmd__set)
+            opts="-b -h --json --board --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
@@ -1967,8 +2187,50 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__help__subcmd__cards__subcmd__labels)
-            opts=""
+            opts="set add remove"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__help__subcmd__cards__subcmd__labels__subcmd__add)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 5 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__help__subcmd__cards__subcmd__labels__subcmd__remove)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 5 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__help__subcmd__cards__subcmd__labels__subcmd__set)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 5 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi

@@ -7,7 +7,7 @@ use tokio::task::JoinSet;
 
 use crate::client::HteamClient;
 use crate::models::{
-    BoardEntry, Card, CardDetail, Comment, FollowUp, List, ProjectMilestone, ProjectSummary,
+    BoardEntry, Card, CardDetail, Comment, FollowUp, Label, List, ProjectMilestone, ProjectSummary,
     ProjectTask, Reminder, UserSuggestion, WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
 };
 use crate::operations;
@@ -145,6 +145,11 @@ pub enum JobOutcome {
         result: Result<CardDetail, String>,
         dependence_label: Option<String>,
         dependence_id: Option<u64>,
+    },
+    LabelPickerLoaded {
+        id: u64,
+        card_id: u64,
+        result: Result<(Vec<Label>, Vec<u64>), String>,
     },
     TaskDetailSaved {
         id: u64,
@@ -700,6 +705,38 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
                     app.task_detail_dependence_id = None;
                     app.task_detail_error = Some(e.clone());
                     app.set_status(format!("Error cargando detalle: {}", e));
+                }
+            }
+        }
+        JobOutcome::LabelPickerLoaded {
+            id,
+            card_id,
+            result,
+        } => {
+            if app.requests.label_picker != id
+                || app.task_detail_card_id != Some(card_id)
+                || !app.picking_labels
+            {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            app.label_picker_loading = false;
+            match result {
+                Ok((labels, selected)) => {
+                    app.label_picker_items = labels;
+                    app.label_catalog_loaded = true;
+                    app.label_picker_selected = selected.into_iter().collect();
+                    app.label_picker_idx = app
+                        .label_picker_items
+                        .iter()
+                        .position(|label| app.label_picker_selected.contains(&label.id))
+                        .unwrap_or(0);
+                    app.clear_status();
+                }
+                Err(error) => {
+                    app.picking_labels = false;
+                    app.set_status(format!("Error cargando labels: {error}"));
                 }
             }
         }

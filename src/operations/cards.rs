@@ -483,12 +483,86 @@ pub async fn update_description(
     client.update_card_description(card_id, description).await
 }
 
+pub async fn card_label_catalog(client: &HteamClient) -> Result<Vec<Label>> {
+    let mut labels = client.get_label_catalog().await?;
+    labels.sort_by_cached_key(|label| label.name.to_lowercase());
+    labels.dedup_by_key(|label| label.id);
+    Ok(labels)
+}
+
 pub async fn card_labels(
     client: &HteamClient,
     card_id: u64,
     board: Option<u64>,
 ) -> Result<Vec<Label>> {
-    client.get_card_labels(card_id, board).await
+    let board_id = resolve_board_id(client, board).await?;
+    client.get_card_labels(card_id, Some(board_id)).await
+}
+
+pub async fn set_card_labels(
+    client: &HteamClient,
+    card_id: u64,
+    board: Option<u64>,
+    label_ids: &[u64],
+) -> Result<Vec<u64>> {
+    let board_id = resolve_board_id(client, board).await?;
+    let label_ids = unique_label_ids(label_ids.iter().copied());
+    client
+        .set_card_labels(board_id, card_id, &label_ids)
+        .await?;
+    Ok(label_ids)
+}
+
+pub async fn add_card_labels(
+    client: &HteamClient,
+    card_id: u64,
+    board: Option<u64>,
+    label_ids: &[u64],
+) -> Result<Vec<u64>> {
+    let board_id = resolve_board_id(client, board).await?;
+    let current = client.get_card_labels(card_id, Some(board_id)).await?;
+    let mut combined = current_label_ids(current)?;
+    combined.extend(label_ids.iter().copied());
+    let label_ids = unique_label_ids(combined);
+    client
+        .set_card_labels(board_id, card_id, &label_ids)
+        .await?;
+    Ok(label_ids)
+}
+
+pub async fn remove_card_labels(
+    client: &HteamClient,
+    card_id: u64,
+    board: Option<u64>,
+    label_ids: &[u64],
+) -> Result<Vec<u64>> {
+    let board_id = resolve_board_id(client, board).await?;
+    let current = client.get_card_labels(card_id, Some(board_id)).await?;
+    let label_ids = current_label_ids(current)?
+        .into_iter()
+        .filter(|id| !label_ids.contains(id));
+    let label_ids = unique_label_ids(label_ids);
+    client
+        .set_card_labels(board_id, card_id, &label_ids)
+        .await?;
+    Ok(label_ids)
+}
+
+fn current_label_ids(labels: Vec<Label>) -> Result<Vec<u64>> {
+    if labels.iter().any(|label| label.id == 0) {
+        anyhow::bail!("el API devolvió labels sin ID; no se modificó el conjunto");
+    }
+    Ok(unique_label_ids(labels.into_iter().map(|label| label.id)))
+}
+
+fn unique_label_ids(ids: impl IntoIterator<Item = u64>) -> Vec<u64> {
+    let mut unique = Vec::new();
+    for id in ids {
+        if !unique.contains(&id) {
+            unique.push(id);
+        }
+    }
+    unique
 }
 
 /// Pure in-memory filter shared by CLI, MCP and TUI. `cards` is
@@ -1049,6 +1123,20 @@ mod tests {
             .expect("test client")
     }
 
+    fn client_with_board_id(server_url: &str) -> HteamClient {
+        let config = Config {
+            auth: AuthConfig {
+                board_number: Some(483),
+                board_id: Some(483),
+                csrf_token: Some("csrf".to_string()),
+                ..AuthConfig::default()
+            },
+            ..Config::default()
+        };
+        HteamClient::new_for_test(config, server_url.to_string(), server_url.to_string())
+            .expect("test client")
+    }
+
     fn sample_edit_form_html() -> &'static str {
         r#"<!DOCTYPE html><html><head><title>Edit task</title></head><body>
 <form method="post">
@@ -1062,6 +1150,17 @@ mod tests {
 <select name="priority"><option value="3" selected>Normal</option></select>
 <input type="hidden" name="id" value="11216">
 </form></body></html>"#
+    }
+
+    #[test]
+    fn current_label_ids_rejects_entries_without_ids() {
+        let labels = vec![Label {
+            id: 0,
+            name: "unknown".into(),
+            color: String::new(),
+        }];
+
+        assert!(current_label_ids(labels).is_err());
     }
 
     #[tokio::test]
@@ -1085,6 +1184,78 @@ mod tests {
         assert_eq!(lists.len(), 1);
         assert_eq!(lists[0].name, "Open");
         assert_eq!(lists[0].card_count, Some(2));
+    }
+
+    #[tokio::test]
+    async fn test_set_card_labels_resolves_internal_board_id() {
+        let mut server = mockito::Server::new_async().await;
+        let _cards = server
+            .mock("GET", "/operation/care/operations/483/lists/1/cards/")
+            .match_query(mockito::Matcher::UrlEncoded("format".into(), "json".into()))
+            .with_status(200)
+            .with_body(r#"{"id":1,"name":"Open","cardlist_list":[{"id":10,"board_id":99,"card":{"id":42,"title":"t","subtitle":"","labels_list":[]},"is_closed":false,"card_type":0,"time_status":0,"get_time_status":"","position":1}]}"#)
+            .create_async()
+            .await;
+        let _post = server
+            .mock("POST", "/boards/care/boards/99/card/42/labels/")
+            .match_body("labels=473&labels=315")
+            .with_status(200)
+            .create_async()
+            .await;
+
+        let label_ids = set_card_labels(&client(&server.url()), 42, None, &[473, 315])
+            .await
+            .expect("set labels");
+
+        assert_eq!(label_ids, vec![473, 315]);
+    }
+
+    #[tokio::test]
+    async fn test_add_card_labels_merges_without_duplicates() {
+        let mut server = mockito::Server::new_async().await;
+        let _get = server
+            .mock("GET", "/boards/care/boards/483/card/42/labels/")
+            .match_query(mockito::Matcher::UrlEncoded("format".into(), "json".into()))
+            .with_status(200)
+            .with_body(r#"{"label":"Labels","labels":[{"id":473,"name":"Bug"}]}"#)
+            .create_async()
+            .await;
+        let _post = server
+            .mock("POST", "/boards/care/boards/483/card/42/labels/")
+            .match_body("labels=473&labels=315")
+            .with_status(200)
+            .create_async()
+            .await;
+
+        let result = add_card_labels(&client_with_board_id(&server.url()), 42, None, &[473, 315])
+            .await
+            .expect("add labels");
+
+        assert_eq!(result, vec![473, 315]);
+    }
+
+    #[tokio::test]
+    async fn test_remove_card_labels_posts_remaining_ids() {
+        let mut server = mockito::Server::new_async().await;
+        let _get = server
+            .mock("GET", "/boards/care/boards/483/card/42/labels/")
+            .match_query(mockito::Matcher::UrlEncoded("format".into(), "json".into()))
+            .with_status(200)
+            .with_body(r#"{"label":"Labels","labels":[{"id":473,"name":"Bug"},{"id":315,"name":"Enhancement"}]}"#)
+            .create_async()
+            .await;
+        let _post = server
+            .mock("POST", "/boards/care/boards/483/card/42/labels/")
+            .match_body("labels=315")
+            .with_status(200)
+            .create_async()
+            .await;
+
+        let result = remove_card_labels(&client_with_board_id(&server.url()), 42, None, &[473])
+            .await
+            .expect("remove label");
+
+        assert_eq!(result, vec![315]);
     }
 
     #[tokio::test]
