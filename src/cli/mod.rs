@@ -340,3 +340,76 @@ async fn search_users(args: UsersArgs, json: bool) -> Result<()> {
     println!();
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap_complete::Shell;
+    use std::io::Cursor;
+
+    fn generate_completion(shell: Shell) -> String {
+        let mut cmd = Cli::command();
+        let name = cmd.get_name().to_string();
+        let mut buf = Cursor::new(Vec::new());
+        generate(shell, &mut cmd, name, &mut buf);
+        String::from_utf8(buf.into_inner()).expect("utf8 completions")
+    }
+
+    fn committed(path: &str) -> String {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        std::fs::read_to_string(root.join(path)).unwrap_or_else(|e| panic!("missing {path}: {e}"))
+    }
+
+    #[test]
+    fn bash_completions_match_committed_snapshot() {
+        assert_eq!(
+            generate_completion(Shell::Bash),
+            committed("completions/hteam.bash"),
+            "regenerate with: hteam completions bash > completions/hteam.bash"
+        );
+    }
+
+    #[test]
+    fn zsh_completions_match_committed_snapshot() {
+        assert_eq!(
+            generate_completion(Shell::Zsh),
+            committed("completions/_hteam"),
+            "regenerate with: hteam completions zsh > completions/_hteam"
+        );
+    }
+
+    #[test]
+    fn fish_completions_match_committed_snapshot() {
+        assert_eq!(
+            generate_completion(Shell::Fish),
+            committed("completions/hteam.fish"),
+            "regenerate with: hteam completions fish > completions/hteam.fish"
+        );
+    }
+
+    #[test]
+    fn readme_mcp_tool_count_matches_source() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let mcp = std::fs::read_to_string(root.join("src/mcp/mod.rs")).unwrap();
+        let readme = std::fs::read_to_string(root.join("README.md")).unwrap();
+        let tools = mcp.matches("async fn ").count().saturating_sub(1);
+        assert!(
+            readme.contains(&format!("Servidor MCP sobre stdio: {tools} tools")),
+            "README feature blurb should say {tools} tools"
+        );
+        assert!(
+            readme.contains(&format!("{tools} tools, una por")),
+            "README MCP section should say {tools} tools"
+        );
+        let mcp_section = readme
+            .split("## MCP")
+            .nth(1)
+            .and_then(|s| s.split("## REPL").next())
+            .expect("README should have MCP then REPL sections");
+        let table_rows = mcp_section.lines().filter(|l| l.starts_with("| `")).count();
+        assert_eq!(
+            table_rows, tools,
+            "README MCP table rows should match MCP tools"
+        );
+    }
+}
