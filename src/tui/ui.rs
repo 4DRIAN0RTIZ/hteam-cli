@@ -209,7 +209,8 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
             " Ayuda · Reminders ",
             &[
                 "Reminders",
-                "  j/k, ↓/↑        scroll",
+                "  j/k, ↓/↑        seleccionar reminder",
+                "  x               cancelar el reminder seleccionado",
                 "  a               agregar un reminder para la card seleccionada",
                 "  Esc, q          cerrar",
             ],
@@ -276,6 +277,7 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
                 "  j/k             cambiar campo",
                 "  e               editar el campo resaltado",
                 "  Enter / Ctrl+S  guardar (en modo edición)",
+                "  l               editar labels con picker multi-select",
                 "  Esc             cancelar edición o cerrar",
                 "  q               cerrar",
             ],
@@ -430,6 +432,7 @@ fn draw_reminders_popup(frame: &mut Frame, app: &App) {
         lines.push(muted_hint(app, "Selecciona una card y pulsa a · ? · Esc"));
     } else {
         for (i, r) in app.reminders.iter().enumerate() {
+            let selected = app.selected_reminder == Some(i);
             if i > 0 {
                 lines.push(Line::from(Span::styled(
                     "  · · ·",
@@ -449,12 +452,20 @@ fn draw_reminders_popup(frame: &mut Frame, app: &App) {
                 date_raw.chars().take(10).collect()
             };
             lines.push(Line::from(vec![
-                Span::styled("› ", Style::default().fg(app.theme.border_reminders)),
+                Span::styled(
+                    if selected { "▶ " } else { "› " },
+                    Style::default().fg(app.theme.border_reminders),
+                ),
                 Span::styled(
                     title.to_string(),
                     Style::default()
                         .fg(app.theme.highlight)
-                        .add_modifier(Modifier::BOLD),
+                        .add_modifier(Modifier::BOLD)
+                        .bg(if selected {
+                            app.theme.selection_bg
+                        } else {
+                            app.theme.background
+                        }),
                 ),
             ]));
             lines.push(Line::from(vec![
@@ -468,7 +479,10 @@ fn draw_reminders_popup(frame: &mut Frame, app: &App) {
             ]));
         }
         lines.push(Line::from(""));
-        lines.push(muted_hint(app, "a nuevo · j/k scroll · ? · Esc"));
+        lines.push(muted_hint(
+            app,
+            "a nuevo · j/k seleccionar · x cancelar · ? · Esc",
+        ));
     }
 
     let p = Paragraph::new(Text::from(lines))
@@ -582,7 +596,14 @@ fn draw_description_popup(frame: &mut Frame, app: &App) {
 
 fn draw_task_detail_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(74, 82, frame.area());
-    let title = if app.picking_dependence {
+    let title = if app.picking_labels {
+        let f = app.label_picker_filter.as_str();
+        if f.is_empty() {
+            " Labels ".to_string()
+        } else {
+            format!(" Labels · filtro: {f}_ ")
+        }
+    } else if app.picking_dependence {
         let f = app.dependence_picker_filter.as_str();
         if f.is_empty() {
             " Depende de ".to_string()
@@ -604,7 +625,9 @@ fn draw_task_detail_popup(frame: &mut Frame, app: &App) {
         app.theme.foreground,
     );
 
-    let lines: Vec<Line> = if app.picking_dependence {
+    let lines: Vec<Line> = if app.picking_labels {
+        label_picker_lines(app)
+    } else if app.picking_dependence {
         dependence_picker_lines(app)
     } else if let Some(err) = &app.task_detail_error {
         vec![
@@ -635,6 +658,77 @@ fn draw_task_detail_popup(frame: &mut Frame, app: &App) {
         .wrap(Wrap { trim: false })
         .scroll((app.task_detail_scroll.offset(), 0));
     frame.render_widget(p, inner);
+}
+
+fn label_picker_lines(app: &App) -> Vec<Line<'static>> {
+    use super::events::filtered_label_picker_indices;
+    let mut lines = vec![section_header(app, "Seleccionar labels"), Line::from("")];
+    if app.label_picker_loading {
+        lines.push(muted_hint(app, "Cargando catálogo de labels…"));
+        return lines;
+    }
+    let indices = filtered_label_picker_indices(app);
+    if indices.is_empty() {
+        lines.push(empty_state_line(
+            app,
+            if app.label_picker_items.is_empty() {
+                "No hay labels disponibles en el catálogo."
+            } else {
+                "Ninguna label coincide con el filtro."
+            },
+        ));
+        lines.push(Line::from(""));
+        lines.push(muted_hint(app, "escribe para filtrar · Esc cancela"));
+        return lines;
+    }
+    let selected_position = indices
+        .iter()
+        .position(|index| *index == app.label_picker_idx)
+        .unwrap_or(0);
+    let window = 14usize;
+    let start = selected_position.saturating_sub(window / 2);
+    let end = (start + window).min(indices.len());
+    let start = end.saturating_sub(window);
+    if start > 0 {
+        lines.push(muted_hint(app, format!("▲ {} más arriba", start)));
+    }
+    for &index in &indices[start..end] {
+        let label = &app.label_picker_items[index];
+        let selected = index == app.label_picker_idx;
+        let marked = app.label_picker_selected.contains(&label.id);
+        let style = if selected {
+            selected_row_style(app)
+        } else {
+            Style::default()
+        };
+        let marker = if selected { "› " } else { "  " };
+        let check = if marked { "[x] " } else { "[ ] " };
+        let color = parse_hex_color(&label.color).unwrap_or(app.theme.foreground);
+        lines.push(Line::from(vec![
+            Span::styled(marker, style),
+            Span::styled(check, style),
+            Span::styled(
+                format!("{}  (id {})", label.name, label.id),
+                if selected {
+                    style
+                } else {
+                    Style::default().fg(color)
+                },
+            ),
+        ]));
+    }
+    if end < indices.len() {
+        lines.push(muted_hint(
+            app,
+            format!("▼ {} más abajo", indices.len() - end),
+        ));
+    }
+    lines.push(Line::from(""));
+    lines.push(muted_hint(
+        app,
+        "j/k · Espacio marca/desmarca · Enter guarda · escribe para filtrar · Esc",
+    ));
+    lines
 }
 
 fn dependence_picker_lines(app: &App) -> Vec<Line<'static>> {
@@ -781,7 +875,7 @@ fn task_detail_lines<'a>(app: &'a App, detail: &'a crate::models::CardDetail) ->
     } else {
         lines.push(muted_hint(
             app,
-            "j/k campo · e editar · Enter en Depende de = saltar · ? · Esc",
+            "j/k campo · e editar · l labels · Enter en Depende de = saltar · ? · Esc",
         ));
     }
 
@@ -952,7 +1046,9 @@ fn detail_field_value(app: &App, detail: &crate::models::CardDetail, field: Deta
 fn draw_comments_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(72, 75, frame.area());
 
-    let title = if app.composing_comment {
+    let title = if app.composing_comment && app.comment_reply_to.is_some() {
+        " Responder comentario "
+    } else if app.composing_comment {
         " Comentario nuevo "
     } else {
         " Comentarios "
@@ -1020,6 +1116,7 @@ fn draw_comment_list(frame: &mut Frame, app: &App, area: Rect) {
         }
     } else {
         for (i, c) in app.comments.iter().enumerate() {
+            let selected = app.comments_selected == Some(i);
             if i > 0 {
                 lines.push(Line::from(Span::styled(
                     "  · · ·",
@@ -1027,12 +1124,20 @@ fn draw_comment_list(frame: &mut Frame, app: &App, area: Rect) {
                 )));
             }
             lines.push(Line::from(vec![
-                Span::styled("› ", Style::default().fg(app.theme.border_comments)),
+                Span::styled(
+                    if selected { "▶ " } else { "› " },
+                    Style::default().fg(app.theme.border_comments),
+                ),
                 Span::styled(
                     c.user_name.as_str(),
                     Style::default()
                         .fg(app.theme.highlight)
-                        .add_modifier(Modifier::BOLD),
+                        .add_modifier(Modifier::BOLD)
+                        .bg(if selected {
+                            app.theme.selection_bg
+                        } else {
+                            app.theme.background
+                        }),
                 ),
                 Span::styled(
                     format!("  {}", c.submit_date),
@@ -1067,7 +1172,10 @@ fn draw_comment_list(frame: &mut Frame, app: &App, area: Rect) {
             lines.push(Line::from(""));
         }
         if !app.composing_comment {
-            lines.push(muted_hint(app, "a nuevo · j/k scroll · ? · Esc"));
+            lines.push(muted_hint(
+                app,
+                "a nuevo · j/k seleccionar · r responder · ? · Esc",
+            ));
         }
     }
 

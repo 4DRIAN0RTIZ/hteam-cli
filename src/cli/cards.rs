@@ -187,6 +187,10 @@ pub struct CommentArgs {
     /// Fecha del comentario, formato "YYYY-MM-DD HH:MM" en hora local (opcional; por defecto ahora)
     #[arg(short, long)]
     pub date: Option<String>,
+
+    /// ID del comentario al que responder
+    #[arg(long)]
+    pub reply_to: Option<u64>,
 }
 
 #[derive(Args, Debug)]
@@ -199,6 +203,22 @@ pub struct CommentsArgs {
 pub struct LabelsArgs {
     /// ID del card
     pub card_id: u64,
+
+    #[command(subcommand)]
+    pub command: Option<CardLabelsCommand>,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum CardLabelsCommand {
+    /// Reemplazar todas las labels asignadas
+    Set {
+        #[arg(value_name = "LABEL_ID", num_args = 0..)]
+        label_ids: Vec<u64>,
+    },
+    /// Agregar labels sin quitar las existentes
+    Add { label_ids: Vec<u64> },
+    /// Quitar labels indicadas
+    Remove { label_ids: Vec<u64> },
 }
 
 #[derive(Args, Debug)]
@@ -680,6 +700,7 @@ async fn post_comment(args: CommentArgs, board: Option<u64>, json: bool) -> Resu
         board,
         args.follow,
         args.date.as_deref(),
+        args.reply_to,
     )
     .await?;
 
@@ -720,24 +741,60 @@ async fn list_comments(args: CommentsArgs, json: bool) -> Result<()> {
 
 async fn card_labels(args: LabelsArgs, board: Option<u64>, json: bool) -> Result<()> {
     let session = Session::open().await?;
+    let Some(command) = args.command else {
+        let labels = operations::cards::card_labels(&session.client, args.card_id, board).await?;
+        if json {
+            println!("{}", serde_json::to_string_pretty(&labels)?);
+            return Ok(());
+        }
 
-    let labels = operations::cards::card_labels(&session.client, args.card_id, board).await?;
+        if labels.is_empty() {
+            println!("No hay labels asignadas al card {}.", args.card_id);
+            return Ok(());
+        }
+
+        println!("\n Labels del card {}:\n", args.card_id);
+        for label in &labels {
+            println!("   {} — {} ({})", label.id, label.name, label.color);
+        }
+        println!();
+        return Ok(());
+    };
+
+    let (action, label_ids) = match command {
+        CardLabelsCommand::Set { label_ids } => (
+            "set",
+            operations::cards::set_card_labels(&session.client, args.card_id, board, &label_ids)
+                .await?,
+        ),
+        CardLabelsCommand::Add { label_ids } => (
+            "add",
+            operations::cards::add_card_labels(&session.client, args.card_id, board, &label_ids)
+                .await?,
+        ),
+        CardLabelsCommand::Remove { label_ids } => (
+            "remove",
+            operations::cards::remove_card_labels(&session.client, args.card_id, board, &label_ids)
+                .await?,
+        ),
+    };
 
     if json {
-        println!("{}", serde_json::to_string_pretty(&labels)?);
-        return Ok(());
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "success": true,
+                "card_id": args.card_id,
+                "action": action,
+                "label_ids": label_ids,
+            }))?
+        );
+    } else {
+        println!(
+            "Labels del card {} actualizadas ({action}): {:?}",
+            args.card_id, label_ids
+        );
     }
-
-    if labels.is_empty() {
-        println!("No se encontraron labels para el card {}.", args.card_id);
-        return Ok(());
-    }
-
-    println!("\n Labels del card {}:\n", args.card_id);
-    for label in &labels {
-        println!("   {} — {} ({})", label.id, label.name, label.color);
-    }
-    println!();
 
     Ok(())
 }

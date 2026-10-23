@@ -5,6 +5,20 @@ All notable changes to hteam-cli will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Documentation
+- *(readme)* Count 31 MCP tools after dashboard
+- *(readme)* Document clap commands and snapshot completions
+- *(cli)* Merge dashboard into completions and README
+
+
+### Features
+- *(cli)* Add personal dashboard command
+- *(comments)* Support replying to card comments
+- *(reminders)* Support reminder cancellation
+- *(cards)* Support card label mutations
+
 ## [0.11.0] - 2026-10-22
 
 ### Bug Fixes

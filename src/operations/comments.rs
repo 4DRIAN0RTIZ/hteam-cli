@@ -48,10 +48,11 @@ pub async fn post_comment(
     board: Option<u64>,
     follow: bool,
     date: Option<&str>,
+    reply_to: Option<u64>,
 ) -> Result<()> {
     let date = resolve_comment_date(date)?;
     client
-        .post_comment(card_id, text, board, follow, date)
+        .post_comment(card_id, text, board, follow, date, reply_to)
         .await
 }
 

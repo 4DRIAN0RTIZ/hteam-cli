@@ -95,7 +95,7 @@ async fn show(args: ObjectivesShowArgs, json: bool) -> Result<()> {
 /// Texto tipo "hace 2h 15m" / "hace 40m" / "hace 12s" a partir de un
 /// timestamp pasado. Decisión de presentación, por eso vive en `cli` y no en
 /// `operations` (que sólo expone `synced_at`).
-fn relative_time(synced_at: chrono::DateTime<Utc>) -> String {
+pub(crate) fn relative_time(synced_at: chrono::DateTime<Utc>) -> String {
     let elapsed = Utc::now().signed_duration_since(synced_at);
 
     if elapsed.num_hours() > 0 {

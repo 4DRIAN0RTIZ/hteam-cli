@@ -68,8 +68,22 @@ struct CardParams {
 struct CardLabelsParams {
     #[schemars(description = "ID del card")]
     card_id: u64,
-    #[schemars(description = "ID del board (opcional)")]
+    #[schemars(
+        description = "Número de operación/board (opcional; usa el configurado si se omite)"
+    )]
     board: Option<u64>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct CardLabelsMutationParams {
+    #[schemars(description = "ID del card")]
+    card_id: u64,
+    #[schemars(
+        description = "Número de operación/board (opcional; usa el configurado si se omite)"
+    )]
+    board: Option<u64>,
+    #[schemars(description = "IDs de labels")]
+    label_ids: Vec<u64>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -168,6 +182,8 @@ struct CommentParams {
         description = "Fecha del comentario, formato \"YYYY-MM-DD HH:MM\" en hora local (opcional; por defecto ahora)"
     )]
     date: Option<String>,
+    #[schemars(description = "ID del comentario al que responder (opcional)")]
+    reply_to: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -176,6 +192,12 @@ struct FollowUpIdParams {
         description = "ID del seguimiento (no el id del card ni el número visible — se obtiene con card_follow_up)"
     )]
     follow_up_id: u64,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct ReminderIdParams {
+    #[schemars(description = "ID del reminder a cancelar")]
+    reminder_id: u64,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -309,7 +331,7 @@ impl HteamMcpServer {
         ok(detail)
     }
 
-    #[tool(description = "Obtener los labels disponibles de un card")]
+    #[tool(description = "Obtener las labels asignadas a un card")]
     async fn card_labels(
         &self,
         Parameters(CardLabelsParams { card_id, board }): Parameters<CardLabelsParams>,
@@ -318,6 +340,54 @@ impl HteamMcpServer {
             .await
             .map_err(err)?;
         ok(labels)
+    }
+
+    #[tool(description = "Reemplazar las labels asignadas a un card")]
+    async fn card_labels_set(
+        &self,
+        Parameters(CardLabelsMutationParams {
+            card_id,
+            board,
+            label_ids,
+        }): Parameters<CardLabelsMutationParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let label_ids =
+            operations::cards::set_card_labels(&self.client, card_id, board, &label_ids)
+                .await
+                .map_err(err)?;
+        ok(serde_json::json!({"success": true, "card_id": card_id, "label_ids": label_ids}))
+    }
+
+    #[tool(description = "Agregar labels a un card sin quitar las existentes")]
+    async fn card_labels_add(
+        &self,
+        Parameters(CardLabelsMutationParams {
+            card_id,
+            board,
+            label_ids,
+        }): Parameters<CardLabelsMutationParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let label_ids =
+            operations::cards::add_card_labels(&self.client, card_id, board, &label_ids)
+                .await
+                .map_err(err)?;
+        ok(serde_json::json!({"success": true, "card_id": card_id, "label_ids": label_ids}))
+    }
+
+    #[tool(description = "Quitar labels de un card")]
+    async fn card_labels_remove(
+        &self,
+        Parameters(CardLabelsMutationParams {
+            card_id,
+            board,
+            label_ids,
+        }): Parameters<CardLabelsMutationParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let label_ids =
+            operations::cards::remove_card_labels(&self.client, card_id, board, &label_ids)
+                .await
+                .map_err(err)?;
+        ok(serde_json::json!({"success": true, "card_id": card_id, "label_ids": label_ids}))
     }
 
     #[tool(description = "Crear un nuevo card en el board")]
@@ -481,6 +551,7 @@ impl HteamMcpServer {
             board,
             follow,
             date,
+            reply_to,
         }): Parameters<CommentParams>,
     ) -> Result<CallToolResult, McpError> {
         operations::comments::post_comment(
@@ -490,6 +561,7 @@ impl HteamMcpServer {
             board,
             follow.unwrap_or(false),
             date.as_deref(),
+            reply_to,
         )
         .await
         .map_err(err)?;
@@ -621,6 +693,33 @@ impl HteamMcpServer {
             .await
             .map_err(err)?;
         ok(items)
+    }
+
+    #[tool(description = "Cancelar un reminder por su ID")]
+    async fn reminders_cancel(
+        &self,
+        Parameters(ReminderIdParams { reminder_id }): Parameters<ReminderIdParams>,
+    ) -> Result<CallToolResult, McpError> {
+        operations::reminders::cancel(&self.client, reminder_id)
+            .await
+            .map_err(err)?;
+        ok(serde_json::json!({"success": true, "reminder_id": reminder_id}))
+    }
+
+    #[tool(
+        description = "Resumen personal: working-on-it, recordatorios y objetivos semanales. Si una sección falla, las demás se devuelven igual; from_cache indica si los objetivos vinieron del cache local."
+    )]
+    async fn dashboard(&self) -> Result<CallToolResult, McpError> {
+        let mut config = crate::config::Config::load().map_err(err)?;
+        let snapshot = operations::dashboard::load(&self.client, &mut config).await;
+        if snapshot.objectives.is_ok() {
+            if let Some(objectives) = snapshot.objectives.as_ok() {
+                if !objectives.from_cache {
+                    config.save().map_err(err)?;
+                }
+            }
+        }
+        ok(snapshot)
     }
 
     #[tool(description = "Registrar entrada del día (check in)")]

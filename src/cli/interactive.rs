@@ -94,6 +94,9 @@ async fn process_command(line: &str) -> Result<()> {
         "board" => {
             handle_board_command(args).await?;
         }
+        "dashboard" | "dash" => {
+            cli::dashboard::execute(false).await?;
+        }
         "lists" | "ls" => {
             cli::cards::lists(None, false).await?;
         }
@@ -182,6 +185,10 @@ fn print_help() {
     println!("  time <id> --estimate|--spent  Estimado / tiempo gastado");
     println!("  detail, show <id>       Ver detalle de un card");
     println!("  comment, co <id> <txt>  Agregar comentario");
+    println!();
+
+    println!("{}", "Resumen:".bold());
+    println!("  dashboard, dash         Working on it, recordatorios y objetivos");
     println!();
 
     println!("{}", "Working On It:".bold());
@@ -524,12 +531,21 @@ async fn handle_comment_command(args: &[&str]) -> Result<()> {
     let mut rest = &args[1..];
     let mut follow = false;
     let mut date: Option<String> = None;
+    let mut reply_to: Option<u64> = None;
 
     loop {
         match rest.first() {
             Some(&"--follow") => {
                 follow = true;
                 rest = &rest[1..];
+            }
+            Some(&"--reply-to") => {
+                if rest.len() < 2 {
+                    println!("--reply-to requiere el ID del comentario");
+                    return Ok(());
+                }
+                reply_to = Some(rest[1].parse::<u64>()?);
+                rest = &rest[2..];
             }
             Some(&"--date") => {
                 if rest.len() < 3 {
@@ -556,6 +572,7 @@ async fn handle_comment_command(args: &[&str]) -> Result<()> {
             board: None,
             follow,
             date,
+            reply_to,
         }),
         None,
         false,

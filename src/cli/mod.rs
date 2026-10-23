@@ -6,6 +6,7 @@ use crate::{client, operations};
 
 pub mod board;
 pub mod cards;
+pub mod dashboard;
 pub mod doctor;
 pub mod interactive;
 pub mod login;
@@ -43,6 +44,9 @@ pub enum Commands {
     /// Diagnosticar configuración, sesión y acceso al board
     Doctor,
 
+    /// Resumen personal: working-on-it, recordatorios y objetivos semanales
+    Dashboard,
+
     /// Gestionar boards
     #[command(subcommand)]
     Board(board::BoardCommands),
@@ -75,8 +79,11 @@ pub enum Commands {
     /// Registrar entrada del día (check in)
     Checkin,
 
-    /// Ver recordatorios pendientes
-    Reminders,
+    /// Ver y gestionar reminders
+    Reminders {
+        #[command(subcommand)]
+        command: Option<ReminderCommands>,
+    },
 
     /// Ver historial de trabajo diario del equipo
     DailyWork(DailyWorkArgs),
@@ -105,6 +112,12 @@ pub enum Commands {
         /// Shell destino: bash, zsh, fish, elvish, powershell
         shell: Shell,
     },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ReminderCommands {
+    /// Cancelar un reminder por su ID
+    Cancel { reminder_id: u64 },
 }
 
 #[derive(clap::Args, Debug)]
@@ -153,6 +166,7 @@ pub async fn run() -> Result<()> {
     let result = match cli.command {
         Commands::Login(args) => login::execute(args).await,
         Commands::Doctor => doctor::execute(cli.json, cli.board).await,
+        Commands::Dashboard => dashboard::execute(cli.json).await,
         Commands::Board(cmd) => board::execute(cmd, cli.json).await,
         Commands::Lists => cards::lists(cli.board, cli.json).await,
         Commands::Cards(cmd) => cards::execute(cmd, cli.board, cli.json).await,
@@ -162,7 +176,7 @@ pub async fn run() -> Result<()> {
         Commands::Project(cmd) => project::execute(cmd, cli.json).await,
         Commands::Objectives(cmd) => objectives::execute(cmd, cli.json).await,
         Commands::Checkin => checkin(cli.json).await,
-        Commands::Reminders => reminders(cli.json).await,
+        Commands::Reminders { command } => reminders(command, cli.json).await,
         Commands::DailyWork(args) => daily_work(args, cli.json).await,
         Commands::Users(args) => search_users(args, cli.json).await,
         Commands::Interactive => interactive::run().await,
@@ -255,11 +269,21 @@ async fn checkin(json: bool) -> Result<()> {
     Ok(())
 }
 
-async fn reminders(json: bool) -> Result<()> {
+async fn reminders(command: Option<ReminderCommands>, json: bool) -> Result<()> {
     use crate::operations::{self, Session};
     use tabled::{settings::Style, Table};
 
     let session = Session::open().await?;
+    if let Some(ReminderCommands::Cancel { reminder_id }) = command {
+        operations::reminders::cancel(&session.client, reminder_id).await?;
+        if json {
+            println!("{{\"success\": true, \"reminder_id\": {reminder_id}}}");
+        } else {
+            println!("Reminder {reminder_id} cancelado.");
+        }
+        return Ok(());
+    }
+
     let items = operations::reminders::list(&session.client).await?;
 
     if json {
@@ -334,4 +358,148 @@ async fn search_users(args: UsersArgs, json: bool) -> Result<()> {
     println!("{}", table);
     println!();
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap_complete::Shell;
+    use std::io::Cursor;
+
+    fn generate_completion(shell: Shell) -> String {
+        let mut cmd = Cli::command();
+        let name = cmd.get_name().to_string();
+        let mut buf = Cursor::new(Vec::new());
+        generate(shell, &mut cmd, name, &mut buf);
+        String::from_utf8(buf.into_inner()).expect("utf8 completions")
+    }
+
+    fn committed(path: &str) -> String {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        std::fs::read_to_string(root.join(path)).unwrap_or_else(|e| panic!("missing {path}: {e}"))
+    }
+
+    #[test]
+    fn cards_labels_preserves_listing_and_parses_mutations() {
+        let list =
+            Cli::try_parse_from(["hteam", "cards", "labels", "123"]).expect("list card labels");
+        assert!(matches!(
+            list.command,
+            Commands::Cards(cards::CardsCommands::Labels(cards::LabelsArgs {
+                card_id: 123,
+                command: None
+            }))
+        ));
+
+        let set = Cli::try_parse_from(["hteam", "cards", "labels", "123", "set", "473", "315"])
+            .expect("set card labels");
+        assert!(matches!(
+            set.command,
+            Commands::Cards(cards::CardsCommands::Labels(cards::LabelsArgs {
+                card_id: 123,
+                command: Some(cards::CardLabelsCommand::Set { label_ids })
+            })) if label_ids == vec![473, 315]
+        ));
+
+        let clear = Cli::try_parse_from(["hteam", "cards", "labels", "123", "set"])
+            .expect("clear card labels");
+        assert!(matches!(
+            clear.command,
+            Commands::Cards(cards::CardsCommands::Labels(cards::LabelsArgs {
+                command: Some(cards::CardLabelsCommand::Set { label_ids }),
+                ..
+            })) if label_ids.is_empty()
+        ));
+
+        let add = Cli::try_parse_from(["hteam", "cards", "labels", "123", "add", "473"])
+            .expect("add card label");
+        assert!(matches!(
+            add.command,
+            Commands::Cards(cards::CardsCommands::Labels(cards::LabelsArgs {
+                command: Some(cards::CardLabelsCommand::Add { label_ids }),
+                ..
+            })) if label_ids == vec![473]
+        ));
+
+        let remove = Cli::try_parse_from(["hteam", "cards", "labels", "123", "remove", "315"])
+            .expect("remove card label");
+        assert!(matches!(
+            remove.command,
+            Commands::Cards(cards::CardsCommands::Labels(cards::LabelsArgs {
+                command: Some(cards::CardLabelsCommand::Remove { label_ids }),
+                ..
+            })) if label_ids == vec![315]
+        ));
+    }
+
+    #[test]
+    fn reminders_command_preserves_list_and_parses_cancel() {
+        let list = Cli::try_parse_from(["hteam", "reminders"]).expect("list reminders");
+        assert!(matches!(
+            list.command,
+            Commands::Reminders { command: None }
+        ));
+
+        let cancel =
+            Cli::try_parse_from(["hteam", "reminders", "cancel", "123"]).expect("cancel reminder");
+        assert!(matches!(
+            cancel.command,
+            Commands::Reminders {
+                command: Some(ReminderCommands::Cancel { reminder_id: 123 })
+            }
+        ));
+    }
+
+    #[test]
+    fn bash_completions_match_committed_snapshot() {
+        assert_eq!(
+            generate_completion(Shell::Bash),
+            committed("completions/hteam.bash"),
+            "regenerate with: hteam completions bash > completions/hteam.bash"
+        );
+    }
+
+    #[test]
+    fn zsh_completions_match_committed_snapshot() {
+        assert_eq!(
+            generate_completion(Shell::Zsh),
+            committed("completions/_hteam"),
+            "regenerate with: hteam completions zsh > completions/_hteam"
+        );
+    }
+
+    #[test]
+    fn fish_completions_match_committed_snapshot() {
+        assert_eq!(
+            generate_completion(Shell::Fish),
+            committed("completions/hteam.fish"),
+            "regenerate with: hteam completions fish > completions/hteam.fish"
+        );
+    }
+
+    #[test]
+    fn readme_mcp_tool_count_matches_source() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let mcp = std::fs::read_to_string(root.join("src/mcp/mod.rs")).unwrap();
+        let readme = std::fs::read_to_string(root.join("README.md")).unwrap();
+        let tools = mcp.matches("async fn ").count().saturating_sub(1);
+        assert!(
+            readme.contains(&format!("Servidor MCP sobre stdio: {tools} tools")),
+            "README feature blurb should say {tools} tools"
+        );
+        assert!(
+            readme.contains(&format!("{tools} tools, una por")),
+            "README MCP section should say {tools} tools"
+        );
+        let mcp_section = readme
+            .split("## MCP")
+            .nth(1)
+            .and_then(|s| s.split("## REPL").next())
+            .expect("README should have MCP then REPL sections");
+        let table_rows = mcp_section.lines().filter(|l| l.starts_with("| `")).count();
+        assert_eq!(
+            table_rows, tools,
+            "README MCP table rows should match MCP tools"
+        );
+    }
 }

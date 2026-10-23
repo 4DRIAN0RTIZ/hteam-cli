@@ -211,6 +211,7 @@ pub fn move_active_card(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs, de
 pub fn open_reminders(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     app.show_reminders = true;
     app.reminders_scroll.reset();
+    app.selected_reminder = None;
     let id = app.requests.bump_reminders();
     app.begin_busy("Cargando reminders...");
     jobs.spawn(async move {
@@ -223,6 +224,51 @@ pub fn open_reminders(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
 
 pub fn close_reminders(app: &mut App) {
     app.show_reminders = false;
+    app.selected_reminder = None;
+}
+
+pub fn select_reminder(app: &mut App, delta: isize) {
+    if app.reminders.is_empty() {
+        app.selected_reminder = None;
+        return;
+    }
+    let current = app
+        .selected_reminder
+        .map(|i| i as isize)
+        .unwrap_or_else(|| {
+            if delta >= 0 {
+                -1
+            } else {
+                app.reminders.len() as isize
+            }
+        });
+    let next = (current + delta).clamp(0, app.reminders.len() as isize - 1);
+    app.selected_reminder = Some(next as usize);
+}
+
+pub fn cancel_selected_reminder(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    let Some(index) = app.selected_reminder else {
+        return;
+    };
+    let Some(reminder) = app.reminders.get(index) else {
+        return;
+    };
+    let reminder_id = reminder.id;
+    let id = app.requests.bump_reminders();
+    app.begin_busy("Cancelando reminder...");
+    jobs.spawn(async move {
+        let result = match operations::reminders::cancel(&client, reminder_id).await {
+            Ok(()) => operations::reminders::list(&client)
+                .await
+                .map_err(|e| e.to_string()),
+            Err(e) => Err(e.to_string()),
+        };
+        JobOutcome::ReminderCanceled {
+            id,
+            reminder_id,
+            result,
+        }
+    });
 }
 
 pub fn open_weekly_objectives(app: &mut App, jobs: &Jobs, force: bool) {
@@ -346,6 +392,8 @@ pub fn open_comments(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     app.comment_input.clear();
     app.mention_suggestions.clear();
     app.comments_scroll.reset();
+    app.comments_selected = None;
+    app.comment_reply_to = None;
     app.current_follow_up = None;
     app.comments.clear();
 
@@ -440,7 +488,43 @@ fn resolve_current_follow_up(client: Arc<HteamClient>, app: &mut App, jobs: &Job
     });
 }
 
+pub fn select_comment(app: &mut App, delta: isize) {
+    if app.comments.is_empty() {
+        app.comments_selected = None;
+        return;
+    }
+    let current = app
+        .comments_selected
+        .map(|i| i as isize)
+        .unwrap_or_else(|| {
+            if delta >= 0 {
+                -1
+            } else {
+                app.comments.len() as isize
+            }
+        });
+    let next = (current + delta).clamp(0, app.comments.len() as isize - 1);
+    app.comments_selected = Some(next as usize);
+}
+
+pub fn start_reply_comment(app: &mut App) {
+    let Some(index) = app.comments_selected else {
+        return;
+    };
+    let Some(comment) = app.comments.get(index) else {
+        return;
+    };
+    app.comment_reply_to = Some(comment.id);
+    app.composing_comment = true;
+    app.comment_input.clear();
+    app.comment_follow = false;
+    app.comment_date_input.clear();
+    app.comment_date_focused = false;
+    app.mention_suggestions.clear();
+}
+
 pub fn start_composing_comment(app: &mut App) {
+    app.comment_reply_to = None;
     app.composing_comment = true;
     app.comment_input.clear();
     app.comment_follow = false;
@@ -451,6 +535,7 @@ pub fn start_composing_comment(app: &mut App) {
 
 pub fn cancel_composing_comment(app: &mut App) {
     app.composing_comment = false;
+    app.comment_reply_to = None;
     app.comment_input.clear();
     app.comment_follow = false;
     app.comment_date_input.clear();
@@ -594,6 +679,7 @@ pub fn submit_comment(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
         Some(date_input)
     };
     let follow = app.comment_follow;
+    let reply_to = app.comment_reply_to;
     let board_number = app.board_number;
     let card_id = card.id;
     let id = app.requests.bump_comment_post();
@@ -607,6 +693,7 @@ pub fn submit_comment(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
             Some(board_number),
             follow,
             date.as_deref(),
+            reply_to,
         )
         .await
         {
@@ -653,9 +740,14 @@ pub fn open_task_detail_by_id(
     app.task_detail_scroll.reset();
     app.editing_detail_field = false;
     app.picking_dependence = false;
+    app.picking_labels = false;
+    app.label_picker_loading = false;
+    app.label_picker_filter.clear();
+    app.label_picker_selected.clear();
     app.detail_edit_input.clear();
     app.dependence_picker_filter.clear();
     app.dependence_picker_items.clear();
+    let _ = app.requests.bump_label_picker();
 
     let id = app.requests.bump_task_detail();
     let board_cards: Vec<Card> = app
@@ -740,10 +832,15 @@ pub fn close_task_detail(app: &mut App) {
     app.task_detail_dependence_id = None;
     app.editing_detail_field = false;
     app.picking_dependence = false;
+    app.picking_labels = false;
+    app.label_picker_loading = false;
+    app.label_picker_filter.clear();
+    app.label_picker_selected.clear();
     app.detail_edit_input.clear();
     app.dependence_picker_items.clear();
     app.dependence_picker_filter.clear();
     let _ = app.requests.bump_task_detail();
+    let _ = app.requests.bump_label_picker();
 }
 
 /// Build the board task list for depends-on picking.
@@ -808,6 +905,163 @@ pub fn dependence_picker_move(app: &mut App, delta: i32) {
         .unwrap_or(0) as i32;
     let next = (cur_pos + delta).rem_euclid(indices.len() as i32) as usize;
     app.dependence_picker_idx = indices[next];
+}
+
+pub fn open_label_picker(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    let Some(card_id) = app.task_detail_card_id else {
+        return;
+    };
+    app.picking_labels = true;
+    app.label_picker_loading = true;
+    app.label_picker_idx = 0;
+    app.label_picker_filter.clear();
+    app.label_picker_selected.clear();
+    let cached_catalog = app
+        .label_catalog_loaded
+        .then(|| app.label_picker_items.clone());
+    if cached_catalog.is_none() {
+        app.label_picker_items.clear();
+    }
+    let board_number = app.board_number;
+    let id = app.requests.bump_label_picker();
+    app.begin_busy("Cargando catálogo de labels...");
+    jobs.spawn(async move {
+        let result = async {
+            let mut labels = match cached_catalog {
+                Some(labels) => labels,
+                None => operations::cards::card_label_catalog(&client).await?,
+            };
+            let current =
+                operations::cards::card_labels(&client, card_id, Some(board_number)).await?;
+            if current.iter().any(|label| label.id == 0) {
+                anyhow::bail!("el API devolvió labels sin ID");
+            }
+            let selected: Vec<u64> = current.iter().map(|label| label.id).collect();
+            for label in current {
+                if !labels.iter().any(|available| available.id == label.id) {
+                    labels.push(label);
+                }
+            }
+            labels.sort_by_cached_key(|label| label.name.to_lowercase());
+            Ok((labels, selected))
+        }
+        .await
+        .map_err(|error: anyhow::Error| error.to_string());
+        JobOutcome::LabelPickerLoaded {
+            id,
+            card_id,
+            result,
+        }
+    });
+}
+
+pub fn filtered_label_picker_indices(app: &App) -> Vec<usize> {
+    let filter = app.label_picker_filter.as_str().trim().to_lowercase();
+    app.label_picker_items
+        .iter()
+        .enumerate()
+        .filter(|(_, label)| {
+            filter.is_empty()
+                || label.name.to_lowercase().contains(&filter)
+                || label.id.to_string().contains(&filter)
+        })
+        .map(|(index, _)| index)
+        .collect()
+}
+
+pub fn label_picker_move(app: &mut App, delta: i32) {
+    let indices = filtered_label_picker_indices(app);
+    if indices.is_empty() {
+        return;
+    }
+    let current = indices
+        .iter()
+        .position(|index| *index == app.label_picker_idx)
+        .unwrap_or(0) as i32;
+    let next = (current + delta).rem_euclid(indices.len() as i32) as usize;
+    app.label_picker_idx = indices[next];
+}
+
+pub fn toggle_label_picker_selection(app: &mut App) {
+    if app.label_picker_loading {
+        return;
+    }
+    let Some(label) = app.label_picker_items.get(app.label_picker_idx) else {
+        return;
+    };
+    if !app.label_picker_selected.insert(label.id) {
+        app.label_picker_selected.remove(&label.id);
+    }
+}
+
+pub fn cancel_label_picker(app: &mut App) {
+    app.picking_labels = false;
+    app.label_picker_loading = false;
+    app.label_picker_filter.clear();
+    let _ = app.requests.bump_label_picker();
+}
+
+pub fn confirm_label_picker(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    if app.label_picker_loading {
+        return;
+    }
+    let Some(card_id) = app.task_detail_card_id else {
+        cancel_label_picker(app);
+        return;
+    };
+    let label_ids: Vec<u64> = app
+        .label_picker_items
+        .iter()
+        .filter(|label| app.label_picker_selected.contains(&label.id))
+        .map(|label| label.id)
+        .collect();
+    app.picking_labels = false;
+    app.editing_detail_field = false;
+    let list_id = app.task_detail_list_id;
+    let board_number = app.board_number;
+    let board_cards: Vec<Card> = app
+        .cards_by_list
+        .values()
+        .flat_map(|cards| cards.iter().cloned())
+        .collect();
+    let id = app.requests.bump_task_detail();
+    let _ = app.requests.bump_label_picker();
+    app.begin_busy("Guardando labels...");
+    jobs.spawn(async move {
+        let save = async {
+            operations::cards::set_card_labels(&client, card_id, Some(board_number), &label_ids)
+                .await?;
+            operations::cards::card_detail_enriched(&client, card_id).await
+        };
+        let result = match save.await {
+            Ok(detail) => {
+                let (dependence_label, dependence_id) =
+                    resolve_dependence_meta(&client, &detail.dependence, &board_cards).await;
+                let cards = if let Some(list_id) = list_id {
+                    Some(
+                        operations::cards::list_cards(&client, list_id, Some(board_number))
+                            .await
+                            .map(|(cards, _)| cards)
+                            .map_err(|error| error.to_string()),
+                    )
+                } else {
+                    None
+                };
+                (Ok(detail), dependence_label, dependence_id, cards)
+            }
+            Err(error) => (Err(error.to_string()), None, None, None),
+        };
+        JobOutcome::TaskDetailSaved {
+            id,
+            card_id,
+            list_id,
+            board_number,
+            result: result.0,
+            dependence_label: result.1,
+            dependence_id: result.2,
+            cards: result.3,
+        }
+    });
 }
 
 pub fn confirm_dependence_picker(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
@@ -1718,6 +1972,7 @@ pub fn toggle_projects_focus(app: &mut App) {
 mod tests {
     use super::*;
     use crate::config::WorkingHoursConfig;
+    use crate::models::{Comment, Label, Reminder};
     use crate::tui::theme::Theme;
     use std::collections::HashSet;
     use std::time::Duration;
@@ -1733,6 +1988,32 @@ mod tests {
     }
 
     #[test]
+    fn label_picker_filters_navigates_and_toggles_selection() {
+        let mut app = test_app();
+        app.label_picker_items = vec![
+            Label {
+                id: 315,
+                name: "DOING".into(),
+                color: "#00ff00".into(),
+            },
+            Label {
+                id: 473,
+                name: "Proceso".into(),
+                color: "#ff0000".into(),
+            },
+        ];
+        app.label_picker_filter.set("proc");
+
+        assert_eq!(filtered_label_picker_indices(&app), vec![1]);
+        label_picker_move(&mut app, 1);
+        assert_eq!(app.label_picker_idx, 1);
+        toggle_label_picker_selection(&mut app);
+        assert!(app.label_picker_selected.contains(&473));
+        toggle_label_picker_selection(&mut app);
+        assert!(!app.label_picker_selected.contains(&473));
+    }
+
+    #[test]
     fn schedule_arms_debounce_for_at_token() {
         let mut app = test_app();
         app.composing_comment = true;
@@ -1742,6 +2023,54 @@ mod tests {
 
         assert!(app.mention_debounce_at.is_some());
         assert_eq!(app.requests.mentions, 1);
+    }
+
+    #[test]
+    fn reply_uses_selected_comment_id() {
+        let mut app = test_app();
+        app.comments = vec![Comment {
+            id: 12,
+            user_name: "ana".into(),
+            submit_date: String::new(),
+            comment: "first".into(),
+            level: 0,
+            parent_id: None,
+            is_removed: false,
+            permalink: None,
+        }];
+
+        select_comment(&mut app, 1);
+        start_reply_comment(&mut app);
+
+        assert_eq!(app.comments_selected, Some(0));
+        assert_eq!(app.comment_reply_to, Some(12));
+        assert!(app.composing_comment);
+    }
+
+    #[test]
+    fn selecting_reminder_tracks_selected_index() {
+        let mut app = test_app();
+        app.reminders = vec![
+            Reminder {
+                id: 5,
+                object_id: 10,
+                reminder_type: Some(1),
+                reminder_date: None,
+                content_object: None,
+            },
+            Reminder {
+                id: 8,
+                object_id: 12,
+                reminder_type: Some(1),
+                reminder_date: None,
+                content_object: None,
+            },
+        ];
+
+        select_reminder(&mut app, 1);
+        assert_eq!(app.selected_reminder, Some(0));
+        select_reminder(&mut app, 1);
+        assert_eq!(app.selected_reminder, Some(1));
     }
 
     #[test]

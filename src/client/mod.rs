@@ -1148,6 +1148,7 @@ impl HteamClient {
         board_number: Option<u64>,
         follow: bool,
         date: chrono::NaiveDateTime,
+        reply_to: Option<u64>,
     ) -> Result<()> {
         let board = match board_number {
             Some(b) => b,
@@ -1204,7 +1205,7 @@ impl HteamClient {
             format!("object_pk={}", card_id),
             format!("timestamp={}", timestamp),
             format!("security_hash={}", security_hash),
-            "reply_to=0".to_string(),
+            format!("reply_to={}", reply_to.unwrap_or(0)),
             "honeypot=".to_string(),
             format!("comment={}", encode(comment)),
         ];
@@ -1266,8 +1267,122 @@ impl HteamClient {
             );
         }
 
-        let labels: Vec<Label> = response.json().await?;
+        #[derive(serde::Deserialize)]
+        #[serde(untagged)]
+        enum LabelsResponse {
+            Wrapped {
+                #[serde(default)]
+                labels: Vec<Label>,
+            },
+            Plain(Vec<Label>),
+        }
+
+        let response: LabelsResponse = response.json().await?;
+        Ok(match response {
+            LabelsResponse::Wrapped { labels } | LabelsResponse::Plain(labels) => labels,
+        })
+    }
+
+    /// Load the paginated label catalog used by the web label selector.
+    pub async fn get_label_catalog(&self) -> Result<Vec<Label>> {
+        #[derive(serde::Deserialize)]
+        struct LabelCatalogPage {
+            #[serde(default)]
+            count: usize,
+            #[serde(default)]
+            results: Vec<Label>,
+        }
+
+        let (url, headers) = {
+            let config = self.config.lock().await;
+            (
+                format!("{}/boards/care/labels/", self.api_base_url),
+                self.build_headers(&config)?,
+            )
+        };
+        let mut labels = Vec::new();
+        let mut page = 1usize;
+        loop {
+            let response = self
+                .client
+                .get(&url)
+                .query(&[
+                    ("format", "json"),
+                    ("page_size", "50"),
+                    ("page", &page.to_string()),
+                ])
+                .headers(headers.clone())
+                .send()
+                .await
+                .context("Error al obtener catálogo de labels")?;
+            if !response.status().is_success() {
+                anyhow::bail!(
+                    "Error HTTP {}: {}",
+                    response.status(),
+                    response.text().await?
+                );
+            }
+            let result: LabelCatalogPage = response
+                .json()
+                .await
+                .context("Error al interpretar catálogo de labels")?;
+            let previous_count = labels.len();
+            labels.extend(result.results);
+            if labels.len() >= result.count || labels.len() == previous_count {
+                break;
+            }
+            page += 1;
+            if page > 100 {
+                anyhow::bail!("El catálogo de labels excede el límite de páginas");
+            }
+        }
         Ok(labels)
+    }
+
+    pub async fn set_card_labels(
+        &self,
+        board_id: u64,
+        card_id: u64,
+        label_ids: &[u64],
+    ) -> Result<()> {
+        let (url, headers) = {
+            let config = self.config.lock().await;
+            let url = format!(
+                "{}/boards/care/boards/{}/card/{}/labels/",
+                self.api_base_url, board_id, card_id
+            );
+            let headers = self.build_headers(&config)?;
+            (url, headers)
+        };
+        let body = label_ids
+            .iter()
+            .map(|id| format!("labels={id}"))
+            .collect::<Vec<_>>()
+            .join("&");
+
+        let response = self
+            .client
+            .post(&url)
+            .headers(headers)
+            .header(
+                CONTENT_TYPE,
+                "application/x-www-form-urlencoded; charset=UTF-8",
+            )
+            .header("Origin", self.site_base_url.as_str())
+            .body(body)
+            .send()
+            .await
+            .context("Error al actualizar labels de la card")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+
+        Ok(())
     }
 
     /// URL pública de la página de detalle de un proyecto (`/projects/{id}/`)
@@ -1668,6 +1783,64 @@ impl HteamClient {
         Ok(())
     }
 
+    pub async fn cancel_reminder(&self, reminder_id: u64) -> Result<()> {
+        let config = self.config.lock().await;
+        let url = format!("{}/tr/reminders/{}/", self.api_base_url, reminder_id);
+        let headers = self.build_headers(&config)?;
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers.clone())
+            .send()
+            .await
+            .context("Error al obtener reminder para cancelarlo")?;
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {} al obtener reminder: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+
+        let record: serde_json::Value = response
+            .json()
+            .await
+            .context("Respuesta inválida al obtener reminder para cancelarlo")?;
+        let fields = record
+            .as_object()
+            .context("La respuesta del reminder no es un objeto JSON")?;
+        let object_id = fields
+            .get("object_id")
+            .and_then(serde_json::Value::as_u64)
+            .context("La respuesta del reminder no incluye object_id válido")?;
+        let content_type = fields
+            .get("content_type")
+            .and_then(serde_json::Value::as_u64)
+            .context("La respuesta del reminder no incluye content_type válido")?;
+        let body = serde_json::json!({
+            "canceled": true,
+            "object_id": object_id,
+            "content_type": content_type,
+        });
+
+        let response = self
+            .client
+            .put(&url)
+            .headers(headers)
+            .header(CONTENT_TYPE, "application/json")
+            .json(&body)
+            .send()
+            .await
+            .context("Error al cancelar reminder")?;
+
+        let code = response.status().as_u16();
+        if code >= 400 {
+            anyhow::bail!("Error HTTP {}: {}", code, response.text().await?);
+        }
+
+        Ok(())
+    }
+
     pub async fn get_reminders(&self) -> Result<Vec<Reminder>> {
         let config = self.config.lock().await;
         let url = format!("{}/tr/reminders/user/", self.api_base_url);
@@ -2050,6 +2223,40 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_post_comment_sends_reply_to_id() {
+        let mut server = mockito::Server::new_async().await;
+        let _page = server
+            .mock("GET", "/operations/483/tasks/42/")
+            .with_status(200)
+            .with_body(r#"<input name="timestamp" value="123"><input name="security_hash" value="hash"><input name="csrfmiddlewaretoken" value="csrf">"#)
+            .create_async()
+            .await;
+        let _post = server
+            .mock("POST", "/comments/post/")
+            .match_body(Matcher::UrlEncoded("reply_to".into(), "17".into()))
+            .match_body(Matcher::UrlEncoded("comment".into(), "respuesta".into()))
+            .with_status(302)
+            .create_async()
+            .await;
+        let client = authenticated_client(&server.url());
+
+        client
+            .post_comment(
+                42,
+                "respuesta",
+                Some(483),
+                false,
+                chrono::NaiveDate::from_ymd_opt(2026, 10, 23)
+                    .unwrap()
+                    .and_hms_opt(12, 0, 0)
+                    .unwrap(),
+                Some(17),
+            )
+            .await
+            .expect("reply comment");
+    }
+
+    #[tokio::test]
     async fn test_new_for_test_uses_mock_base_url() {
         let mut server = mockito::Server::new_async().await;
         let _m = server
@@ -2072,6 +2279,121 @@ mod tests {
         let lists = client.get_lists(Some(483)).await.expect("lists");
 
         assert_eq!(lists[0].name, "Open");
+    }
+
+    #[tokio::test]
+    async fn test_cancel_reminder_puts_full_record_with_canceled_true() {
+        let mut server = mockito::Server::new_async().await;
+        let _detail = server
+            .mock("GET", "/tr/reminders/123/")
+            .with_status(200)
+            .with_body(r#"{"id":123,"user":{"username":"ana"},"customer":21,"object_id":42,"content_type":99,"canceled":null,"type":1}"#)
+            .create_async()
+            .await;
+        let _update = server
+            .mock("PUT", "/tr/reminders/123/")
+            .match_body(Matcher::Json(serde_json::json!({
+                "canceled": true,
+                "object_id": 42,
+                "content_type": 99
+            })))
+            .with_status(200)
+            .create_async()
+            .await;
+        let client = HteamClient::new_for_test(Config::default(), server.url(), server.url())
+            .expect("client");
+
+        client.cancel_reminder(123).await.expect("cancel reminder");
+    }
+
+    #[tokio::test]
+    async fn test_get_card_labels_parses_wrapped_response() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/boards/care/boards/483/card/42/labels/")
+            .match_query(Matcher::UrlEncoded("format".into(), "json".into()))
+            .with_status(200)
+            .with_body(r##"{"label":"Labels","labels":[{"id":473,"name":"Bug","color":"#fff"}]}"##)
+            .create_async()
+            .await;
+        let client = HteamClient::new_for_test(Config::default(), server.url(), server.url())
+            .expect("client");
+
+        let labels = client.get_card_labels(42, Some(483)).await.expect("labels");
+
+        assert_eq!(labels.len(), 1);
+        assert_eq!(labels[0].id, 473);
+        assert_eq!(labels[0].name, "Bug");
+    }
+
+    #[tokio::test]
+    async fn test_get_card_labels_accepts_array_response() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/boards/care/boards/483/card/43/labels/")
+            .match_query(Matcher::UrlEncoded("format".into(), "json".into()))
+            .with_status(200)
+            .with_body(r##"[{"id":315,"name":"Feature","color":"#abc"}]"##)
+            .create_async()
+            .await;
+        let client = HteamClient::new_for_test(Config::default(), server.url(), server.url())
+            .expect("client");
+
+        let labels = client.get_card_labels(43, Some(483)).await.expect("labels");
+
+        assert_eq!(labels[0].id, 315);
+    }
+
+    #[tokio::test]
+    async fn test_get_label_catalog_follows_pages() {
+        let mut server = mockito::Server::new_async().await;
+        let _page_one = server
+            .mock("GET", "/boards/care/labels/")
+            .match_query(Matcher::UrlEncoded("page".into(), "1".into()))
+            .with_status(200)
+            .with_body(r##"{"count":2,"next":"?page=2","results":[{"id":473,"name":"Proceso","color":"#f00"}]}"##)
+            .create_async()
+            .await;
+        let _page_two = server
+            .mock("GET", "/boards/care/labels/")
+            .match_query(Matcher::UrlEncoded("page".into(), "2".into()))
+            .with_status(200)
+            .with_body(
+                r##"{"count":2,"next":null,"results":[{"id":315,"name":"DOING","color":"#0f0"}]}"##,
+            )
+            .create_async()
+            .await;
+        let client = HteamClient::new_for_test(Config::default(), server.url(), server.url())
+            .expect("client");
+
+        let labels = client.get_label_catalog().await.expect("catalog");
+
+        assert_eq!(
+            labels.iter().map(|label| label.id).collect::<Vec<_>>(),
+            vec![473, 315]
+        );
+    }
+
+    #[tokio::test]
+    async fn test_set_card_labels_posts_repeated_label_ids() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("POST", "/boards/care/boards/483/card/42/labels/")
+            .match_header(
+                "content-type",
+                "application/x-www-form-urlencoded; charset=UTF-8",
+            )
+            .match_body("labels=473&labels=315")
+            .with_status(200)
+            .create_async()
+            .await;
+        let client = HteamClient::new_for_test(Config::default(), server.url(), server.url())
+            .expect("client");
+
+        client
+            .set_card_labels(483, 42, &[473, 315])
+            .await
+            .expect("set labels");
     }
 
     #[tokio::test]
