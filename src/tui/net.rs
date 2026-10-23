@@ -69,6 +69,11 @@ pub enum JobOutcome {
         card_name: String,
         result: Result<Vec<Reminder>, String>,
     },
+    ReminderCanceled {
+        id: u64,
+        reminder_id: u64,
+        result: Result<Vec<Reminder>, String>,
+    },
     WeeklyObjectives {
         id: u64,
         result: Result<WeeklyObjectivesLoaded, String>,
@@ -384,7 +389,10 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
             }
             app.end_busy();
             match result {
-                Ok(list) => app.reminders = list,
+                Ok(list) => {
+                    app.reminders = list;
+                    app.selected_reminder = None;
+                }
                 Err(e) => app.set_status(format!("Error cargando reminders: {}", e)),
             }
         }
@@ -404,6 +412,25 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
                     app.set_status(format!("Reminder creado: {}", card_name));
                 }
                 Err(e) => app.set_status(format!("Error creando reminder: {}", e)),
+            }
+        }
+        JobOutcome::ReminderCanceled {
+            id,
+            reminder_id,
+            result,
+        } => {
+            if app.requests.reminders != id {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            match result {
+                Ok(list) => {
+                    app.reminders = list;
+                    app.selected_reminder = None;
+                    app.set_status(format!("Reminder {reminder_id} cancelado."));
+                }
+                Err(e) => app.set_status(format!("Error cancelando reminder: {}", e)),
             }
         }
         JobOutcome::WeeklyObjectives { id, result } => {

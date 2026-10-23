@@ -1669,6 +1669,64 @@ impl HteamClient {
         Ok(())
     }
 
+    pub async fn cancel_reminder(&self, reminder_id: u64) -> Result<()> {
+        let config = self.config.lock().await;
+        let url = format!("{}/tr/reminders/{}/", self.api_base_url, reminder_id);
+        let headers = self.build_headers(&config)?;
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers.clone())
+            .send()
+            .await
+            .context("Error al obtener reminder para cancelarlo")?;
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {} al obtener reminder: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+
+        let record: serde_json::Value = response
+            .json()
+            .await
+            .context("Respuesta inválida al obtener reminder para cancelarlo")?;
+        let fields = record
+            .as_object()
+            .context("La respuesta del reminder no es un objeto JSON")?;
+        let object_id = fields
+            .get("object_id")
+            .and_then(serde_json::Value::as_u64)
+            .context("La respuesta del reminder no incluye object_id válido")?;
+        let content_type = fields
+            .get("content_type")
+            .and_then(serde_json::Value::as_u64)
+            .context("La respuesta del reminder no incluye content_type válido")?;
+        let body = serde_json::json!({
+            "canceled": true,
+            "object_id": object_id,
+            "content_type": content_type,
+        });
+
+        let response = self
+            .client
+            .put(&url)
+            .headers(headers)
+            .header(CONTENT_TYPE, "application/json")
+            .json(&body)
+            .send()
+            .await
+            .context("Error al cancelar reminder")?;
+
+        let code = response.status().as_u16();
+        if code >= 400 {
+            anyhow::bail!("Error HTTP {}: {}", code, response.text().await?);
+        }
+
+        Ok(())
+    }
+
     pub async fn get_reminders(&self) -> Result<Vec<Reminder>> {
         let config = self.config.lock().await;
         let url = format!("{}/tr/reminders/user/", self.api_base_url);
@@ -2107,6 +2165,31 @@ mod tests {
         let lists = client.get_lists(Some(483)).await.expect("lists");
 
         assert_eq!(lists[0].name, "Open");
+    }
+
+    #[tokio::test]
+    async fn test_cancel_reminder_puts_full_record_with_canceled_true() {
+        let mut server = mockito::Server::new_async().await;
+        let _detail = server
+            .mock("GET", "/tr/reminders/123/")
+            .with_status(200)
+            .with_body(r#"{"id":123,"user":{"username":"ana"},"customer":21,"object_id":42,"content_type":99,"canceled":null,"type":1}"#)
+            .create_async()
+            .await;
+        let _update = server
+            .mock("PUT", "/tr/reminders/123/")
+            .match_body(Matcher::Json(serde_json::json!({
+                "canceled": true,
+                "object_id": 42,
+                "content_type": 99
+            })))
+            .with_status(200)
+            .create_async()
+            .await;
+        let client = HteamClient::new_for_test(Config::default(), server.url(), server.url())
+            .expect("client");
+
+        client.cancel_reminder(123).await.expect("cancel reminder");
     }
 
     #[tokio::test]

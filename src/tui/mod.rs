@@ -279,8 +279,15 @@ async fn run_loop(
                 KeyCode::Char('a') => {
                     events::add_reminder_for_current_card(client.clone(), app, &jobs)
                 }
-                KeyCode::Char('j') | KeyCode::Down => app.reminders_scroll.by(1),
-                KeyCode::Char('k') | KeyCode::Up => app.reminders_scroll.by(-1),
+                KeyCode::Char('x') => events::cancel_selected_reminder(client.clone(), app, &jobs),
+                KeyCode::Char('j') | KeyCode::Down => {
+                    events::select_reminder(app, 1);
+                    app.reminders_scroll.by(2);
+                }
+                KeyCode::Char('k') | KeyCode::Up => {
+                    events::select_reminder(app, -1);
+                    app.reminders_scroll.by(-2);
+                }
                 KeyCode::Char('?') => events::open_help(app, HelpContext::Reminders),
                 _ => {}
             }

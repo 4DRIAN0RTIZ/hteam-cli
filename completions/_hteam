@@ -782,7 +782,53 @@ _arguments "${_arguments_options[@]}" : \
 '--json[Mostrar salida en formato JSON]' \
 '-h[Print help]' \
 '--help[Print help]' \
+":: :_hteam__subcmd__reminders_commands" \
+"*::: :->reminders" \
 && ret=0
+
+    case $state in
+    (reminders)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-reminders-command-$line[1]:"
+        case $line[1] in
+            (cancel)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar]:BOARD:_default' \
+'--board=[ID del board a usar]:BOARD:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':reminder_id:_default' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_hteam__subcmd__reminders__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-reminders-help-command-$line[1]:"
+        case $line[1] in
+            (cancel)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
 ;;
 (daily-work)
 _arguments "${_arguments_options[@]}" : \
@@ -1169,7 +1215,23 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (reminders)
 _arguments "${_arguments_options[@]}" : \
+":: :_hteam__subcmd__help__subcmd__reminders_commands" \
+"*::: :->reminders" \
 && ret=0
+
+    case $state in
+    (reminders)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:hteam-help-reminders-command-$line[1]:"
+        case $line[1] in
+            (cancel)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
 ;;
 (daily-work)
 _arguments "${_arguments_options[@]}" : \
@@ -1251,7 +1313,7 @@ _hteam_commands() {
 'project:Gestionar proyectos' \
 'objectives:Objetivos semanales (scraping de SharePad, sólo lectura)' \
 'checkin:Registrar entrada del día (check in)' \
-'reminders:Ver recordatorios pendientes' \
+'reminders:Ver y gestionar reminders' \
 'daily-work:Ver historial de trabajo diario del equipo' \
 'users:Buscar usuarios por nombre' \
 'interactive:Modo interactivo REPL' \
@@ -1623,7 +1685,7 @@ _hteam__subcmd__help_commands() {
 'project:Gestionar proyectos' \
 'objectives:Objetivos semanales (scraping de SharePad, sólo lectura)' \
 'checkin:Registrar entrada del día (check in)' \
-'reminders:Ver recordatorios pendientes' \
+'reminders:Ver y gestionar reminders' \
 'daily-work:Ver historial de trabajo diario del equipo' \
 'users:Buscar usuarios por nombre' \
 'interactive:Modo interactivo REPL' \
@@ -1890,8 +1952,15 @@ _hteam__subcmd__help__subcmd__project__subcmd__tasks_commands() {
 }
 (( $+functions[_hteam__subcmd__help__subcmd__reminders_commands] )) ||
 _hteam__subcmd__help__subcmd__reminders_commands() {
-    local commands; commands=()
+    local commands; commands=(
+'cancel:Cancelar un reminder por su ID' \
+    )
     _describe -t commands 'hteam help reminders commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__reminders__subcmd__cancel_commands] )) ||
+_hteam__subcmd__help__subcmd__reminders__subcmd__cancel_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help reminders cancel commands' commands "$@"
 }
 (( $+functions[_hteam__subcmd__help__subcmd__theme_commands] )) ||
 _hteam__subcmd__help__subcmd__theme_commands() {
@@ -2075,8 +2144,34 @@ _hteam__subcmd__project__subcmd__tasks_commands() {
 }
 (( $+functions[_hteam__subcmd__reminders_commands] )) ||
 _hteam__subcmd__reminders_commands() {
-    local commands; commands=()
+    local commands; commands=(
+'cancel:Cancelar un reminder por su ID' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
     _describe -t commands 'hteam reminders commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__reminders__subcmd__cancel_commands] )) ||
+_hteam__subcmd__reminders__subcmd__cancel_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam reminders cancel commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__reminders__subcmd__help_commands] )) ||
+_hteam__subcmd__reminders__subcmd__help_commands() {
+    local commands; commands=(
+'cancel:Cancelar un reminder por su ID' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'hteam reminders help commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__reminders__subcmd__help__subcmd__cancel_commands] )) ||
+_hteam__subcmd__reminders__subcmd__help__subcmd__cancel_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam reminders help cancel commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__reminders__subcmd__help__subcmd__help_commands] )) ||
+_hteam__subcmd__reminders__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam reminders help help commands' commands "$@"
 }
 (( $+functions[_hteam__subcmd__theme_commands] )) ||
 _hteam__subcmd__theme_commands() {

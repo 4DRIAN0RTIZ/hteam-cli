@@ -209,7 +209,8 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
             " Ayuda · Reminders ",
             &[
                 "Reminders",
-                "  j/k, ↓/↑        scroll",
+                "  j/k, ↓/↑        seleccionar reminder",
+                "  x               cancelar el reminder seleccionado",
                 "  a               agregar un reminder para la card seleccionada",
                 "  Esc, q          cerrar",
             ],
@@ -430,6 +431,7 @@ fn draw_reminders_popup(frame: &mut Frame, app: &App) {
         lines.push(muted_hint(app, "Selecciona una card y pulsa a · ? · Esc"));
     } else {
         for (i, r) in app.reminders.iter().enumerate() {
+            let selected = app.selected_reminder == Some(i);
             if i > 0 {
                 lines.push(Line::from(Span::styled(
                     "  · · ·",
@@ -449,12 +451,20 @@ fn draw_reminders_popup(frame: &mut Frame, app: &App) {
                 date_raw.chars().take(10).collect()
             };
             lines.push(Line::from(vec![
-                Span::styled("› ", Style::default().fg(app.theme.border_reminders)),
+                Span::styled(
+                    if selected { "▶ " } else { "› " },
+                    Style::default().fg(app.theme.border_reminders),
+                ),
                 Span::styled(
                     title.to_string(),
                     Style::default()
                         .fg(app.theme.highlight)
-                        .add_modifier(Modifier::BOLD),
+                        .add_modifier(Modifier::BOLD)
+                        .bg(if selected {
+                            app.theme.selection_bg
+                        } else {
+                            app.theme.background
+                        }),
                 ),
             ]));
             lines.push(Line::from(vec![
@@ -468,7 +478,10 @@ fn draw_reminders_popup(frame: &mut Frame, app: &App) {
             ]));
         }
         lines.push(Line::from(""));
-        lines.push(muted_hint(app, "a nuevo · j/k scroll · ? · Esc"));
+        lines.push(muted_hint(
+            app,
+            "a nuevo · j/k seleccionar · x cancelar · ? · Esc",
+        ));
     }
 
     let p = Paragraph::new(Text::from(lines))
