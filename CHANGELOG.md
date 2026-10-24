@@ -5,6 +5,11 @@ All notable changes to hteam-cli will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Features
+- *(cards)* Support project board lists and task detail
+
 ## [0.12.0] - 2026-10-23
 
 ### Documentation
@@ -18,7 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(comments)* Support replying to card comments
 - *(reminders)* Support reminder cancellation
 - *(cards)* Support card label mutations
-- *(cards)* Support project board lists and task detail
 
 ## [0.11.0] - 2026-10-22
 
