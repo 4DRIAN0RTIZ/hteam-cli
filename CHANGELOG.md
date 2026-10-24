@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 - *(cards)* Support project board lists and task detail
 - *(projects)* Create and edit milestones
+- *(projects)* Create tasks in milestones
+- *(projects)* Create tasks in milestones
 
 ## [0.12.0] - 2026-10-23
 
