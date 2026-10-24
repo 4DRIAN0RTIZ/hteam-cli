@@ -254,6 +254,26 @@ struct ProjectMilestoneEditParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(untagged)]
+enum UserReference {
+    Id(u64),
+    Username(String),
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct ProjectTaskCreateParams {
+    project_id: u64,
+    milestone_id: u64,
+    name: String,
+    description: Option<String>,
+    estimate: Option<String>,
+    start_date: Option<String>,
+    dependence: Option<u64>,
+    responsible: Option<UserReference>,
+    priority: Option<u8>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 struct UsersSearchParams {
     #[schemars(description = "Texto a buscar en usernames")]
     query: String,
@@ -766,6 +786,49 @@ impl HteamMcpServer {
         .await
         .map_err(err)?;
         ok(milestone)
+    }
+
+    #[tool(description = "Crear una task dentro de un milestone de proyecto")]
+    async fn project_task_create(
+        &self,
+        Parameters(ProjectTaskCreateParams {
+            project_id,
+            milestone_id,
+            name,
+            description,
+            estimate,
+            start_date,
+            dependence,
+            responsible,
+            priority,
+        }): Parameters<ProjectTaskCreateParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let responsible = match responsible {
+            Some(UserReference::Id(id)) => Some(id),
+            Some(UserReference::Username(username)) => Some(
+                operations::projects::resolve_user_id(&self.client, &username)
+                    .await
+                    .map_err(err)?,
+            ),
+            None => None,
+        };
+        let task = operations::projects::create_task(
+            &self.client,
+            project_id,
+            milestone_id,
+            operations::projects::ProjectTaskCreate {
+                name: &name,
+                description: description.as_deref(),
+                time_estimated: estimate.as_deref(),
+                start_date: start_date.as_deref(),
+                dependence,
+                responsible,
+                priority,
+            },
+        )
+        .await
+        .map_err(err)?;
+        ok(task)
     }
 
     #[tool(description = "Ver las tasks de un proyecto con su estado y responsable")]
