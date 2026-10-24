@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 use crate::client::HteamClient;
 use crate::config::Config;
@@ -66,6 +66,68 @@ pub async fn edit_milestone(
         .edit_project_milestone(project_id, milestone_id, name, description)
         .await?;
     Ok(to_write_result(written))
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ProjectTaskCreate<'a> {
+    pub name: &'a str,
+    pub description: Option<&'a str>,
+    pub time_estimated: Option<&'a str>,
+    pub start_date: Option<&'a str>,
+    pub dependence: Option<u64>,
+    pub responsible: Option<u64>,
+    pub priority: Option<u8>,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ProjectTaskWriteResult {
+    pub project_id: u64,
+    pub milestone_id: u64,
+    pub task_id: Option<u64>,
+    pub name: String,
+}
+
+pub async fn resolve_user_id(client: &HteamClient, reference: &str) -> Result<u64> {
+    if let Ok(id) = reference.parse() {
+        return Ok(id);
+    }
+    let users = crate::operations::users::search(client, reference).await?;
+    users
+        .into_iter()
+        .find(|user| user.selected_text.eq_ignore_ascii_case(reference))
+        .context("no se encontró un usuario exacto; usa `hteam users <query>` para buscarlo")?
+        .id
+        .parse()
+        .context("Hteam devolvió un ID de usuario inválido")
+}
+
+pub async fn create_task(
+    client: &HteamClient,
+    project_id: u64,
+    milestone_id: u64,
+    task: ProjectTaskCreate<'_>,
+) -> Result<ProjectTaskWriteResult> {
+    let written = client
+        .create_project_task(
+            project_id,
+            milestone_id,
+            crate::client::ProjectTaskCreateRequest {
+                name: task.name,
+                description: task.description,
+                time_estimated: task.time_estimated,
+                start_date: task.start_date,
+                dependence: task.dependence,
+                responsible: task.responsible,
+                priority: task.priority,
+            },
+        )
+        .await?;
+    Ok(ProjectTaskWriteResult {
+        project_id: written.project_id,
+        milestone_id: written.milestone_id,
+        task_id: written.task_id,
+        name: written.name,
+    })
 }
 
 /// Moves `id` to the front of the known-projects MRU list (deduping) and
@@ -159,6 +221,67 @@ mod tests {
         assert_eq!(milestones[0].progress, 0.5);
     }
 
+    #[tokio::test]
+    async fn resolve_user_id_accepts_an_exact_username() {
+        let mut server = mockito::Server::new_async().await;
+        let _users = server
+            .mock("GET", "/users/username-autocomplete/")
+            .match_query(Matcher::UrlEncoded("q".into(), "egaleana".into()))
+            .with_status(200)
+            .with_body(
+                r#"{"results":[{"id":"114","selected_text":"egaleana","text":"egaleana (egaleana@example.com)"}]}"#,
+            )
+            .create_async()
+            .await;
+
+        assert_eq!(
+            resolve_user_id(&client(&server.url()), "egaleana")
+                .await
+                .expect("user ID"),
+            114
+        );
+    }
+
+    #[tokio::test]
+    async fn create_task_posts_project_milestone_form() {
+        let mut server = mockito::Server::new_async().await;
+        let _form = server
+            .mock("GET", "/projects/469/milestones/835/task/create/")
+            .with_status(200)
+            .with_body(r#"<form><input name="csrfmiddlewaretoken" value="csrf"><input name="name"></form>"#)
+            .create_async()
+            .await;
+        let _post = server
+            .mock("POST", "/projects/469/milestones/835/task/create/")
+            .match_body(Matcher::UrlEncoded(
+                "csrfmiddlewaretoken".into(),
+                "csrf".into(),
+            ))
+            .match_body(Matcher::UrlEncoded("process_id".into(), "469".into()))
+            .match_body(Matcher::UrlEncoded("name".into(), "Plan+release".into()))
+            .match_body(Matcher::UrlEncoded("priority".into(), "4".into()))
+            .with_status(200)
+            .with_body(r#"<div>Created task: Plan release</div><a href="/projects/469/tasks/996/">Plan release</a>"#)
+            .create_async()
+            .await;
+
+        let result = create_task(
+            &client(&server.url()),
+            469,
+            835,
+            ProjectTaskCreate {
+                name: "Plan release",
+                priority: Some(4),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("create task");
+        assert_eq!(result.name, "Plan release");
+        assert_eq!(result.milestone_id, 835);
+        assert_eq!(result.task_id, Some(996));
+    }
+
     #[test]
     fn test_project_url_builds_link() {
         let url = project_url(&client("https://hteam.mx"), 472);
@@ -195,6 +318,12 @@ mod tests {
             )
             .create_async()
             .await;
+        let _milestones = server
+            .mock("GET", "/project-new/care/projects/469/milestones_progress/")
+            .with_status(200)
+            .with_body(r#"[["Release prep",0,"/projects/469/milestones/835/"]]"#)
+            .create_async()
+            .await;
         let _post = server
             .mock("POST", "/projects/469/milestones/create/")
             .match_body(Matcher::UrlEncoded(
@@ -215,7 +344,7 @@ mod tests {
 
         assert_eq!(result.project_id, 469);
         assert_eq!(result.name, "Release prep");
-        assert_eq!(result.milestone_id, None);
+        assert_eq!(result.milestone_id, Some(835));
     }
 
     #[tokio::test]

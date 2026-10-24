@@ -14,6 +14,8 @@ pub enum ProjectCommands {
     MilestoneCreate(MilestoneCreateArgs),
     /// Editar un milestone de un proyecto
     MilestoneEdit(MilestoneEditArgs),
+    /// Crear una task de proyecto dentro de un milestone
+    TaskCreate(ProjectTaskCreateArgs),
     /// Ver tasks de un proyecto
     Tasks(ProjectArgs),
     /// Copiar el link de un proyecto al portapapeles
@@ -60,6 +62,30 @@ pub struct MilestoneEditArgs {
 }
 
 #[derive(Args, Debug)]
+pub struct ProjectTaskCreateArgs {
+    /// ID del proyecto
+    pub project_id: u64,
+    /// ID del milestone
+    pub milestone_id: u64,
+    /// Nombre de la task
+    #[arg(long)]
+    pub name: String,
+    #[arg(long)]
+    pub description: Option<String>,
+    #[arg(long)]
+    pub estimate: Option<String>,
+    #[arg(long)]
+    pub start_date: Option<String>,
+    #[arg(long)]
+    pub dependence: Option<u64>,
+    /// ID o username del responsable
+    #[arg(long)]
+    pub responsible: Option<String>,
+    #[arg(long)]
+    pub priority: Option<u8>,
+}
+
+#[derive(Args, Debug)]
 pub struct ProjectLinkArgs {
     /// ID del proyecto
     pub project_id: u64,
@@ -75,6 +101,7 @@ pub async fn execute(cmd: ProjectCommands, json: bool) -> Result<()> {
         ProjectCommands::Milestones(args) => project_milestones(args, json).await,
         ProjectCommands::MilestoneCreate(args) => milestone_create(args, json).await,
         ProjectCommands::MilestoneEdit(args) => milestone_edit(args, json).await,
+        ProjectCommands::TaskCreate(args) => task_create(args, json).await,
         ProjectCommands::Tasks(args) => project_tasks(args, json).await,
         ProjectCommands::Link(args) => project_link(args, json).await,
     }
@@ -181,6 +208,41 @@ async fn milestone_edit(args: MilestoneEditArgs, json: bool) -> Result<()> {
             "\nMilestone actualizado: {} ({})\n",
             result.name, args.milestone_id
         );
+    }
+    Ok(())
+}
+
+async fn task_create(args: ProjectTaskCreateArgs, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+    let responsible = match args.responsible.as_deref() {
+        Some(reference) => {
+            Some(operations::projects::resolve_user_id(&session.client, reference).await?)
+        }
+        None => None,
+    };
+    let task = operations::projects::create_task(
+        &session.client,
+        args.project_id,
+        args.milestone_id,
+        operations::projects::ProjectTaskCreate {
+            name: &args.name,
+            description: args.description.as_deref(),
+            time_estimated: args.estimate.as_deref(),
+            start_date: args.start_date.as_deref(),
+            dependence: args.dependence,
+            responsible,
+            priority: args.priority,
+        },
+    )
+    .await?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&task)?);
+    } else {
+        let id = task
+            .task_id
+            .map(|id| format!(" ({id})"))
+            .unwrap_or_default();
+        println!("\nTask creada: {}{}\n", task.name, id);
     }
     Ok(())
 }

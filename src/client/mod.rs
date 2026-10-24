@@ -219,9 +219,11 @@ fn parse_task_edit_form(html: &str) -> TaskEditFormBaseline {
 #[derive(Debug, Clone, Default)]
 struct MilestoneFormBaseline {
     csrf: Option<String>,
+    action: String,
     name: String,
     description: String,
     process: String,
+    process_field: String,
 }
 
 /// The page also has a customer-switch form with its own CSRF. Prefer the
@@ -242,7 +244,7 @@ fn parse_milestone_form(html: &str) -> MilestoneFormBaseline {
         Ok(s) => s,
         Err(_) => return MilestoneFormBaseline::default(),
     };
-    let process_sel = match Selector::parse(r#"input[name="process"]"#) {
+    let process_sel = match Selector::parse(r#"input[name="process"], input[name="process_id"]"#) {
         Ok(s) => s,
         Err(_) => return MilestoneFormBaseline::default(),
     };
@@ -256,6 +258,10 @@ fn parse_milestone_form(html: &str) -> MilestoneFormBaseline {
         let Some(name_el) = form.select(&name_sel).next() else {
             continue;
         };
+        let Some(process_el) = form.select(&process_sel).next() else {
+            continue;
+        };
+        out.action = form.value().attr("action").unwrap_or("").to_string();
         out.name = name_el.value().attr("value").unwrap_or("").to_string();
         out.description = form
             .select(&desc_sel)
@@ -264,12 +270,8 @@ fn parse_milestone_form(html: &str) -> MilestoneFormBaseline {
             .unwrap_or_default()
             .trim()
             .to_string();
-        out.process = form
-            .select(&process_sel)
-            .next()
-            .and_then(|el| el.value().attr("value"))
-            .unwrap_or("")
-            .to_string();
+        out.process = process_el.value().attr("value").unwrap_or("").to_string();
+        out.process_field = process_el.value().attr("name").unwrap_or("").to_string();
         let csrf = form
             .select(&csrf_sel)
             .next()
@@ -280,6 +282,40 @@ fn parse_milestone_form(html: &str) -> MilestoneFormBaseline {
         break;
     }
     out
+}
+
+fn form_error_summary(html: &str) -> String {
+    use scraper::{Html, Selector};
+
+    let doc = Html::parse_document(html);
+    for selector in [
+        ".errorlist",
+        ".invalid-feedback",
+        ".alert-danger",
+        ".alert-error",
+    ] {
+        let Ok(selector) = Selector::parse(selector) else {
+            continue;
+        };
+        let message = doc
+            .select(&selector)
+            .map(|element| element.text().collect::<String>())
+            .collect::<Vec<_>>()
+            .join(" ");
+        if !message.trim().is_empty() {
+            return message.trim().to_string();
+        }
+    }
+    let title = Selector::parse("title")
+        .ok()
+        .and_then(|selector| doc.select(&selector).next())
+        .map(|element| element.text().collect::<String>())
+        .unwrap_or_default();
+    if title.trim().is_empty() {
+        truncate_for_error(html, 300)
+    } else {
+        title.trim().to_string()
+    }
 }
 
 fn encode_form_value(s: &str) -> String {
@@ -308,6 +344,44 @@ fn milestone_id_from_url(url: &str) -> Option<u64> {
         }
     }
     None
+}
+
+fn task_id_from_url(url: &str) -> Option<u64> {
+    let mut parts = url.split('/');
+    while let Some(part) = parts.next() {
+        if part == "tasks" {
+            if let Some(id) = parts.next() {
+                if let Ok(n) = id.parse::<u64>() {
+                    return Some(n);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn created_task_id_from_page(html: &str, name: &str) -> Option<u64> {
+    use scraper::{Html, Selector};
+
+    let doc = Html::parse_document(html);
+    let link_sel = Selector::parse("a[href]").ok()?;
+    doc.select(&link_sel).find_map(|link| {
+        let text = link.text().collect::<String>();
+        (text.trim() == name)
+            .then(|| link.value().attr("href"))
+            .flatten()
+            .and_then(task_id_from_url)
+    })
+}
+
+fn task_creation_confirmed(html: &str, name: &str) -> bool {
+    use scraper::Html;
+
+    let text = Html::parse_document(html)
+        .root_element()
+        .text()
+        .collect::<String>();
+    text.contains(&format!("Created task: {name}"))
 }
 
 fn dependence_id_from_detail(value: &Option<serde_json::Value>) -> Option<String> {
@@ -386,6 +460,24 @@ pub struct MilestoneWrite {
     pub project_id: u64,
     pub milestone_id: Option<u64>,
     pub name: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProjectTaskWrite {
+    pub project_id: u64,
+    pub milestone_id: u64,
+    pub task_id: Option<u64>,
+    pub name: String,
+}
+
+pub struct ProjectTaskCreateRequest<'a> {
+    pub name: &'a str,
+    pub description: Option<&'a str>,
+    pub time_estimated: Option<&'a str>,
+    pub start_date: Option<&'a str>,
+    pub dependence: Option<u64>,
+    pub responsible: Option<u64>,
+    pub priority: Option<u8>,
 }
 
 impl HteamClient {
@@ -1656,11 +1748,22 @@ impl HteamClient {
     }
 
     pub async fn get_project_tasks(&self, project_id: u64) -> Result<ProjectTasksResponse> {
+        self.get_project_tasks_page(project_id, None).await
+    }
+
+    async fn get_project_tasks_page(
+        &self,
+        project_id: u64,
+        page: Option<u64>,
+    ) -> Result<ProjectTasksResponse> {
         let config = self.config.lock().await;
-        let url = format!(
+        let mut url = format!(
             "{}/project-new/care/{}/tasks-projects/",
             self.api_base_url, project_id
         );
+        if let Some(page) = page {
+            url.push_str(&format!("?page={page}"));
+        }
         let headers = self.build_headers(&config)?;
 
         let response = self
@@ -1681,6 +1784,42 @@ impl HteamClient {
 
         let resp: ProjectTasksResponse = response.json().await?;
         Ok(resp)
+    }
+
+    async fn project_task_exists(
+        &self,
+        project_id: u64,
+        milestone_id: u64,
+        name: &str,
+    ) -> Result<bool> {
+        let first_page = self.get_project_tasks(project_id).await?;
+        let page_size = first_page.results.len() as u64;
+        let matches = |task: &crate::models::ProjectTask| {
+            task.name == name
+                && task
+                    .milestone
+                    .as_ref()
+                    .is_some_and(|milestone| milestone.id == milestone_id)
+        };
+        if first_page.results.iter().any(matches) {
+            return Ok(true);
+        }
+        if page_size == 0 {
+            return Ok(false);
+        }
+        let pages = first_page.count.div_ceil(page_size);
+        for page in 2..=pages {
+            if self
+                .get_project_tasks_page(project_id, Some(page))
+                .await?
+                .results
+                .iter()
+                .any(matches)
+            {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     pub async fn create_project_milestone(
@@ -1772,10 +1911,18 @@ impl HteamClient {
             response.text().await.unwrap_or_default()
         };
         let baseline = parse_milestone_form(&form_html);
-        if baseline.name.is_empty() && name.is_none() {
+        if baseline.process_field.is_empty() || (baseline.name.is_empty() && name.is_none()) {
             anyhow::bail!("no se encontró el formulario de milestone en {url}");
         }
 
+        let post_url = if baseline.action.is_empty() {
+            url.to_string()
+        } else {
+            reqwest::Url::parse(&self.site_base_url)
+                .and_then(|base| base.join(&baseline.action))
+                .context("acción inválida en formulario de milestone")?
+                .to_string()
+        };
         let csrf = baseline
             .csrf
             .as_deref()
@@ -1798,13 +1945,13 @@ impl HteamClient {
             format!("csrfmiddlewaretoken={}", encode_form_value(csrf)),
             format!("name={}", encode_form_value(&name_owned)),
             format!("description={}", encode_form_value(&description_owned)),
-            format!("process={}", encode_form_value(&process)),
+            format!("{}={}", baseline.process_field, encode_form_value(&process)),
         ]
         .join("&");
 
         let response = self
             .client
-            .post(url)
+            .post(&post_url)
             .headers(headers)
             .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
             .header("Origin", self.site_base_url.as_str())
@@ -1825,10 +1972,142 @@ impl HteamClient {
         }
 
         let resolved_id = milestone_id.or_else(|| milestone_id_from_url(final_url.as_str()));
+        let resolved_id = match resolved_id {
+            Some(id) => Some(id),
+            None => self
+                .get_project_milestones(project_id)
+                .await?
+                .into_iter()
+                .find(|milestone| milestone.name == name_owned)
+                .and_then(|milestone| milestone_id_from_url(&milestone.url)),
+        };
+        if milestone_id.is_none() && resolved_id.is_none() {
+            anyhow::bail!(
+                "Hteam no confirmó la creación del milestone: {}",
+                form_error_summary(&text)
+            );
+        }
         Ok(MilestoneWrite {
             project_id,
             milestone_id: resolved_id,
             name: name_owned,
+        })
+    }
+
+    pub async fn create_project_task(
+        &self,
+        project_id: u64,
+        milestone_id: u64,
+        task: ProjectTaskCreateRequest<'_>,
+    ) -> Result<ProjectTaskWrite> {
+        let name = task.name.trim();
+        if name.is_empty() {
+            anyhow::bail!("el nombre de la task no puede estar vacío");
+        }
+        if let Some(priority) = task.priority {
+            if !(1..=5).contains(&priority) {
+                anyhow::bail!("la prioridad debe estar entre 1 y 5");
+            }
+        }
+        let url = format!(
+            "{}/projects/{project_id}/milestones/{milestone_id}/task/create/",
+            self.site_base_url
+        );
+        let (headers, csrf_config) = {
+            let config = self.config.lock().await;
+            (
+                self.build_headers(&config)?,
+                config.auth.csrf_token.clone().unwrap_or_default(),
+            )
+        };
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers.clone())
+            .send()
+            .await
+            .context("Error al cargar formulario de creación de task")?;
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await.unwrap_or_default()
+            );
+        }
+        let baseline = parse_task_edit_form(&response.text().await.unwrap_or_default());
+        let csrf = baseline
+            .csrf
+            .as_deref()
+            .filter(|s| !s.is_empty())
+            .unwrap_or(csrf_config.as_str());
+        let fields = [
+            ("csrfmiddlewaretoken", csrf.to_string()),
+            ("process_id", project_id.to_string()),
+            ("name", name.to_string()),
+            ("description", task.description.unwrap_or("").to_string()),
+            (
+                "time_estimated",
+                task.time_estimated.unwrap_or("").to_string(),
+            ),
+            ("start_date", task.start_date.unwrap_or("").to_string()),
+            (
+                "dependence",
+                task.dependence.map(|id| id.to_string()).unwrap_or_default(),
+            ),
+            (
+                "responsible",
+                task.responsible
+                    .map(|id| id.to_string())
+                    .unwrap_or_default(),
+            ),
+            (
+                "priority",
+                task.priority
+                    .map(|n| n.to_string())
+                    .unwrap_or_else(|| "3".to_string()),
+            ),
+        ];
+        let body = fields
+            .into_iter()
+            .map(|(key, value)| format!("{key}={}", encode_form_value(&value)))
+            .collect::<Vec<_>>()
+            .join("&");
+        let response = self
+            .client
+            .post(&url)
+            .headers(headers)
+            .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header("Origin", self.site_base_url.as_str())
+            .header(REFERER, &url)
+            .body(body)
+            .send()
+            .await
+            .context("Error al crear task de proyecto")?;
+        let final_url = response.url().clone();
+        let code = response.status().as_u16();
+        let text = response.text().await.unwrap_or_default();
+        if code >= 400 {
+            anyhow::bail!("Error HTTP {code}: {}", truncate_for_error(&text, 300));
+        }
+        if text.contains("errorlist") || text.contains("<title>Create task</title>") {
+            anyhow::bail!("El servidor no creó la task de proyecto (formulario rechazado).");
+        }
+        if !task_creation_confirmed(&text, name)
+            && !self
+                .project_task_exists(project_id, milestone_id, name)
+                .await?
+        {
+            anyhow::bail!(
+                "Hteam no confirmó la creación de la task de proyecto: {}",
+                form_error_summary(&text)
+            );
+        }
+        Ok(ProjectTaskWrite {
+            project_id,
+            milestone_id,
+            task_id: task_id_from_url(final_url.as_str())
+                .or_else(|| created_task_id_from_page(&text, name)),
+            name: name.to_string(),
         })
     }
 
