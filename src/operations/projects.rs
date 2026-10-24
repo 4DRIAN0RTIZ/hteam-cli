@@ -28,6 +28,46 @@ pub fn project_url(client: &HteamClient, project_id: u64) -> String {
     client.project_url(project_id)
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct MilestoneWriteResult {
+    pub project_id: u64,
+    pub milestone_id: Option<u64>,
+    pub name: String,
+}
+
+fn to_write_result(w: crate::client::MilestoneWrite) -> MilestoneWriteResult {
+    MilestoneWriteResult {
+        project_id: w.project_id,
+        milestone_id: w.milestone_id,
+        name: w.name,
+    }
+}
+
+pub async fn create_milestone(
+    client: &HteamClient,
+    project_id: u64,
+    name: &str,
+    description: Option<&str>,
+) -> Result<MilestoneWriteResult> {
+    let written = client
+        .create_project_milestone(project_id, name, description)
+        .await?;
+    Ok(to_write_result(written))
+}
+
+pub async fn edit_milestone(
+    client: &HteamClient,
+    project_id: u64,
+    milestone_id: u64,
+    name: Option<&str>,
+    description: Option<&str>,
+) -> Result<MilestoneWriteResult> {
+    let written = client
+        .edit_project_milestone(project_id, milestone_id, name, description)
+        .await?;
+    Ok(to_write_result(written))
+}
+
 /// Moves `id` to the front of the known-projects MRU list (deduping) and
 /// persists it to `config.toml`'s `[tui] known_projects`.
 pub fn remember_project(config: &mut Config, id: u64) -> Result<()> {
@@ -142,5 +182,79 @@ mod tests {
 
         assert_eq!(response.count, 1);
         assert_eq!(response.results[0].name, "Fix bug");
+    }
+
+    #[tokio::test]
+    async fn create_milestone_posts_scraped_csrf_and_process() {
+        let mut server = mockito::Server::new_async().await;
+        let _form = server
+            .mock("GET", "/projects/469/milestones/create/")
+            .with_status(200)
+            .with_body(
+                r#"<form method="post"><input name="csrfmiddlewaretoken" value="csrf"><input name="name" value=""><textarea name="description"></textarea><input name="process" value="469"></form>"#,
+            )
+            .create_async()
+            .await;
+        let _post = server
+            .mock("POST", "/projects/469/milestones/create/")
+            .match_body(Matcher::UrlEncoded(
+                "csrfmiddlewaretoken".into(),
+                "csrf".into(),
+            ))
+            .match_body(Matcher::UrlEncoded("name".into(), "Release+prep".into()))
+            .match_body(Matcher::UrlEncoded("description".into(), "Notes".into()))
+            .match_body(Matcher::UrlEncoded("process".into(), "469".into()))
+            .with_status(200)
+            .with_body("saved")
+            .create_async()
+            .await;
+
+        let result = create_milestone(&client(&server.url()), 469, "Release prep", Some("Notes"))
+            .await
+            .expect("create milestone");
+
+        assert_eq!(result.project_id, 469);
+        assert_eq!(result.name, "Release prep");
+        assert_eq!(result.milestone_id, None);
+    }
+
+    #[tokio::test]
+    async fn edit_milestone_preserves_unspecified_fields() {
+        let mut server = mockito::Server::new_async().await;
+        let _form = server
+            .mock("GET", "/projects/469/milestones/835/edit/")
+            .with_status(200)
+            .with_body(
+                r#"<form method="post"><input name="csrfmiddlewaretoken" value="csrf"><input name="name" value="GWTC"><textarea name="description">Current notes</textarea><input name="process" value="469"></form>"#,
+            )
+            .create_async()
+            .await;
+        let _post = server
+            .mock("POST", "/projects/469/milestones/835/edit/")
+            .match_body(Matcher::UrlEncoded("name".into(), "New+name".into()))
+            .match_body(Matcher::UrlEncoded(
+                "description".into(),
+                "Current+notes".into(),
+            ))
+            .match_body(Matcher::UrlEncoded("process".into(), "469".into()))
+            .with_status(200)
+            .with_body("saved")
+            .create_async()
+            .await;
+
+        let result = edit_milestone(&client(&server.url()), 469, 835, Some("New name"), None)
+            .await
+            .expect("edit milestone");
+
+        assert_eq!(result.milestone_id, Some(835));
+        assert_eq!(result.name, "New name");
+    }
+
+    #[tokio::test]
+    async fn edit_milestone_requires_a_change() {
+        let err = edit_milestone(&client("https://example.test"), 469, 835, None, None)
+            .await
+            .expect_err("must reject empty edit");
+        assert!(err.to_string().contains("--name o --description"));
     }
 }

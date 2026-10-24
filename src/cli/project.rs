@@ -10,6 +10,10 @@ pub enum ProjectCommands {
     List(ProjectListArgs),
     /// Ver progreso de milestones de un proyecto
     Milestones(ProjectArgs),
+    /// Crear un milestone en un proyecto
+    MilestoneCreate(MilestoneCreateArgs),
+    /// Editar un milestone de un proyecto
+    MilestoneEdit(MilestoneEditArgs),
     /// Ver tasks de un proyecto
     Tasks(ProjectArgs),
     /// Copiar el link de un proyecto al portapapeles
@@ -30,6 +34,32 @@ pub struct ProjectListArgs {
 }
 
 #[derive(Args, Debug)]
+pub struct MilestoneCreateArgs {
+    /// ID del proyecto
+    pub project_id: u64,
+    /// Nombre del milestone
+    #[arg(long)]
+    pub name: String,
+    /// Descripción (opcional)
+    #[arg(long)]
+    pub description: Option<String>,
+}
+
+#[derive(Args, Debug)]
+pub struct MilestoneEditArgs {
+    /// ID del proyecto
+    pub project_id: u64,
+    /// ID del milestone
+    pub milestone_id: u64,
+    /// Nuevo nombre (opcional)
+    #[arg(long)]
+    pub name: Option<String>,
+    /// Nueva descripción (opcional; cadena vacía la limpia)
+    #[arg(long)]
+    pub description: Option<String>,
+}
+
+#[derive(Args, Debug)]
 pub struct ProjectLinkArgs {
     /// ID del proyecto
     pub project_id: u64,
@@ -43,6 +73,8 @@ pub async fn execute(cmd: ProjectCommands, json: bool) -> Result<()> {
     match cmd {
         ProjectCommands::List(args) => project_list(args, json).await,
         ProjectCommands::Milestones(args) => project_milestones(args, json).await,
+        ProjectCommands::MilestoneCreate(args) => milestone_create(args, json).await,
+        ProjectCommands::MilestoneEdit(args) => milestone_edit(args, json).await,
         ProjectCommands::Tasks(args) => project_tasks(args, json).await,
         ProjectCommands::Link(args) => project_link(args, json).await,
     }
@@ -106,6 +138,50 @@ async fn project_milestones(args: ProjectArgs, json: bool) -> Result<()> {
     println!("{}", table);
     println!();
 
+    Ok(())
+}
+
+async fn milestone_create(args: MilestoneCreateArgs, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+    let result = operations::projects::create_milestone(
+        &session.client,
+        args.project_id,
+        &args.name,
+        args.description.as_deref(),
+    )
+    .await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&result)?);
+    } else {
+        let id = result
+            .milestone_id
+            .map(|id| format!(" ({id})"))
+            .unwrap_or_default();
+        println!("\nMilestone creado: {}{}\n", result.name, id);
+    }
+    Ok(())
+}
+
+async fn milestone_edit(args: MilestoneEditArgs, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+    let result = operations::projects::edit_milestone(
+        &session.client,
+        args.project_id,
+        args.milestone_id,
+        args.name.as_deref(),
+        args.description.as_deref(),
+    )
+    .await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&result)?);
+    } else {
+        println!(
+            "\nMilestone actualizado: {} ({})\n",
+            result.name, args.milestone_id
+        );
+    }
     Ok(())
 }
 

@@ -6,7 +6,7 @@ CLI en Rust para gestionar boards de Hteam, con REPL, TUI tipo kanban y servidor
 
 - Autenticación con cookies de sesión (`sessionid` + `csrftoken`)
 - REPL interactivo con historial (`~/.hteam_history`)
-- Servidor MCP sobre stdio: 35 tools
+- Servidor MCP sobre stdio: 37 tools
 - Multi-board, temas del TUI y self-update
 - `--json` en la mayoría de los comandos (ver abajo: no es universal)
 
@@ -119,6 +119,8 @@ hteam working stop 8954                      # ID del registro, no del card
 hteam project list                           # Por defecto status Execution
 hteam project list --status All
 hteam project milestones 99
+hteam project milestone-create 99 --name "Sprint 1" --description "Initial scope"
+hteam project milestone-edit 99 835 --name "Sprint 1.1"
 hteam project tasks 99
 hteam project link 99
 hteam project link 99 --no-copy
@@ -209,7 +211,7 @@ cp completions/hteam.fish ~/.config/fish/completions/hteam.fish
 
 ## MCP
 
-35 tools, una por `#[tool]` en `src/mcp/mod.rs`:
+37 tools, una por `#[tool]` en `src/mcp/mod.rs`: 
 
 | Herramienta | Descripción |
 |---|---|
@@ -241,6 +243,8 @@ cp completions/hteam.fish ~/.config/fish/completions/hteam.fish
 | `working_start` | Empezar a trabajar |
 | `working_stop` | Dejar de trabajar |
 | `project_milestones` | Milestones de un proyecto |
+| `project_milestone_create` | Crear milestone |
+| `project_milestone_edit` | Editar milestone |
 | `project_tasks` | Tasks de un proyecto |
 | `users_search` | Buscar usuarios |
 | `reminders` | Recordatorios pendientes |

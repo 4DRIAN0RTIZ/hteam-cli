@@ -786,6 +786,33 @@ _arguments "${_arguments_options[@]}" : \
 ':project_id -- ID del proyecto:_default' \
 && ret=0
 ;;
+(milestone-create)
+_arguments "${_arguments_options[@]}" : \
+'--name=[Nombre del milestone]:NAME:_default' \
+'--description=[Descripción (opcional)]:DESCRIPTION:_default' \
+'-b+[ID del board a usar (operación o proyecto según --family)]:BOARD:_default' \
+'--board=[ID del board a usar (operación o proyecto según --family)]:BOARD:_default' \
+'--family=[Familia del tablero\: operation (default) o project]:FAMILY:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':project_id -- ID del proyecto:_default' \
+&& ret=0
+;;
+(milestone-edit)
+_arguments "${_arguments_options[@]}" : \
+'--name=[Nuevo nombre (opcional)]:NAME:_default' \
+'--description=[Nueva descripción (opcional; cadena vacía la limpia)]:DESCRIPTION:_default' \
+'-b+[ID del board a usar (operación o proyecto según --family)]:BOARD:_default' \
+'--board=[ID del board a usar (operación o proyecto según --family)]:BOARD:_default' \
+'--family=[Familia del tablero\: operation (default) o project]:FAMILY:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':project_id -- ID del proyecto:_default' \
+':milestone_id -- ID del milestone:_default' \
+&& ret=0
+;;
 (tasks)
 _arguments "${_arguments_options[@]}" : \
 '-b+[ID del board a usar (operación o proyecto según --family)]:BOARD:_default' \
@@ -826,6 +853,14 @@ _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (milestones)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(milestone-create)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(milestone-edit)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
@@ -1353,6 +1388,14 @@ _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (milestones)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(milestone-create)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(milestone-edit)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
@@ -2192,6 +2235,8 @@ _hteam__subcmd__help__subcmd__project_commands() {
     local commands; commands=(
 'list:Listar proyectos (por defecto, en estado "Execution")' \
 'milestones:Ver progreso de milestones de un proyecto' \
+'milestone-create:Crear un milestone en un proyecto' \
+'milestone-edit:Editar un milestone de un proyecto' \
 'tasks:Ver tasks de un proyecto' \
 'link:Copiar el link de un proyecto al portapapeles' \
     )
@@ -2206,6 +2251,16 @@ _hteam__subcmd__help__subcmd__project__subcmd__link_commands() {
 _hteam__subcmd__help__subcmd__project__subcmd__list_commands() {
     local commands; commands=()
     _describe -t commands 'hteam help project list commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__project__subcmd__milestone-create_commands] )) ||
+_hteam__subcmd__help__subcmd__project__subcmd__milestone-create_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help project milestone-create commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__project__subcmd__milestone-edit_commands] )) ||
+_hteam__subcmd__help__subcmd__project__subcmd__milestone-edit_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help project milestone-edit commands' commands "$@"
 }
 (( $+functions[_hteam__subcmd__help__subcmd__project__subcmd__milestones_commands] )) ||
 _hteam__subcmd__help__subcmd__project__subcmd__milestones_commands() {
@@ -2347,6 +2402,8 @@ _hteam__subcmd__project_commands() {
     local commands; commands=(
 'list:Listar proyectos (por defecto, en estado "Execution")' \
 'milestones:Ver progreso de milestones de un proyecto' \
+'milestone-create:Crear un milestone en un proyecto' \
+'milestone-edit:Editar un milestone de un proyecto' \
 'tasks:Ver tasks de un proyecto' \
 'link:Copiar el link de un proyecto al portapapeles' \
 'help:Print this message or the help of the given subcommand(s)' \
@@ -2358,6 +2415,8 @@ _hteam__subcmd__project__subcmd__help_commands() {
     local commands; commands=(
 'list:Listar proyectos (por defecto, en estado "Execution")' \
 'milestones:Ver progreso de milestones de un proyecto' \
+'milestone-create:Crear un milestone en un proyecto' \
+'milestone-edit:Editar un milestone de un proyecto' \
 'tasks:Ver tasks de un proyecto' \
 'link:Copiar el link de un proyecto al portapapeles' \
 'help:Print this message or the help of the given subcommand(s)' \
@@ -2379,6 +2438,16 @@ _hteam__subcmd__project__subcmd__help__subcmd__list_commands() {
     local commands; commands=()
     _describe -t commands 'hteam project help list commands' commands "$@"
 }
+(( $+functions[_hteam__subcmd__project__subcmd__help__subcmd__milestone-create_commands] )) ||
+_hteam__subcmd__project__subcmd__help__subcmd__milestone-create_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam project help milestone-create commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__project__subcmd__help__subcmd__milestone-edit_commands] )) ||
+_hteam__subcmd__project__subcmd__help__subcmd__milestone-edit_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam project help milestone-edit commands' commands "$@"
+}
 (( $+functions[_hteam__subcmd__project__subcmd__help__subcmd__milestones_commands] )) ||
 _hteam__subcmd__project__subcmd__help__subcmd__milestones_commands() {
     local commands; commands=()
@@ -2398,6 +2467,16 @@ _hteam__subcmd__project__subcmd__link_commands() {
 _hteam__subcmd__project__subcmd__list_commands() {
     local commands; commands=()
     _describe -t commands 'hteam project list commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__project__subcmd__milestone-create_commands] )) ||
+_hteam__subcmd__project__subcmd__milestone-create_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam project milestone-create commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__project__subcmd__milestone-edit_commands] )) ||
+_hteam__subcmd__project__subcmd__milestone-edit_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam project milestone-edit commands' commands "$@"
 }
 (( $+functions[_hteam__subcmd__project__subcmd__milestones_commands] )) ||
 _hteam__subcmd__project__subcmd__milestones_commands() {
