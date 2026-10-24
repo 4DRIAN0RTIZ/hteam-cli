@@ -232,6 +232,28 @@ struct ProjectParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+struct ProjectMilestoneCreateParams {
+    #[schemars(description = "ID del proyecto")]
+    project_id: u64,
+    #[schemars(description = "Nombre del milestone")]
+    name: String,
+    #[schemars(description = "Descripción opcional")]
+    description: Option<String>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct ProjectMilestoneEditParams {
+    #[schemars(description = "ID del proyecto")]
+    project_id: u64,
+    #[schemars(description = "ID del milestone")]
+    milestone_id: u64,
+    #[schemars(description = "Nuevo nombre (opcional)")]
+    name: Option<String>,
+    #[schemars(description = "Nueva descripción (opcional; cadena vacía la limpia)")]
+    description: Option<String>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 struct UsersSearchParams {
     #[schemars(description = "Texto a buscar en usernames")]
     query: String,
@@ -702,6 +724,48 @@ impl HteamMcpServer {
             .await
             .map_err(err)?;
         ok(milestones)
+    }
+
+    #[tool(description = "Crear un milestone en un proyecto")]
+    async fn project_milestone_create(
+        &self,
+        Parameters(ProjectMilestoneCreateParams {
+            project_id,
+            name,
+            description,
+        }): Parameters<ProjectMilestoneCreateParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let milestone = operations::projects::create_milestone(
+            &self.client,
+            project_id,
+            &name,
+            description.as_deref(),
+        )
+        .await
+        .map_err(err)?;
+        ok(milestone)
+    }
+
+    #[tool(description = "Editar nombre y/o descripción de un milestone")]
+    async fn project_milestone_edit(
+        &self,
+        Parameters(ProjectMilestoneEditParams {
+            project_id,
+            milestone_id,
+            name,
+            description,
+        }): Parameters<ProjectMilestoneEditParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let milestone = operations::projects::edit_milestone(
+            &self.client,
+            project_id,
+            milestone_id,
+            name.as_deref(),
+            description.as_deref(),
+        )
+        .await
+        .map_err(err)?;
+        ok(milestone)
     }
 
     #[tool(description = "Ver las tasks de un proyecto con su estado y responsable")]

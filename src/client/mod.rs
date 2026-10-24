@@ -216,6 +216,100 @@ fn parse_task_edit_form(html: &str) -> TaskEditFormBaseline {
     out
 }
 
+#[derive(Debug, Clone, Default)]
+struct MilestoneFormBaseline {
+    csrf: Option<String>,
+    name: String,
+    description: String,
+    process: String,
+}
+
+/// The page also has a customer-switch form with its own CSRF. Prefer the
+/// form that actually carries `name` (create/edit milestone).
+fn parse_milestone_form(html: &str) -> MilestoneFormBaseline {
+    use scraper::{Html, Selector};
+
+    let doc = Html::parse_document(html);
+    let form_sel = match Selector::parse("form") {
+        Ok(s) => s,
+        Err(_) => return MilestoneFormBaseline::default(),
+    };
+    let name_sel = match Selector::parse(r#"input[name="name"]"#) {
+        Ok(s) => s,
+        Err(_) => return MilestoneFormBaseline::default(),
+    };
+    let csrf_sel = match Selector::parse(r#"input[name="csrfmiddlewaretoken"]"#) {
+        Ok(s) => s,
+        Err(_) => return MilestoneFormBaseline::default(),
+    };
+    let process_sel = match Selector::parse(r#"input[name="process"]"#) {
+        Ok(s) => s,
+        Err(_) => return MilestoneFormBaseline::default(),
+    };
+    let desc_sel = match Selector::parse(r#"textarea[name="description"]"#) {
+        Ok(s) => s,
+        Err(_) => return MilestoneFormBaseline::default(),
+    };
+
+    let mut out = MilestoneFormBaseline::default();
+    for form in doc.select(&form_sel) {
+        let Some(name_el) = form.select(&name_sel).next() else {
+            continue;
+        };
+        out.name = name_el.value().attr("value").unwrap_or("").to_string();
+        out.description = form
+            .select(&desc_sel)
+            .next()
+            .map(|el| el.text().collect::<String>())
+            .unwrap_or_default()
+            .trim()
+            .to_string();
+        out.process = form
+            .select(&process_sel)
+            .next()
+            .and_then(|el| el.value().attr("value"))
+            .unwrap_or("")
+            .to_string();
+        let csrf = form
+            .select(&csrf_sel)
+            .next()
+            .and_then(|el| el.value().attr("value"))
+            .unwrap_or("")
+            .to_string();
+        out.csrf = if csrf.is_empty() { None } else { Some(csrf) };
+        break;
+    }
+    out
+}
+
+fn encode_form_value(s: &str) -> String {
+    let mut out = String::new();
+    for b in s.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char);
+            }
+            b' ' => out.push('+'),
+            _ => out.push_str(&format!("%{:02X}", b)),
+        }
+    }
+    out
+}
+
+fn milestone_id_from_url(url: &str) -> Option<u64> {
+    let mut parts = url.split('/');
+    while let Some(part) = parts.next() {
+        if part == "milestones" {
+            if let Some(id) = parts.next() {
+                if let Ok(n) = id.parse::<u64>() {
+                    return Some(n);
+                }
+            }
+        }
+    }
+    None
+}
+
 fn dependence_id_from_detail(value: &Option<serde_json::Value>) -> Option<String> {
     match value.as_ref() {
         Some(serde_json::Value::Number(n)) => Some(n.to_string()),
@@ -285,6 +379,13 @@ pub struct UpdateCardPatch<'a> {
     /// Task id this card depends on (form field `dependence`), or empty to clear.
     pub dependence: Option<&'a str>,
     pub time_estimated: Option<&'a str>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MilestoneWrite {
+    pub project_id: u64,
+    pub milestone_id: Option<u64>,
+    pub name: String,
 }
 
 impl HteamClient {
@@ -1580,6 +1681,155 @@ impl HteamClient {
 
         let resp: ProjectTasksResponse = response.json().await?;
         Ok(resp)
+    }
+
+    pub async fn create_project_milestone(
+        &self,
+        project_id: u64,
+        name: &str,
+        description: Option<&str>,
+    ) -> Result<MilestoneWrite> {
+        let name = name.trim();
+        if name.is_empty() {
+            anyhow::bail!("el nombre del milestone no puede estar vacío");
+        }
+        let url = format!(
+            "{}/projects/{project_id}/milestones/create/",
+            self.site_base_url
+        );
+        self.post_milestone_form(
+            &url,
+            project_id,
+            None,
+            Some(name),
+            description,
+            "Milestone creation",
+        )
+        .await
+    }
+
+    pub async fn edit_project_milestone(
+        &self,
+        project_id: u64,
+        milestone_id: u64,
+        name: Option<&str>,
+        description: Option<&str>,
+    ) -> Result<MilestoneWrite> {
+        if name.is_none() && description.is_none() {
+            anyhow::bail!("indica al menos --name o --description");
+        }
+        if let Some(n) = name {
+            if n.trim().is_empty() {
+                anyhow::bail!("el nombre del milestone no puede estar vacío");
+            }
+        }
+        let url = format!(
+            "{}/projects/{project_id}/milestones/{milestone_id}/edit/",
+            self.site_base_url
+        );
+        self.post_milestone_form(
+            &url,
+            project_id,
+            Some(milestone_id),
+            name.map(str::trim),
+            description,
+            "Milestone edit",
+        )
+        .await
+    }
+
+    async fn post_milestone_form(
+        &self,
+        url: &str,
+        project_id: u64,
+        milestone_id: Option<u64>,
+        name: Option<&str>,
+        description: Option<&str>,
+        reject_title: &str,
+    ) -> Result<MilestoneWrite> {
+        let (headers, csrf_config) = {
+            let config = self.config.lock().await;
+            let headers = self.build_headers(&config)?;
+            let csrf = config.auth.csrf_token.clone().unwrap_or_default();
+            (headers, csrf)
+        };
+
+        let form_html = {
+            let response = self
+                .client
+                .get(url)
+                .headers(headers.clone())
+                .send()
+                .await
+                .context("Error al cargar formulario de milestone")?;
+            if !response.status().is_success() {
+                anyhow::bail!(
+                    "Error HTTP {}: {}",
+                    response.status(),
+                    response.text().await.unwrap_or_default()
+                );
+            }
+            response.text().await.unwrap_or_default()
+        };
+        let baseline = parse_milestone_form(&form_html);
+        if baseline.name.is_empty() && name.is_none() {
+            anyhow::bail!("no se encontró el formulario de milestone en {url}");
+        }
+
+        let csrf = baseline
+            .csrf
+            .as_deref()
+            .filter(|s| !s.is_empty())
+            .unwrap_or(csrf_config.as_str());
+        let name_owned = name
+            .map(str::to_string)
+            .unwrap_or_else(|| baseline.name.clone());
+        let description_owned = description
+            .map(str::trim)
+            .map(str::to_string)
+            .unwrap_or_else(|| baseline.description.clone());
+        let process = if baseline.process.is_empty() {
+            project_id.to_string()
+        } else {
+            baseline.process.clone()
+        };
+
+        let body = [
+            format!("csrfmiddlewaretoken={}", encode_form_value(csrf)),
+            format!("name={}", encode_form_value(&name_owned)),
+            format!("description={}", encode_form_value(&description_owned)),
+            format!("process={}", encode_form_value(&process)),
+        ]
+        .join("&");
+
+        let response = self
+            .client
+            .post(url)
+            .headers(headers)
+            .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header("Origin", self.site_base_url.as_str())
+            .header(REFERER, url)
+            .body(body)
+            .send()
+            .await
+            .context("Error al guardar milestone")?;
+
+        let final_url = response.url().clone();
+        let code = response.status().as_u16();
+        let text = response.text().await.unwrap_or_default();
+        if code >= 400 {
+            anyhow::bail!("Error HTTP {code}: {}", truncate_for_error(&text, 300));
+        }
+        if text.contains("errorlist") || text.contains(&format!("<title>{reject_title}</title>")) {
+            anyhow::bail!("El servidor no aplicó el cambio del milestone (formulario rechazado).");
+        }
+
+        let resolved_id = milestone_id.or_else(|| milestone_id_from_url(final_url.as_str()));
+        Ok(MilestoneWrite {
+            project_id,
+            milestone_id: resolved_id,
+            name: name_owned,
+        })
     }
 
     #[expect(
@@ -3071,6 +3321,43 @@ mod tests {
         assert_eq!(b.priority, "4");
         assert_eq!(b.start_date, "2026-10-13");
         assert_eq!(b.description, "hello");
+    }
+
+    #[test]
+    fn parse_milestone_form_skips_customer_form() {
+        let html = r#"<html><body>
+<form method="post" action="/settings/change-customer/">
+<input name="csrfmiddlewaretoken" value="other">
+<select name="customer"><option value="21">x</option></select>
+</form>
+<form method="post">
+<input name="csrfmiddlewaretoken" value="abc">
+<input name="name" value="GWTC">
+<textarea name="description">  notes  </textarea>
+<input type="hidden" name="process" value="469">
+</form>
+</body></html>"#;
+        let b = parse_milestone_form(html);
+        assert_eq!(b.csrf.as_deref(), Some("abc"));
+        assert_eq!(b.name, "GWTC");
+        assert_eq!(b.description, "notes");
+        assert_eq!(b.process, "469");
+    }
+
+    #[test]
+    fn milestone_id_from_url_reads_path() {
+        assert_eq!(
+            milestone_id_from_url("https://hteam.mx/projects/469/milestones/835/"),
+            Some(835)
+        );
+        assert_eq!(
+            milestone_id_from_url("https://hteam.mx/projects/469/milestones/835/edit/"),
+            Some(835)
+        );
+        assert_eq!(
+            milestone_id_from_url("https://hteam.mx/projects/469/"),
+            None
+        );
     }
 
     #[test]
