@@ -184,6 +184,8 @@ pub struct App {
     pub selected_project_idx: usize,
     pub active_project: Option<u64>,
     pub project_milestones: Vec<ProjectMilestone>,
+    /// Highlighted milestone inside the projects detail panel (create/edit).
+    pub selected_milestone_idx: usize,
     pub project_tasks: Vec<ProjectTask>,
     pub show_projects: bool,
     /// Proyectos en vivo (`hteam project list`, status "Execution"),
@@ -213,6 +215,14 @@ pub struct App {
     /// True while typing a new project id inside the projects popup.
     pub composing_project: bool,
     pub project_input: TextInput,
+    /// True while creating/editing a project milestone (name + description).
+    pub composing_milestone: bool,
+    /// `None` = create; `Some(id)` = edit that milestone.
+    pub milestone_form_edit_id: Option<u64>,
+    pub milestone_name_input: TextInput,
+    pub milestone_desc_input: TextInput,
+    /// `false` = name field focused; `true` = description.
+    pub milestone_desc_focused: bool,
     /// True while typing a new card's name for `new_card_list_id`.
     pub composing_card: bool,
     pub new_card_input: TextInput,
@@ -265,6 +275,8 @@ pub struct RequestIds {
     pub reminders: u64,
     pub objectives: u64,
     pub projects: u64,
+    pub project_milestone_write: u64,
+    pub project_milestone_form: u64,
     pub live_projects: u64,
     pub boards_popup: u64,
     pub move_card: u64,
@@ -301,6 +313,12 @@ impl RequestIds {
     }
     pub fn bump_projects(&mut self) -> u64 {
         Self::bump(&mut self.projects)
+    }
+    pub fn bump_project_milestone_write(&mut self) -> u64 {
+        Self::bump(&mut self.project_milestone_write)
+    }
+    pub fn bump_project_milestone_form(&mut self) -> u64 {
+        Self::bump(&mut self.project_milestone_form)
     }
     pub fn bump_live_projects(&mut self) -> u64 {
         Self::bump(&mut self.live_projects)
@@ -407,6 +425,7 @@ impl App {
             selected_project_idx: 0,
             active_project: None,
             project_milestones: Vec::new(),
+            selected_milestone_idx: 0,
             project_tasks: Vec::new(),
             show_projects: false,
             live_projects: Vec::new(),
@@ -427,6 +446,11 @@ impl App {
             show_update_available: false,
             composing_project: false,
             project_input: TextInput::default(),
+            composing_milestone: false,
+            milestone_form_edit_id: None,
+            milestone_name_input: TextInput::default(),
+            milestone_desc_input: TextInput::default(),
+            milestone_desc_focused: false,
             composing_card: false,
             new_card_input: TextInput::default(),
             new_card_list_id: None,

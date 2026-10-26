@@ -136,6 +136,17 @@ pub async fn edit_milestone(
     Ok(to_write_result(written))
 }
 
+/// Name + description from the server edit form (for TUI seeding).
+pub async fn milestone_form(
+    client: &HteamClient,
+    project_id: u64,
+    milestone_id: u64,
+) -> Result<crate::client::MilestoneFormFields> {
+    client
+        .get_project_milestone_form(project_id, milestone_id)
+        .await
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct ProjectTaskCreate<'a> {
     pub name: &'a str,
@@ -488,7 +499,15 @@ mod tests {
             .match_body(Matcher::UrlEncoded("description".into(), "Notes".into()))
             .match_body(Matcher::UrlEncoded("process".into(), "469".into()))
             .with_status(200)
-            .with_body("saved")
+            .with_body("<title>Projects</title>ok")
+            .create_async()
+            .await;
+        let _verify = server
+            .mock("GET", "/projects/469/milestones/835/edit/")
+            .with_status(200)
+            .with_body(
+                r#"<form method="post"><input name="csrfmiddlewaretoken" value="csrf"><input name="name" value="Release prep"><textarea name="description">Notes</textarea><input name="process" value="469"></form>"#,
+            )
             .create_async()
             .await;
 
@@ -504,7 +523,8 @@ mod tests {
     #[tokio::test]
     async fn edit_milestone_preserves_unspecified_fields() {
         let mut server = mockito::Server::new_async().await;
-        let _form = server
+        // 1) baseline scrape  2) post-verify scrape (mockito matches in order).
+        let _baseline = server
             .mock("GET", "/projects/469/milestones/835/edit/")
             .with_status(200)
             .with_body(
@@ -514,23 +534,88 @@ mod tests {
             .await;
         let _post = server
             .mock("POST", "/projects/469/milestones/835/edit/")
-            .match_body(Matcher::UrlEncoded("name".into(), "New+name".into()))
+            .match_body(Matcher::UrlEncoded("name".into(), "GWTC".into()))
             .match_body(Matcher::UrlEncoded(
                 "description".into(),
-                "Current+notes".into(),
+                "New+notes".into(),
             ))
             .match_body(Matcher::UrlEncoded("process".into(), "469".into()))
             .with_status(200)
-            .with_body("saved")
+            .with_body("<title>GWTC</title>updated")
+            .create_async()
+            .await;
+        let _verify = server
+            .mock("GET", "/projects/469/milestones/835/edit/")
+            .with_status(200)
+            .with_body(
+                r#"<form method="post"><input name="csrfmiddlewaretoken" value="csrf"><input name="name" value="GWTC"><textarea name="description">New notes</textarea><input name="process" value="469"></form>"#,
+            )
             .create_async()
             .await;
 
-        let result = edit_milestone(&client(&server.url()), 469, 835, Some("New name"), None)
+        let result = edit_milestone(&client(&server.url()), 469, 835, None, Some("New notes"))
             .await
             .expect("edit milestone");
 
         assert_eq!(result.milestone_id, Some(835));
-        assert_eq!(result.name, "New name");
+        assert_eq!(result.name, "GWTC");
+    }
+
+    #[tokio::test]
+    async fn edit_milestone_rejects_soft_404_false_success() {
+        let mut server = mockito::Server::new_async().await;
+        let _form = server
+            .mock("GET", "/projects/469/milestones/835/edit/")
+            .with_status(200)
+            .with_body(
+                r#"<form method="post"><input name="csrfmiddlewaretoken" value="csrf"><input name="name" value="GWTC"><textarea name="description">Notes</textarea><input name="process" value="469"></form>"#,
+            )
+            .create_async()
+            .await;
+        let _post = server
+            .mock("POST", "/projects/469/milestones/835/edit/")
+            .with_status(200)
+            .with_body(
+                r#"<!DOCTYPE html><html><head><title>404</title></head><body><img src="/ditracare/static/error_pages_numbers/404.svg"></body></html>"#,
+            )
+            .create_async()
+            .await;
+
+        let err = edit_milestone(
+            &client(&server.url()),
+            469,
+            835,
+            Some("Renamed"),
+            Some("Notes"),
+        )
+        .await
+        .expect_err("soft 404 must not look like success");
+
+        let msg = err.to_string();
+        assert!(
+            msg.contains("404") || msg.contains("rechazó"),
+            "unexpected error: {msg}"
+        );
+    }
+
+    #[tokio::test]
+    async fn milestone_form_reads_name_and_description() {
+        let mut server = mockito::Server::new_async().await;
+        let _form = server
+            .mock("GET", "/projects/469/milestones/835/edit/")
+            .with_status(200)
+            .with_body(
+                r#"<form method="post"><input name="csrfmiddlewaretoken" value="csrf"><input name="name" value="GWTC"><textarea name="description">Current notes</textarea><input name="process" value="469"></form>"#,
+            )
+            .create_async()
+            .await;
+
+        let fields = milestone_form(&client(&server.url()), 469, 835)
+            .await
+            .expect("milestone form");
+
+        assert_eq!(fields.name, "GWTC");
+        assert_eq!(fields.description, "Current notes");
     }
 
     #[tokio::test]

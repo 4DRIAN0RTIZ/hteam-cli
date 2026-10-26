@@ -287,6 +287,23 @@ fn parse_milestone_form(html: &str) -> MilestoneFormBaseline {
     out
 }
 
+fn html_title(html: &str) -> Option<String> {
+    let lower = html.to_ascii_lowercase();
+    let start = lower.find("<title>")?;
+    let rest = &html[start + 7..];
+    let end = rest.to_ascii_lowercase().find("</title>")?;
+    Some(rest[..end].trim().to_string())
+}
+
+/// Hteam sometimes answers failed milestone writes with HTTP 200 + a soft 404
+/// page (seen when renaming). Treat that as rejection, not success.
+fn milestone_write_rejected(html: &str) -> bool {
+    if html.contains("errorlist") || html.contains("error_pages_numbers/404") {
+        return true;
+    }
+    matches!(html_title(html).as_deref(), Some("404"))
+}
+
 fn form_error_summary(html: &str) -> String {
     use scraper::{Html, Selector};
 
@@ -463,6 +480,13 @@ pub struct MilestoneWrite {
     pub project_id: u64,
     pub milestone_id: Option<u64>,
     pub name: String,
+}
+
+/// Name + description scraped from the create/edit milestone HTML form.
+#[derive(Debug, Clone, Default)]
+pub struct MilestoneFormFields {
+    pub name: String,
+    pub description: String,
 }
 
 #[derive(Debug, Clone)]
@@ -2059,6 +2083,45 @@ impl HteamClient {
         .await
     }
 
+    /// Loads name/description from the edit form so the TUI can seed its fields.
+    pub async fn get_project_milestone_form(
+        &self,
+        project_id: u64,
+        milestone_id: u64,
+    ) -> Result<MilestoneFormFields> {
+        let url = format!(
+            "{}/projects/{project_id}/milestones/{milestone_id}/edit/",
+            self.site_base_url
+        );
+        let headers = {
+            let config = self.config.lock().await;
+            self.build_headers(&config)?
+        };
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers)
+            .send()
+            .await
+            .context("Error al cargar formulario de milestone")?;
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await.unwrap_or_default()
+            );
+        }
+        let html = response.text().await.unwrap_or_default();
+        let baseline = parse_milestone_form(&html);
+        if baseline.process_field.is_empty() && baseline.name.is_empty() {
+            anyhow::bail!("no se encontró el formulario de milestone en {url}");
+        }
+        Ok(MilestoneFormFields {
+            name: baseline.name,
+            description: baseline.description,
+        })
+    }
+
     pub async fn delete_project_milestone(&self, project_id: u64, milestone_id: u64) -> Result<()> {
         use scraper::{Html, Selector};
 
@@ -2208,8 +2271,23 @@ impl HteamClient {
         if code >= 400 {
             anyhow::bail!("Error HTTP {code}: {}", truncate_for_error(&text, 300));
         }
-        if text.contains("errorlist") || text.contains(&format!("<title>{reject_title}</title>")) {
-            anyhow::bail!("El servidor no aplicó el cambio del milestone (formulario rechazado).");
+        if milestone_write_rejected(&text)
+            || text.contains(&format!("<title>{reject_title}</title>"))
+        {
+            // Soft 404 on rename is the usual case; keep the message actionable.
+            if html_title(&text).as_deref() == Some("404")
+                || text.contains("error_pages_numbers/404")
+            {
+                anyhow::bail!(
+                    "El servidor rechazó el guardado del milestone (respuesta 404). \
+Si solo cambiaste el nombre, Hteam suele ignorar renombres vía este formulario; \
+probá cambiar la descripción o recrear el milestone."
+                );
+            }
+            anyhow::bail!(
+                "El servidor no aplicó el cambio del milestone (formulario rechazado): {}",
+                form_error_summary(&text)
+            );
         }
 
         let resolved_id = milestone_id.or_else(|| milestone_id_from_url(final_url.as_str()));
@@ -2228,6 +2306,41 @@ impl HteamClient {
                 form_error_summary(&text)
             );
         }
+
+        // Re-read the edit form when possible so a soft failure cannot look like success.
+        if let Some(id) = resolved_id {
+            match self.get_project_milestone_form(project_id, id).await {
+                Ok(fields) => {
+                    let got_name = fields.name.trim();
+                    let got_desc = fields.description.trim();
+                    if got_name != name_owned.trim() {
+                        anyhow::bail!(
+                            "Hteam no actualizó el nombre del milestone \
+(enviado {name_owned:?}, quedó {got_name:?}). \
+El formulario de edit suele rechazar renombres; la descripción sí se puede cambiar."
+                        );
+                    }
+                    if got_desc != description_owned.trim() {
+                        anyhow::bail!(
+                            "Hteam no actualizó la descripción del milestone \
+(enviado {:?}, quedó {:?}).",
+                            description_owned.trim(),
+                            got_desc
+                        );
+                    }
+                }
+                Err(err) => {
+                    // Create may resolve an id before the edit page is ready; don't
+                    // hide a successful create behind a transient form fetch error.
+                    if milestone_id.is_some() {
+                        return Err(err.context(
+                            "guardado reportado, pero no se pudo verificar el milestone",
+                        ));
+                    }
+                }
+            }
+        }
+
         Ok(MilestoneWrite {
             project_id,
             milestone_id: resolved_id,

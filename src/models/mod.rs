@@ -312,6 +312,23 @@ pub struct ProjectMilestone {
     pub url: String,
 }
 
+impl ProjectMilestone {
+    /// Numeric id parsed from the milestone detail URL (`.../milestones/{id}/`).
+    pub fn id(&self) -> Option<u64> {
+        let mut parts = self.url.split('/');
+        while let Some(part) = parts.next() {
+            if part == "milestones" {
+                if let Some(id) = parts.next() {
+                    if let Ok(n) = id.parse::<u64>() {
+                        return Some(n);
+                    }
+                }
+            }
+        }
+        None
+    }
+}
+
 impl<'de> serde::Deserialize<'de> for ProjectMilestone {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let (name, progress, url): (String, f64, String) =
@@ -836,6 +853,7 @@ mod tests {
         assert_eq!(milestone.name, "Sprint 1");
         assert_eq!(milestone.progress, 0.5);
         assert_eq!(milestone.url, "/milestones/1");
+        assert_eq!(milestone.id(), Some(1));
     }
 
     #[test]
