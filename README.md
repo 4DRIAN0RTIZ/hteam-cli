@@ -6,7 +6,7 @@ CLI en Rust para gestionar boards de Hteam, con REPL, TUI tipo kanban y servidor
 
 - Autenticación con cookies de sesión (`sessionid` + `csrftoken`)
 - REPL interactivo con historial (`~/.hteam_history`)
-- Servidor MCP sobre stdio: 38 tools
+- Servidor MCP sobre stdio: 39 tools
 - Multi-board, temas del TUI y self-update
 - `--json` en la mayoría de los comandos (ver abajo: no es universal)
 
@@ -212,7 +212,7 @@ cp completions/hteam.fish ~/.config/fish/completions/hteam.fish
 
 ## MCP
 
-38 tools, una por `#[tool]` en `src/mcp/mod.rs`: 
+39 tools, una por `#[tool]` en `src/mcp/mod.rs`: 
 
 | Herramienta | Descripción |
 |---|---|
@@ -247,6 +247,7 @@ cp completions/hteam.fish ~/.config/fish/completions/hteam.fish
 | `project_milestone_create` | Crear milestone |
 | `project_milestone_edit` | Editar milestone |
 | `project_task_create` | Crear una task dentro de un milestone |
+| `project_task_edit` | Editar milestone, dependencia o fecha de inicio de una task |
 | `project_tasks` | Tasks de un proyecto |
 | `users_search` | Buscar usuarios |
 | `reminders` | Recordatorios pendientes |

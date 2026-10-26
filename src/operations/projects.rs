@@ -101,6 +101,49 @@ pub async fn resolve_user_id(client: &HteamClient, reference: &str) -> Result<u6
         .context("Hteam devolvió un ID de usuario inválido")
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct ProjectTaskEdit<'a> {
+    pub milestone_id: Option<u64>,
+    pub dependence: Option<u64>,
+    pub start_date: Option<&'a str>,
+}
+
+pub async fn edit_task(
+    client: &HteamClient,
+    project_id: u64,
+    task_id: u64,
+    task: ProjectTaskEdit<'_>,
+) -> Result<ProjectTaskWriteResult> {
+    if task.milestone_id.is_none() && task.dependence.is_none() && task.start_date.is_none() {
+        anyhow::bail!("indica al menos --milestone, --dependence o --start-date");
+    }
+    if let Some(date) = task.start_date {
+        if date.len() != 10
+            || !date.as_bytes().get(4).is_some_and(|b| *b == b'-')
+            || !date.as_bytes().get(7).is_some_and(|b| *b == b'-')
+        {
+            anyhow::bail!("--start-date debe usar el formato YYYY-MM-DD");
+        }
+    }
+    let written = client
+        .edit_project_task(
+            project_id,
+            task_id,
+            crate::client::ProjectTaskEditRequest {
+                milestone_id: task.milestone_id,
+                dependence: task.dependence,
+                start_date: task.start_date,
+            },
+        )
+        .await?;
+    Ok(ProjectTaskWriteResult {
+        project_id: written.project_id,
+        milestone_id: written.milestone_id,
+        task_id: written.task_id,
+        name: written.name,
+    })
+}
+
 pub async fn create_task(
     client: &HteamClient,
     project_id: u64,
@@ -296,7 +339,7 @@ mod tests {
             .mock("GET", "/project-new/care/7/tasks-projects/")
             .with_status(200)
             .with_body(
-                r#"{"count":1,"results":[{"number":42,"name":"Fix bug","milestone":{"id":1,"name":"M1"},"progress":50.0,"closed":false,"responsible":{"email":"ana@example.com","username":"ana"}}]}"#,
+                r#"{"count":1,"results":[{"id":42,"number":7,"name":"Fix bug","milestone":{"id":1,"name":"M1"},"progress":50.0,"closed":false,"responsible":{"email":"ana@example.com","username":"ana"}}]}"#,
             )
             .create_async()
             .await;
@@ -304,6 +347,7 @@ mod tests {
         let response = tasks(&client(&server.url()), 7).await.expect("tasks");
 
         assert_eq!(response.count, 1);
+        assert_eq!(response.results[0].id, 42);
         assert_eq!(response.results[0].name, "Fix bug");
     }
 
@@ -377,6 +421,49 @@ mod tests {
 
         assert_eq!(result.milestone_id, Some(835));
         assert_eq!(result.name, "New name");
+    }
+
+    #[tokio::test]
+    async fn edit_task_preserves_unmodified_form_fields() {
+        let mut server = mockito::Server::new_async().await;
+        let form = r#"<form><input name="csrfmiddlewaretoken" value="csrf"><input name="name" value="Plan"><textarea name="description">Notes</textarea><input name="time_estimated" value="1h"><input name="start_date" value="2026-10-01"><select name="dependence"><option value="12" selected>Previous</option></select><select name="responsible"><option value="114" selected>egaleana</option></select><select name="priority"><option value="3" selected>Normal</option></select><select name="milestone"><option value="835" selected>M1</option></select></form>"#;
+        let _form = server
+            .mock("GET", "/projects/469/tasks/996/edit/")
+            .with_status(200)
+            .with_body(form)
+            .create_async()
+            .await;
+        let _post = server
+            .mock("POST", "/projects/469/tasks/996/edit/")
+            .match_body(Matcher::UrlEncoded("milestone".into(), "836".into()))
+            .match_body(Matcher::UrlEncoded("dependence".into(), "12".into()))
+            .match_body(Matcher::UrlEncoded(
+                "start_date".into(),
+                "2026-10-02".into(),
+            ))
+            .match_body(Matcher::UrlEncoded("time_estimated".into(), "1h".into()))
+            .match_body(Matcher::UrlEncoded("responsible".into(), "114".into()))
+            .with_status(200)
+            .with_body("saved")
+            .create_async()
+            .await;
+
+        let result = edit_task(
+            &client(&server.url()),
+            469,
+            996,
+            ProjectTaskEdit {
+                milestone_id: Some(836),
+                start_date: Some("2026-10-02"),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("edit task");
+
+        assert_eq!(result.milestone_id, 836);
+        assert_eq!(result.task_id, Some(996));
+        assert_eq!(result.name, "Plan");
     }
 
     #[tokio::test]

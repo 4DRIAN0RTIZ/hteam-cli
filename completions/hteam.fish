@@ -279,18 +279,19 @@ complete -c hteam -n "__fish_hteam_using_subcommand working; and __fish_seen_sub
 complete -c hteam -n "__fish_hteam_using_subcommand working; and __fish_seen_subcommand_from help" -f -a "start" -d 'Empezar a trabajar en un card'
 complete -c hteam -n "__fish_hteam_using_subcommand working; and __fish_seen_subcommand_from help" -f -a "stop" -d 'Dejar de trabajar en un card'
 complete -c hteam -n "__fish_hteam_using_subcommand working; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
-complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create tasks link help" -s b -l board -d 'ID del board a usar (operación o proyecto según --family)' -r
-complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create tasks link help" -l family -d 'Familia del tablero: operation (default) o project' -r
-complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create tasks link help" -l json -d 'Mostrar salida en formato JSON'
-complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create tasks link help" -s h -l help -d 'Print help'
-complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create tasks link help" -f -a "list" -d 'Listar proyectos (por defecto, en estado "Execution")'
-complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create tasks link help" -f -a "milestones" -d 'Ver progreso de milestones de un proyecto'
-complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create tasks link help" -f -a "milestone-create" -d 'Crear un milestone en un proyecto'
-complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create tasks link help" -f -a "milestone-edit" -d 'Editar un milestone de un proyecto'
-complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create tasks link help" -f -a "task-create" -d 'Crear una task de proyecto dentro de un milestone'
-complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create tasks link help" -f -a "tasks" -d 'Ver tasks de un proyecto'
-complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create tasks link help" -f -a "link" -d 'Copiar el link de un proyecto al portapapeles'
-complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create tasks link help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create task-edit tasks link help" -s b -l board -d 'ID del board a usar (operación o proyecto según --family)' -r
+complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create task-edit tasks link help" -l family -d 'Familia del tablero: operation (default) o project' -r
+complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create task-edit tasks link help" -l json -d 'Mostrar salida en formato JSON'
+complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create task-edit tasks link help" -s h -l help -d 'Print help'
+complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create task-edit tasks link help" -f -a "list" -d 'Listar proyectos (por defecto, en estado "Execution")'
+complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create task-edit tasks link help" -f -a "milestones" -d 'Ver progreso de milestones de un proyecto'
+complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create task-edit tasks link help" -f -a "milestone-create" -d 'Crear un milestone en un proyecto'
+complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create task-edit tasks link help" -f -a "milestone-edit" -d 'Editar un milestone de un proyecto'
+complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create task-edit tasks link help" -f -a "task-create" -d 'Crear una task de proyecto dentro de un milestone'
+complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create task-edit tasks link help" -f -a "task-edit" -d 'Editar milestone, dependencia o fecha de inicio de una task de proyecto'
+complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create task-edit tasks link help" -f -a "tasks" -d 'Ver tasks de un proyecto'
+complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create task-edit tasks link help" -f -a "link" -d 'Copiar el link de un proyecto al portapapeles'
+complete -c hteam -n "__fish_hteam_using_subcommand project; and not __fish_seen_subcommand_from list milestones milestone-create milestone-edit task-create task-edit tasks link help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from list" -s s -l status -d 'Estado a filtrar: All, Planning, Execution (default), Finished, Cancelled' -r
 complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from list" -s b -l board -d 'ID del board a usar (operación o proyecto según --family)' -r
 complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from list" -l family -d 'Familia del tablero: operation (default) o project' -r
@@ -323,6 +324,13 @@ complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_sub
 complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from task-create" -l family -d 'Familia del tablero: operation (default) o project' -r
 complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from task-create" -l json -d 'Mostrar salida en formato JSON'
 complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from task-create" -s h -l help -d 'Print help'
+complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from task-edit" -l milestone -d 'Nuevo ID de milestone' -r
+complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from task-edit" -l dependence -d 'Nuevo ID de task de la que depende' -r
+complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from task-edit" -l start-date -d 'Nueva fecha de inicio (YYYY-MM-DD)' -r
+complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from task-edit" -s b -l board -d 'ID del board a usar (operación o proyecto según --family)' -r
+complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from task-edit" -l family -d 'Familia del tablero: operation (default) o project' -r
+complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from task-edit" -l json -d 'Mostrar salida en formato JSON'
+complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from task-edit" -s h -l help -d 'Print help'
 complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from tasks" -s b -l board -d 'ID del board a usar (operación o proyecto según --family)' -r
 complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from tasks" -l family -d 'Familia del tablero: operation (default) o project' -r
 complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from tasks" -l json -d 'Mostrar salida en formato JSON'
@@ -337,6 +345,7 @@ complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_sub
 complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from help" -f -a "milestone-create" -d 'Crear un milestone en un proyecto'
 complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from help" -f -a "milestone-edit" -d 'Editar un milestone de un proyecto'
 complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from help" -f -a "task-create" -d 'Crear una task de proyecto dentro de un milestone'
+complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from help" -f -a "task-edit" -d 'Editar milestone, dependencia o fecha de inicio de una task de proyecto'
 complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from help" -f -a "tasks" -d 'Ver tasks de un proyecto'
 complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from help" -f -a "link" -d 'Copiar el link de un proyecto al portapapeles'
 complete -c hteam -n "__fish_hteam_using_subcommand project; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
@@ -472,6 +481,7 @@ complete -c hteam -n "__fish_hteam_using_subcommand help; and __fish_seen_subcom
 complete -c hteam -n "__fish_hteam_using_subcommand help; and __fish_seen_subcommand_from project" -f -a "milestone-create" -d 'Crear un milestone en un proyecto'
 complete -c hteam -n "__fish_hteam_using_subcommand help; and __fish_seen_subcommand_from project" -f -a "milestone-edit" -d 'Editar un milestone de un proyecto'
 complete -c hteam -n "__fish_hteam_using_subcommand help; and __fish_seen_subcommand_from project" -f -a "task-create" -d 'Crear una task de proyecto dentro de un milestone'
+complete -c hteam -n "__fish_hteam_using_subcommand help; and __fish_seen_subcommand_from project" -f -a "task-edit" -d 'Editar milestone, dependencia o fecha de inicio de una task de proyecto'
 complete -c hteam -n "__fish_hteam_using_subcommand help; and __fish_seen_subcommand_from project" -f -a "tasks" -d 'Ver tasks de un proyecto'
 complete -c hteam -n "__fish_hteam_using_subcommand help; and __fish_seen_subcommand_from project" -f -a "link" -d 'Copiar el link de un proyecto al portapapeles'
 complete -c hteam -n "__fish_hteam_using_subcommand help; and __fish_seen_subcommand_from objectives" -f -a "show" -d 'Mostrar los objetivos semanales del notebook de SharePad'

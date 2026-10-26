@@ -261,6 +261,15 @@ enum UserReference {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+struct ProjectTaskEditParams {
+    project_id: u64,
+    task_id: u64,
+    milestone: Option<u64>,
+    dependence: Option<u64>,
+    start_date: Option<String>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 struct ProjectTaskCreateParams {
     project_id: u64,
     milestone_id: u64,
@@ -824,6 +833,32 @@ impl HteamMcpServer {
                 dependence,
                 responsible,
                 priority,
+            },
+        )
+        .await
+        .map_err(err)?;
+        ok(task)
+    }
+
+    #[tool(description = "Editar milestone, dependencia o fecha de inicio de una task de proyecto")]
+    async fn project_task_edit(
+        &self,
+        Parameters(ProjectTaskEditParams {
+            project_id,
+            task_id,
+            milestone,
+            dependence,
+            start_date,
+        }): Parameters<ProjectTaskEditParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let task = operations::projects::edit_task(
+            &self.client,
+            project_id,
+            task_id,
+            operations::projects::ProjectTaskEdit {
+                milestone_id: milestone,
+                dependence,
+                start_date: start_date.as_deref(),
             },
         )
         .await
