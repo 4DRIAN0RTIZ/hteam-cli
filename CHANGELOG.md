@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(projects)* Add project status summary
 - *(projects)* Manage project members
 - *(projects)* Delete empty milestones
+- *(tui)* Create and edit project milestones
 
 ## [0.12.0] - 2026-10-23
 
