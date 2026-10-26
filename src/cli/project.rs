@@ -22,6 +22,8 @@ pub enum ProjectCommands {
     Tasks(ProjectArgs),
     /// Resumir progreso, fechas y tiempos de un proyecto
     Status(ProjectArgs),
+    /// Reemplazar los miembros de un proyecto por IDs de usuario
+    MembersSet(ProjectMembersSetArgs),
     /// Ver el árbol de dependencias de tasks de un proyecto
     TaskTree(ProjectArgs),
     /// Copiar el link de un proyecto al portapapeles
@@ -109,6 +111,15 @@ pub struct ProjectTaskCreateArgs {
 }
 
 #[derive(Args, Debug)]
+pub struct ProjectMembersSetArgs {
+    /// ID del proyecto
+    pub project_id: u64,
+    /// IDs de usuario que quedarán como miembros
+    #[arg(required = true)]
+    pub member_ids: Vec<u64>,
+}
+
+#[derive(Args, Debug)]
 pub struct ProjectLinkArgs {
     /// ID del proyecto
     pub project_id: u64,
@@ -128,6 +139,7 @@ pub async fn execute(cmd: ProjectCommands, json: bool) -> Result<()> {
         ProjectCommands::TaskEdit(args) => task_edit(args, json).await,
         ProjectCommands::Tasks(args) => project_tasks(args, json).await,
         ProjectCommands::Status(args) => project_status(args, json).await,
+        ProjectCommands::MembersSet(args) => project_members_set(args, json).await,
         ProjectCommands::TaskTree(args) => project_task_tree(args, json).await,
         ProjectCommands::Link(args) => project_link(args, json).await,
     }
@@ -290,6 +302,23 @@ async fn task_edit(args: ProjectTaskEditArgs, json: bool) -> Result<()> {
         println!("{}", serde_json::to_string_pretty(&task)?);
     } else {
         println!("\nTask actualizada: {}\n", args.task_id);
+    }
+    Ok(())
+}
+
+async fn project_members_set(args: ProjectMembersSetArgs, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+    operations::projects::set_members(&session.client, args.project_id, &args.member_ids).await?;
+    if json {
+        println!(
+            "{}",
+            serde_json::json!({"project_id": args.project_id, "member_ids": args.member_ids})
+        );
+    } else {
+        println!(
+            "Miembros actualizados para el proyecto {}.",
+            args.project_id
+        );
     }
     Ok(())
 }

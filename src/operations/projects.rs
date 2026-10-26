@@ -30,6 +30,10 @@ pub async fn task_tree(client: &HteamClient, project_id: u64) -> Result<Vec<Proj
     client.get_project_task_tree(project_id).await
 }
 
+pub async fn set_members(client: &HteamClient, project_id: u64, member_ids: &[u64]) -> Result<()> {
+    client.update_project_members(project_id, member_ids).await
+}
+
 pub async fn status(client: &HteamClient, project_id: u64) -> Result<ProjectStatusSummary> {
     let project = list(client, Some("All"))
         .await?
@@ -403,6 +407,25 @@ mod tests {
         assert_eq!(response.count, 1);
         assert_eq!(response.results[0].id, 42);
         assert_eq!(response.results[0].name, "Fix bug");
+    }
+
+    #[tokio::test]
+    async fn set_members_replaces_the_complete_member_list() {
+        let mut server = mockito::Server::new_async().await;
+        let _update = server
+            .mock("POST", "/project-new/care/projects/7/update_members/")
+            .match_header(
+                "content-type",
+                "application/x-www-form-urlencoded; charset=UTF-8",
+            )
+            .match_body("members=140&members=114")
+            .with_status(200)
+            .create_async()
+            .await;
+
+        set_members(&client(&server.url()), 7, &[140, 114])
+            .await
+            .expect("members updated");
     }
 
     #[tokio::test]

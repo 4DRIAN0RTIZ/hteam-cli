@@ -270,6 +270,14 @@ struct ProjectTaskEditParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+struct ProjectMembersSetParams {
+    #[schemars(description = "ID del proyecto")]
+    project_id: u64,
+    #[schemars(description = "Lista completa de IDs de usuario que quedarán como miembros")]
+    member_ids: Vec<u64>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 struct ProjectTaskCreateParams {
     project_id: u64,
     milestone_id: u64,
@@ -886,6 +894,20 @@ impl HteamMcpServer {
             .await
             .map_err(err)?;
         ok(tree)
+    }
+
+    #[tool(description = "Reemplazar la lista completa de miembros de un proyecto")]
+    async fn project_members_set(
+        &self,
+        Parameters(ProjectMembersSetParams {
+            project_id,
+            member_ids,
+        }): Parameters<ProjectMembersSetParams>,
+    ) -> Result<CallToolResult, McpError> {
+        operations::projects::set_members(&self.client, project_id, &member_ids)
+            .await
+            .map_err(err)?;
+        ok(serde_json::json!({"project_id": project_id, "member_ids": member_ids}))
     }
 
     #[tool(description = "Resumir progreso, fechas y tiempos de un proyecto")]
