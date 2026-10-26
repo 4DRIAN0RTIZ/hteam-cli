@@ -147,6 +147,15 @@ pub async fn milestone_form(
         .await
 }
 
+/// Milestone / dependence / start_date from the project-task edit form (TUI seed).
+pub async fn task_form(
+    client: &HteamClient,
+    project_id: u64,
+    task_id: u64,
+) -> Result<crate::client::TaskEditFormBaseline> {
+    client.get_project_task_form(project_id, task_id).await
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct ProjectTaskCreate<'a> {
     pub name: &'a str,

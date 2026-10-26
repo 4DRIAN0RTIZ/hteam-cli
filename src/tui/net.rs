@@ -136,6 +136,18 @@ pub enum JobOutcome {
         milestone_id: u64,
         result: Result<crate::client::MilestoneFormFields, String>,
     },
+    ProjectTaskFormLoaded {
+        id: u64,
+        project_id: u64,
+        task_id: u64,
+        result: Result<crate::client::TaskEditFormBaseline, String>,
+    },
+    ProjectTaskSaved {
+        id: u64,
+        project_id: u64,
+        result: Result<String, String>,
+        refresh: Option<ProjectDetailRefresh>,
+    },
     LiveProjects {
         id: u64,
         status_idx: usize,
@@ -301,6 +313,56 @@ fn enrich_detail_responsible(app: &App, card_id: u64, mut detail: CardDetail) ->
         }
     }
     detail
+}
+
+fn apply_project_write_result(
+    app: &mut App,
+    result: Result<String, String>,
+    refresh: Option<ProjectDetailRefresh>,
+    kind: &str,
+) {
+    match result {
+        Ok(msg) => {
+            app.set_status(msg);
+            if let Some((milestones, tasks)) = refresh {
+                match milestones {
+                    Ok(list) => {
+                        app.project_milestones = list;
+                        if app.selected_milestone_idx >= app.project_milestones.len()
+                            && !app.project_milestones.is_empty()
+                        {
+                            app.selected_milestone_idx = app.project_milestones.len() - 1;
+                        }
+                        if app.project_milestones.is_empty() {
+                            app.selected_milestone_idx = 0;
+                        }
+                    }
+                    Err(e) => {
+                        app.set_status(format!(
+                            "Guardado, pero falló el refresh de milestones: {e}"
+                        ));
+                    }
+                }
+                match tasks {
+                    Ok(list) => {
+                        app.project_tasks = list;
+                        if app.selected_task_idx >= app.project_tasks.len()
+                            && !app.project_tasks.is_empty()
+                        {
+                            app.selected_task_idx = app.project_tasks.len() - 1;
+                        }
+                        if app.project_tasks.is_empty() {
+                            app.selected_task_idx = 0;
+                        }
+                    }
+                    Err(e) => {
+                        app.set_status(format!("Guardado, pero falló el refresh de tasks: {e}"));
+                    }
+                }
+            }
+        }
+        Err(e) => app.set_status(format!("Error guardando {kind}: {e}")),
+    }
 }
 
 pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
@@ -624,7 +686,17 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
                 Err(e) => app.set_status(format!("Error cargando milestones: {}", e)),
             }
             match tasks {
-                Ok(list) => app.project_tasks = list,
+                Ok(list) => {
+                    app.project_tasks = list;
+                    if app.selected_task_idx >= app.project_tasks.len()
+                        && !app.project_tasks.is_empty()
+                    {
+                        app.selected_task_idx = app.project_tasks.len() - 1;
+                    }
+                    if app.project_tasks.is_empty() {
+                        app.selected_task_idx = 0;
+                    }
+                }
                 Err(e) => app.set_status(format!("Error cargando tasks: {}", e)),
             }
         }
@@ -667,42 +739,47 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
                 return;
             }
             app.end_busy();
-            match result {
-                Ok(msg) => {
-                    app.set_status(msg);
-                    if let Some((milestones, tasks)) = refresh {
-                        match milestones {
-                            Ok(list) => {
-                                app.project_milestones = list;
-                                if app.selected_milestone_idx >= app.project_milestones.len()
-                                    && !app.project_milestones.is_empty()
-                                {
-                                    app.selected_milestone_idx = app.project_milestones.len() - 1;
-                                }
-                                if app.project_milestones.is_empty() {
-                                    app.selected_milestone_idx = 0;
-                                }
-                            }
-                            Err(e) => {
-                                app.set_status(format!(
-                                    "Guardado, pero falló el refresh de milestones: {}",
-                                    e
-                                ));
-                            }
-                        }
-                        match tasks {
-                            Ok(list) => app.project_tasks = list,
-                            Err(e) => {
-                                app.set_status(format!(
-                                    "Guardado, pero falló el refresh de tasks: {}",
-                                    e
-                                ));
-                            }
-                        }
-                    }
-                }
-                Err(e) => app.set_status(format!("Error guardando milestone: {}", e)),
+            apply_project_write_result(app, result, refresh, "milestone");
+        }
+        JobOutcome::ProjectTaskFormLoaded {
+            id,
+            project_id,
+            task_id,
+            result,
+        } => {
+            if app.requests.project_task_form != id || app.active_project != Some(project_id) {
+                app.end_busy();
+                return;
             }
+            app.end_busy();
+            match result {
+                Ok(fields) => {
+                    super::events::open_project_task_edit_form(
+                        app,
+                        task_id,
+                        fields.milestone,
+                        fields.dependence,
+                        fields.start_date,
+                    );
+                }
+                Err(e) => {
+                    app.project_task_form_edit_id = None;
+                    app.set_status(format!("Error cargando task: {}", e));
+                }
+            }
+        }
+        JobOutcome::ProjectTaskSaved {
+            id,
+            project_id,
+            result,
+            refresh,
+        } => {
+            if app.requests.project_task_write != id || app.active_project != Some(project_id) {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            apply_project_write_result(app, result, refresh, "task");
         }
         JobOutcome::LiveProjects {
             id,
