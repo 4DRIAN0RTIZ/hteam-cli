@@ -877,6 +877,17 @@ impl HteamMcpServer {
         ok(resp)
     }
 
+    #[tool(description = "Ver el árbol de dependencias de las tasks de un proyecto")]
+    async fn project_task_tree(
+        &self,
+        Parameters(ProjectParams { project_id }): Parameters<ProjectParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let tree = operations::projects::task_tree(&self.client, project_id)
+            .await
+            .map_err(err)?;
+        ok(tree)
+    }
+
     // ── usuarios / misc ──────────────────────────────────────────────────
 
     #[tool(description = "Buscar usuarios por username o nombre")]

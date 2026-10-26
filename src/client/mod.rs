@@ -11,8 +11,8 @@ use crate::config::Config;
 use crate::models::{
     BoardEntry, BoardsResponse, Card, CardDetail, CardTimesResult, CheckInResult, Comment,
     CommentsResponse, DailyWorkEntry, FollowUp, Label, List, ProjectMilestone, ProjectSummary,
-    ProjectTasksResponse, ProjectsResponse, Reminder, UserSuggestion, WorkShiftResume,
-    WorkingOnStatus,
+    ProjectTaskTreeNode, ProjectTasksResponse, ProjectsResponse, Reminder, UserSuggestion,
+    WorkShiftResume, WorkingOnStatus,
 };
 
 const BASE_URL: &str = "https://hteam.mx/api";
@@ -1758,6 +1758,107 @@ impl HteamClient {
 
     pub async fn get_project_tasks(&self, project_id: u64) -> Result<ProjectTasksResponse> {
         self.get_project_tasks_page(project_id, None).await
+    }
+
+    pub async fn get_project_task_tree(&self, project_id: u64) -> Result<Vec<ProjectTaskTreeNode>> {
+        let config = self.config.lock().await;
+        let url = format!("{}/projects/{project_id}/task-tree", self.site_base_url);
+        let headers = self.build_headers(&config)?;
+        drop(config);
+
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers)
+            .send()
+            .await
+            .context("Error al obtener el árbol de tasks del proyecto")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+
+        Self::parse_project_task_tree(&response.text().await?, project_id)
+    }
+
+    fn parse_project_task_tree(html: &str, project_id: u64) -> Result<Vec<ProjectTaskTreeNode>> {
+        use scraper::{ElementRef, Html, Selector};
+
+        fn is_element_named(element: ElementRef<'_>, name: &str) -> bool {
+            element.value().name().eq_ignore_ascii_case(name)
+        }
+
+        fn task_from_branch(element: ElementRef<'_>, project_id: u64) -> Option<(u64, String)> {
+            if is_element_named(element, "li") {
+                return None;
+            }
+            if is_element_named(element, "a") {
+                let href = element.value().attr("href")?;
+                let prefix = format!("/projects/{project_id}/tasks/");
+                let id = href
+                    .strip_prefix(&prefix)?
+                    .trim_end_matches('/')
+                    .parse()
+                    .ok()?;
+                let name = element
+                    .text()
+                    .collect::<String>()
+                    .split_whitespace()
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                return Some((id, name));
+            }
+            element
+                .children()
+                .filter_map(ElementRef::wrap)
+                .find_map(|child| task_from_branch(child, project_id))
+        }
+
+        fn child_items(element: ElementRef<'_>) -> Vec<ElementRef<'_>> {
+            fn collect<'a>(element: ElementRef<'a>, items: &mut Vec<ElementRef<'a>>) {
+                for child in element.children().filter_map(ElementRef::wrap) {
+                    if is_element_named(child, "li") {
+                        items.push(child);
+                    } else {
+                        collect(child, items);
+                    }
+                }
+            }
+
+            let mut items = Vec::new();
+            collect(element, &mut items);
+            items
+        }
+
+        fn parse_item(element: ElementRef<'_>, project_id: u64) -> Option<ProjectTaskTreeNode> {
+            let (id, name) = element
+                .children()
+                .filter_map(ElementRef::wrap)
+                .find_map(|child| task_from_branch(child, project_id))?;
+            let children = child_items(element)
+                .into_iter()
+                .filter_map(|child| parse_item(child, project_id))
+                .collect();
+            Some(ProjectTaskTreeNode { id, name, children })
+        }
+
+        let document = Html::parse_document(html);
+        let item_selector = Selector::parse("li").map_err(|e| anyhow::anyhow!("{e:?}"))?;
+        let roots = document
+            .select(&item_selector)
+            .filter(|item| {
+                !item
+                    .ancestors()
+                    .filter_map(ElementRef::wrap)
+                    .any(|parent| is_element_named(parent, "li"))
+            })
+            .filter_map(|item| parse_item(item, project_id))
+            .collect();
+        Ok(roots)
     }
 
     async fn get_project_tasks_page(

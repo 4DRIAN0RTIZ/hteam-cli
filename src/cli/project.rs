@@ -20,6 +20,8 @@ pub enum ProjectCommands {
     TaskEdit(ProjectTaskEditArgs),
     /// Ver tasks de un proyecto
     Tasks(ProjectArgs),
+    /// Ver el árbol de dependencias de tasks de un proyecto
+    TaskTree(ProjectArgs),
     /// Copiar el link de un proyecto al portapapeles
     Link(ProjectLinkArgs),
 }
@@ -123,6 +125,7 @@ pub async fn execute(cmd: ProjectCommands, json: bool) -> Result<()> {
         ProjectCommands::TaskCreate(args) => task_create(args, json).await,
         ProjectCommands::TaskEdit(args) => task_edit(args, json).await,
         ProjectCommands::Tasks(args) => project_tasks(args, json).await,
+        ProjectCommands::TaskTree(args) => project_task_tree(args, json).await,
         ProjectCommands::Link(args) => project_link(args, json).await,
     }
 }
@@ -285,6 +288,39 @@ async fn task_edit(args: ProjectTaskEditArgs, json: bool) -> Result<()> {
     } else {
         println!("\nTask actualizada: {}\n", args.task_id);
     }
+    Ok(())
+}
+
+async fn project_task_tree(args: ProjectArgs, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+    let tree = operations::projects::task_tree(&session.client, args.project_id).await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&tree)?);
+        return Ok(());
+    }
+
+    if tree.is_empty() {
+        println!(
+            "No se encontraron tasks en el árbol del proyecto {}.",
+            args.project_id
+        );
+        return Ok(());
+    }
+
+    fn print_node(node: &crate::models::ProjectTaskTreeNode, depth: usize) {
+        println!("{}#{} {}", "  ".repeat(depth), node.id, node.name);
+        for child in &node.children {
+            print_node(child, depth + 1);
+        }
+    }
+
+    println!("\nÁrbol de tasks del proyecto {}:\n", args.project_id);
+    for node in &tree {
+        print_node(node, 0);
+    }
+    println!();
+
     Ok(())
 }
 
