@@ -345,6 +345,11 @@ pub struct ProjectTasksResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Tabled)]
 pub struct ProjectTask {
+    /// Internal record ID used by task detail and mutation routes.
+    #[serde(default)]
+    #[tabled(rename = "ID")]
+    pub id: u64,
+    /// Human-facing task number within its project.
     #[tabled(rename = "#")]
     pub number: u64,
     #[tabled(rename = "Task")]

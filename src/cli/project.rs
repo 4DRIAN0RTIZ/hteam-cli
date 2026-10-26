@@ -16,6 +16,8 @@ pub enum ProjectCommands {
     MilestoneEdit(MilestoneEditArgs),
     /// Crear una task de proyecto dentro de un milestone
     TaskCreate(ProjectTaskCreateArgs),
+    /// Editar milestone, dependencia o fecha de inicio de una task de proyecto
+    TaskEdit(ProjectTaskEditArgs),
     /// Ver tasks de un proyecto
     Tasks(ProjectArgs),
     /// Copiar el link de un proyecto al portapapeles
@@ -62,6 +64,23 @@ pub struct MilestoneEditArgs {
 }
 
 #[derive(Args, Debug)]
+pub struct ProjectTaskEditArgs {
+    /// ID del proyecto
+    pub project_id: u64,
+    /// ID interno de la task (visible con `hteam project tasks --json`)
+    pub task_id: u64,
+    /// Nuevo ID de milestone
+    #[arg(long)]
+    pub milestone: Option<u64>,
+    /// Nuevo ID de task de la que depende
+    #[arg(long)]
+    pub dependence: Option<u64>,
+    /// Nueva fecha de inicio (YYYY-MM-DD)
+    #[arg(long)]
+    pub start_date: Option<String>,
+}
+
+#[derive(Args, Debug)]
 pub struct ProjectTaskCreateArgs {
     /// ID del proyecto
     pub project_id: u64,
@@ -102,6 +121,7 @@ pub async fn execute(cmd: ProjectCommands, json: bool) -> Result<()> {
         ProjectCommands::MilestoneCreate(args) => milestone_create(args, json).await,
         ProjectCommands::MilestoneEdit(args) => milestone_edit(args, json).await,
         ProjectCommands::TaskCreate(args) => task_create(args, json).await,
+        ProjectCommands::TaskEdit(args) => task_edit(args, json).await,
         ProjectCommands::Tasks(args) => project_tasks(args, json).await,
         ProjectCommands::Link(args) => project_link(args, json).await,
     }
@@ -243,6 +263,27 @@ async fn task_create(args: ProjectTaskCreateArgs, json: bool) -> Result<()> {
             .map(|id| format!(" ({id})"))
             .unwrap_or_default();
         println!("\nTask creada: {}{}\n", task.name, id);
+    }
+    Ok(())
+}
+
+async fn task_edit(args: ProjectTaskEditArgs, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+    let task = operations::projects::edit_task(
+        &session.client,
+        args.project_id,
+        args.task_id,
+        operations::projects::ProjectTaskEdit {
+            milestone_id: args.milestone,
+            dependence: args.dependence,
+            start_date: args.start_date.as_deref(),
+        },
+    )
+    .await?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&task)?);
+    } else {
+        println!("\nTask actualizada: {}\n", args.task_id);
     }
     Ok(())
 }

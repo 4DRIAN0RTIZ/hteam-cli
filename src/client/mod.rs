@@ -150,6 +150,8 @@ pub struct TaskEditFormBaseline {
     pub responsible: String,
     /// Priority select value `1`..=`5` (web: 1 very low … 5 very high).
     pub priority: String,
+    /// Selected project milestone id, or empty when unassigned.
+    pub milestone: String,
 }
 
 fn parse_task_edit_form(html: &str) -> TaskEditFormBaseline {
@@ -213,6 +215,7 @@ fn parse_task_edit_form(html: &str) -> TaskEditFormBaseline {
     out.dependence = select_selected("dependence");
     out.responsible = select_selected("responsible");
     out.priority = select_selected("priority");
+    out.milestone = select_selected("milestone");
     out
 }
 
@@ -478,6 +481,12 @@ pub struct ProjectTaskCreateRequest<'a> {
     pub dependence: Option<u64>,
     pub responsible: Option<u64>,
     pub priority: Option<u8>,
+}
+
+pub struct ProjectTaskEditRequest<'a> {
+    pub milestone_id: Option<u64>,
+    pub dependence: Option<u64>,
+    pub start_date: Option<&'a str>,
 }
 
 impl HteamClient {
@@ -2108,6 +2117,106 @@ impl HteamClient {
             task_id: task_id_from_url(final_url.as_str())
                 .or_else(|| created_task_id_from_page(&text, name)),
             name: name.to_string(),
+        })
+    }
+
+    pub async fn edit_project_task(
+        &self,
+        project_id: u64,
+        task_id: u64,
+        patch: ProjectTaskEditRequest<'_>,
+    ) -> Result<ProjectTaskWrite> {
+        let url = format!(
+            "{}/projects/{project_id}/tasks/{task_id}/edit/",
+            self.site_base_url
+        );
+        let (headers, csrf_config) = {
+            let config = self.config.lock().await;
+            (
+                self.build_headers(&config)?,
+                config.auth.csrf_token.clone().unwrap_or_default(),
+            )
+        };
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers.clone())
+            .send()
+            .await
+            .context("Error al cargar formulario de edición de task de proyecto")?;
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await.unwrap_or_default()
+            );
+        }
+        let baseline = parse_task_edit_form(&response.text().await.unwrap_or_default());
+        let csrf = baseline
+            .csrf
+            .as_deref()
+            .filter(|s| !s.is_empty())
+            .unwrap_or(&csrf_config);
+        let milestone_id = patch
+            .milestone_id
+            .map(|id| id.to_string())
+            .unwrap_or(baseline.milestone);
+        let dependence = patch
+            .dependence
+            .map(|id| id.to_string())
+            .unwrap_or(baseline.dependence);
+        let start_date = patch
+            .start_date
+            .map(|date| form_date_yyyy_mm_dd(Some(date)))
+            .unwrap_or(baseline.start_date);
+        let name = baseline.name.clone();
+        let fields = [
+            ("csrfmiddlewaretoken", csrf.to_string()),
+            ("process_id", project_id.to_string()),
+            ("name", baseline.name),
+            ("description", baseline.description),
+            ("time_estimated", baseline.time_estimated),
+            ("start_date", start_date),
+            ("dependence", dependence),
+            ("responsible", baseline.responsible),
+            ("priority", baseline.priority),
+            ("milestone", milestone_id.clone()),
+            ("id", task_id.to_string()),
+        ];
+        let body = fields
+            .into_iter()
+            .map(|(key, value)| format!("{key}={}", encode_form_value(&value)))
+            .collect::<Vec<_>>()
+            .join("&");
+        let response = self
+            .client
+            .post(&url)
+            .headers(headers)
+            .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header("Origin", self.site_base_url.as_str())
+            .header(REFERER, &url)
+            .body(body)
+            .send()
+            .await
+            .context("Error al editar task de proyecto")?;
+        let code = response.status().as_u16();
+        let text = response.text().await.unwrap_or_default();
+        if code >= 400 {
+            anyhow::bail!("Error HTTP {code}: {}", truncate_for_error(&text, 300));
+        }
+        if text.contains("errorlist")
+            || text.contains("<title>Edit task</title>")
+            || text.contains("value=Update")
+        {
+            anyhow::bail!(
+                "El servidor no aplicó el cambio de la task de proyecto (formulario rechazado)."
+            );
+        }
+        Ok(ProjectTaskWrite {
+            project_id,
+            milestone_id: milestone_id.parse().unwrap_or_default(),
+            task_id: Some(task_id),
+            name,
         })
     }
 

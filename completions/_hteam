@@ -832,6 +832,21 @@ _arguments "${_arguments_options[@]}" : \
 ':milestone_id -- ID del milestone:_default' \
 && ret=0
 ;;
+(task-edit)
+_arguments "${_arguments_options[@]}" : \
+'--milestone=[Nuevo ID de milestone]:MILESTONE:_default' \
+'--dependence=[Nuevo ID de task de la que depende]:DEPENDENCE:_default' \
+'--start-date=[Nueva fecha de inicio (YYYY-MM-DD)]:START_DATE:_default' \
+'-b+[ID del board a usar (operación o proyecto según --family)]:BOARD:_default' \
+'--board=[ID del board a usar (operación o proyecto según --family)]:BOARD:_default' \
+'--family=[Familia del tablero\: operation (default) o project]:FAMILY:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':project_id -- ID del proyecto:_default' \
+':task_id -- ID interno de la task (visible con `hteam project tasks --json`):_default' \
+&& ret=0
+;;
 (tasks)
 _arguments "${_arguments_options[@]}" : \
 '-b+[ID del board a usar (operación o proyecto según --family)]:BOARD:_default' \
@@ -884,6 +899,10 @@ _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (task-create)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(task-edit)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
@@ -1423,6 +1442,10 @@ _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (task-create)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(task-edit)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
@@ -2265,6 +2288,7 @@ _hteam__subcmd__help__subcmd__project_commands() {
 'milestone-create:Crear un milestone en un proyecto' \
 'milestone-edit:Editar un milestone de un proyecto' \
 'task-create:Crear una task de proyecto dentro de un milestone' \
+'task-edit:Editar milestone, dependencia o fecha de inicio de una task de proyecto' \
 'tasks:Ver tasks de un proyecto' \
 'link:Copiar el link de un proyecto al portapapeles' \
     )
@@ -2299,6 +2323,11 @@ _hteam__subcmd__help__subcmd__project__subcmd__milestones_commands() {
 _hteam__subcmd__help__subcmd__project__subcmd__task-create_commands() {
     local commands; commands=()
     _describe -t commands 'hteam help project task-create commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__project__subcmd__task-edit_commands] )) ||
+_hteam__subcmd__help__subcmd__project__subcmd__task-edit_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help project task-edit commands' commands "$@"
 }
 (( $+functions[_hteam__subcmd__help__subcmd__project__subcmd__tasks_commands] )) ||
 _hteam__subcmd__help__subcmd__project__subcmd__tasks_commands() {
@@ -2438,6 +2467,7 @@ _hteam__subcmd__project_commands() {
 'milestone-create:Crear un milestone en un proyecto' \
 'milestone-edit:Editar un milestone de un proyecto' \
 'task-create:Crear una task de proyecto dentro de un milestone' \
+'task-edit:Editar milestone, dependencia o fecha de inicio de una task de proyecto' \
 'tasks:Ver tasks de un proyecto' \
 'link:Copiar el link de un proyecto al portapapeles' \
 'help:Print this message or the help of the given subcommand(s)' \
@@ -2452,6 +2482,7 @@ _hteam__subcmd__project__subcmd__help_commands() {
 'milestone-create:Crear un milestone en un proyecto' \
 'milestone-edit:Editar un milestone de un proyecto' \
 'task-create:Crear una task de proyecto dentro de un milestone' \
+'task-edit:Editar milestone, dependencia o fecha de inicio de una task de proyecto' \
 'tasks:Ver tasks de un proyecto' \
 'link:Copiar el link de un proyecto al portapapeles' \
 'help:Print this message or the help of the given subcommand(s)' \
@@ -2493,6 +2524,11 @@ _hteam__subcmd__project__subcmd__help__subcmd__task-create_commands() {
     local commands; commands=()
     _describe -t commands 'hteam project help task-create commands' commands "$@"
 }
+(( $+functions[_hteam__subcmd__project__subcmd__help__subcmd__task-edit_commands] )) ||
+_hteam__subcmd__project__subcmd__help__subcmd__task-edit_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam project help task-edit commands' commands "$@"
+}
 (( $+functions[_hteam__subcmd__project__subcmd__help__subcmd__tasks_commands] )) ||
 _hteam__subcmd__project__subcmd__help__subcmd__tasks_commands() {
     local commands; commands=()
@@ -2527,6 +2563,11 @@ _hteam__subcmd__project__subcmd__milestones_commands() {
 _hteam__subcmd__project__subcmd__task-create_commands() {
     local commands; commands=()
     _describe -t commands 'hteam project task-create commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__project__subcmd__task-edit_commands] )) ||
+_hteam__subcmd__project__subcmd__task-edit_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam project task-edit commands' commands "$@"
 }
 (( $+functions[_hteam__subcmd__project__subcmd__tasks_commands] )) ||
 _hteam__subcmd__project__subcmd__tasks_commands() {
