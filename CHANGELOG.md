@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(projects)* Create tasks in milestones
 - *(projects)* Create tasks in milestones
 - *(projects)* Edit project tasks
+- *(projects)* Add project task dependency tree
 
 ## [0.12.0] - 2026-10-23
 
