@@ -350,6 +350,25 @@ pub struct ProjectTaskTreeNode {
     pub children: Vec<ProjectTaskTreeNode>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct ProjectDueTask {
+    pub id: u64,
+    pub number: u64,
+    pub name: String,
+    pub due_date: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ProjectStatusSummary {
+    pub project: ProjectSummary,
+    pub milestones: Vec<ProjectMilestone>,
+    pub total_tasks: u64,
+    pub closed_tasks: u64,
+    pub overdue_tasks: Vec<ProjectDueTask>,
+    pub upcoming_tasks: Vec<ProjectDueTask>,
+    pub times: serde_json::Value,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Tabled)]
 pub struct ProjectTask {
     /// Internal record ID used by task detail and mutation routes.
@@ -615,6 +634,9 @@ pub struct ProjectSummary {
     #[serde(default)]
     #[tabled(display_with = "display_due_date", rename = "Vence")]
     pub due_date: Option<String>,
+    #[serde(rename = "clc_time_deviation", default)]
+    #[tabled(skip)]
+    pub time_deviation: f64,
     #[serde(default)]
     #[tabled(skip)]
     pub priority: u8,

@@ -20,6 +20,8 @@ pub enum ProjectCommands {
     TaskEdit(ProjectTaskEditArgs),
     /// Ver tasks de un proyecto
     Tasks(ProjectArgs),
+    /// Resumir progreso, fechas y tiempos de un proyecto
+    Status(ProjectArgs),
     /// Ver el árbol de dependencias de tasks de un proyecto
     TaskTree(ProjectArgs),
     /// Copiar el link de un proyecto al portapapeles
@@ -125,6 +127,7 @@ pub async fn execute(cmd: ProjectCommands, json: bool) -> Result<()> {
         ProjectCommands::TaskCreate(args) => task_create(args, json).await,
         ProjectCommands::TaskEdit(args) => task_edit(args, json).await,
         ProjectCommands::Tasks(args) => project_tasks(args, json).await,
+        ProjectCommands::Status(args) => project_status(args, json).await,
         ProjectCommands::TaskTree(args) => project_task_tree(args, json).await,
         ProjectCommands::Link(args) => project_link(args, json).await,
     }
@@ -288,6 +291,55 @@ async fn task_edit(args: ProjectTaskEditArgs, json: bool) -> Result<()> {
     } else {
         println!("\nTask actualizada: {}\n", args.task_id);
     }
+    Ok(())
+}
+
+async fn project_status(args: ProjectArgs, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+    let summary = operations::projects::status(&session.client, args.project_id).await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&summary)?);
+        return Ok(());
+    }
+
+    println!(
+        "\nEstado de {} (#{}):",
+        summary.project.name, summary.project.id
+    );
+    println!("Progreso: {:.0}%", summary.project.progress);
+    println!(
+        "Tasks: {}/{} cerradas",
+        summary.closed_tasks, summary.total_tasks
+    );
+    println!("Milestones: {}", summary.milestones.len());
+    println!("Vencidas: {}", summary.overdue_tasks.len());
+    println!("Próximas 7 días: {}", summary.upcoming_tasks.len());
+    let (estimated, spent) = summary
+        .times
+        .as_array()
+        .into_iter()
+        .flatten()
+        .skip(1)
+        .filter_map(|row| row.as_array())
+        .fold((0.0, 0.0), |(estimated, spent), row| {
+            (
+                estimated
+                    + row
+                        .get(1)
+                        .and_then(serde_json::Value::as_f64)
+                        .unwrap_or(0.0),
+                spent
+                    + row
+                        .get(2)
+                        .and_then(serde_json::Value::as_f64)
+                        .unwrap_or(0.0),
+            )
+        });
+    println!(
+        "Tiempo: {:.1}h estimadas / {:.1}h reales\n",
+        estimated, spent
+    );
     Ok(())
 }
 

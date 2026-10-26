@@ -781,6 +781,10 @@ impl HteamClient {
         Ok(detail)
     }
 
+    pub async fn get_project_task_detail(&self, task_id: u64) -> Result<CardDetail> {
+        self.fetch_task_detail(TaskFamily::Project, task_id).await
+    }
+
     async fn fetch_task_detail(&self, family: TaskFamily, card_id: u64) -> Result<CardDetail> {
         let config = self.config.lock().await;
         let url = family.task_detail_api(&self.api_base_url, card_id);
@@ -1758,6 +1762,37 @@ impl HteamClient {
 
     pub async fn get_project_tasks(&self, project_id: u64) -> Result<ProjectTasksResponse> {
         self.get_project_tasks_page(project_id, None).await
+    }
+
+    pub async fn get_project_times(&self, project_id: u64) -> Result<serde_json::Value> {
+        let config = self.config.lock().await;
+        let url = format!(
+            "{}/project-new/care/projects/{project_id}/times/",
+            self.api_base_url
+        );
+        let headers = self.build_headers(&config)?;
+        drop(config);
+
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers)
+            .send()
+            .await
+            .context("Error al obtener los tiempos del proyecto")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+
+        response
+            .json()
+            .await
+            .context("Respuesta de tiempos de proyecto inválida")
     }
 
     pub async fn get_project_task_tree(&self, project_id: u64) -> Result<Vec<ProjectTaskTreeNode>> {
