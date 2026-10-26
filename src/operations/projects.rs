@@ -113,6 +113,16 @@ pub async fn create_milestone(
     Ok(to_write_result(written))
 }
 
+pub async fn delete_milestone(
+    client: &HteamClient,
+    project_id: u64,
+    milestone_id: u64,
+) -> Result<()> {
+    client
+        .delete_project_milestone(project_id, milestone_id)
+        .await
+}
+
 pub async fn edit_milestone(
     client: &HteamClient,
     project_id: u64,

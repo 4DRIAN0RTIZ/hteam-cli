@@ -242,6 +242,14 @@ struct ProjectMilestoneCreateParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+struct ProjectMilestoneDeleteParams {
+    #[schemars(description = "ID del proyecto")]
+    project_id: u64,
+    #[schemars(description = "ID del milestone a eliminar; debe no tener tasks asociadas")]
+    milestone_id: u64,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 struct ProjectMilestoneEditParams {
     #[schemars(description = "ID del proyecto")]
     project_id: u64,
@@ -781,6 +789,22 @@ impl HteamMcpServer {
         .await
         .map_err(err)?;
         ok(milestone)
+    }
+
+    #[tool(description = "Eliminar un milestone vacío de un proyecto")]
+    async fn project_milestone_delete(
+        &self,
+        Parameters(ProjectMilestoneDeleteParams {
+            project_id,
+            milestone_id,
+        }): Parameters<ProjectMilestoneDeleteParams>,
+    ) -> Result<CallToolResult, McpError> {
+        operations::projects::delete_milestone(&self.client, project_id, milestone_id)
+            .await
+            .map_err(err)?;
+        ok(
+            serde_json::json!({"project_id": project_id, "milestone_id": milestone_id, "deleted": true}),
+        )
     }
 
     #[tool(description = "Editar nombre y/o descripción de un milestone")]

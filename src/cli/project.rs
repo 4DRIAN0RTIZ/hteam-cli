@@ -14,6 +14,8 @@ pub enum ProjectCommands {
     MilestoneCreate(MilestoneCreateArgs),
     /// Editar un milestone de un proyecto
     MilestoneEdit(MilestoneEditArgs),
+    /// Eliminar un milestone de un proyecto
+    MilestoneDelete(ProjectMilestoneArgs),
     /// Crear una task de proyecto dentro de un milestone
     TaskCreate(ProjectTaskCreateArgs),
     /// Editar milestone, dependencia o fecha de inicio de una task de proyecto
@@ -53,6 +55,12 @@ pub struct MilestoneCreateArgs {
     /// Descripción (opcional)
     #[arg(long)]
     pub description: Option<String>,
+}
+
+#[derive(Args, Debug)]
+pub struct ProjectMilestoneArgs {
+    pub project_id: u64,
+    pub milestone_id: u64,
 }
 
 #[derive(Args, Debug)]
@@ -135,6 +143,7 @@ pub async fn execute(cmd: ProjectCommands, json: bool) -> Result<()> {
         ProjectCommands::Milestones(args) => project_milestones(args, json).await,
         ProjectCommands::MilestoneCreate(args) => milestone_create(args, json).await,
         ProjectCommands::MilestoneEdit(args) => milestone_edit(args, json).await,
+        ProjectCommands::MilestoneDelete(args) => milestone_delete(args, json).await,
         ProjectCommands::TaskCreate(args) => task_create(args, json).await,
         ProjectCommands::TaskEdit(args) => task_edit(args, json).await,
         ProjectCommands::Tasks(args) => project_tasks(args, json).await,
@@ -224,6 +233,21 @@ async fn milestone_create(args: MilestoneCreateArgs, json: bool) -> Result<()> {
             .map(|id| format!(" ({id})"))
             .unwrap_or_default();
         println!("\nMilestone creado: {}{}\n", result.name, id);
+    }
+    Ok(())
+}
+
+async fn milestone_delete(args: ProjectMilestoneArgs, json: bool) -> Result<()> {
+    let session = Session::open().await?;
+    operations::projects::delete_milestone(&session.client, args.project_id, args.milestone_id)
+        .await?;
+    if json {
+        println!(
+            "{}",
+            serde_json::json!({"project_id": args.project_id, "milestone_id": args.milestone_id, "deleted": true})
+        );
+    } else {
+        println!("Milestone {} eliminado.", args.milestone_id);
     }
     Ok(())
 }
