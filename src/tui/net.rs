@@ -38,6 +38,12 @@ impl Jobs {
     }
 }
 
+/// Milestones + tasks snapshot returned after a successful project write.
+type ProjectDetailRefresh = (
+    Result<Vec<ProjectMilestone>, String>,
+    Result<Vec<ProjectTask>, String>,
+);
+
 /// Result of a background network job. Applied on the TUI thread so draws and
 /// key handling never await HTTP.
 pub enum JobOutcome {
@@ -116,6 +122,19 @@ pub enum JobOutcome {
         project_id: u64,
         milestones: Result<Vec<ProjectMilestone>, String>,
         tasks: Result<Vec<ProjectTask>, String>,
+    },
+    ProjectMilestoneSaved {
+        id: u64,
+        project_id: u64,
+        result: Result<String, String>,
+        /// Fresh milestones+tasks after a successful write; `None` on error.
+        refresh: Option<ProjectDetailRefresh>,
+    },
+    MilestoneFormLoaded {
+        id: u64,
+        project_id: u64,
+        milestone_id: u64,
+        result: Result<crate::client::MilestoneFormFields, String>,
     },
     LiveProjects {
         id: u64,
@@ -591,12 +610,98 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
             }
             app.end_busy();
             match milestones {
-                Ok(list) => app.project_milestones = list,
+                Ok(list) => {
+                    app.project_milestones = list;
+                    if app.selected_milestone_idx >= app.project_milestones.len()
+                        && !app.project_milestones.is_empty()
+                    {
+                        app.selected_milestone_idx = app.project_milestones.len() - 1;
+                    }
+                    if app.project_milestones.is_empty() {
+                        app.selected_milestone_idx = 0;
+                    }
+                }
                 Err(e) => app.set_status(format!("Error cargando milestones: {}", e)),
             }
             match tasks {
                 Ok(list) => app.project_tasks = list,
                 Err(e) => app.set_status(format!("Error cargando tasks: {}", e)),
+            }
+        }
+        JobOutcome::MilestoneFormLoaded {
+            id,
+            project_id,
+            milestone_id,
+            result,
+        } => {
+            if app.requests.project_milestone_form != id || app.active_project != Some(project_id) {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            match result {
+                Ok(fields) => {
+                    super::events::open_milestone_edit_form(
+                        app,
+                        milestone_id,
+                        fields.name,
+                        fields.description,
+                    );
+                }
+                Err(e) => {
+                    app.milestone_form_edit_id = None;
+                    app.milestone_name_input.clear();
+                    app.set_status(format!("Error cargando milestone: {}", e));
+                }
+            }
+        }
+        JobOutcome::ProjectMilestoneSaved {
+            id,
+            project_id,
+            result,
+            refresh,
+        } => {
+            if app.requests.project_milestone_write != id || app.active_project != Some(project_id)
+            {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            match result {
+                Ok(msg) => {
+                    app.set_status(msg);
+                    if let Some((milestones, tasks)) = refresh {
+                        match milestones {
+                            Ok(list) => {
+                                app.project_milestones = list;
+                                if app.selected_milestone_idx >= app.project_milestones.len()
+                                    && !app.project_milestones.is_empty()
+                                {
+                                    app.selected_milestone_idx = app.project_milestones.len() - 1;
+                                }
+                                if app.project_milestones.is_empty() {
+                                    app.selected_milestone_idx = 0;
+                                }
+                            }
+                            Err(e) => {
+                                app.set_status(format!(
+                                    "Guardado, pero falló el refresh de milestones: {}",
+                                    e
+                                ));
+                            }
+                        }
+                        match tasks {
+                            Ok(list) => app.project_tasks = list,
+                            Err(e) => {
+                                app.set_status(format!(
+                                    "Guardado, pero falló el refresh de tasks: {}",
+                                    e
+                                ));
+                            }
+                        }
+                    }
+                }
+                Err(e) => app.set_status(format!("Error guardando milestone: {}", e)),
             }
         }
         JobOutcome::LiveProjects {

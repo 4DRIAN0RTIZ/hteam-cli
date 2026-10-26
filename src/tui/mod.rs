@@ -476,7 +476,24 @@ async fn run_loop(
         }
 
         if app.show_projects {
-            if app.composing_project {
+            if app.composing_milestone {
+                match key.code {
+                    KeyCode::Esc => events::cancel_milestone_form(app),
+                    KeyCode::Tab => events::toggle_milestone_form_field(app),
+                    KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        events::submit_milestone_form(client.clone(), app, &jobs);
+                    }
+                    // Create: Enter from name saves. Edit: name is locked, Enter always saves.
+                    KeyCode::Enter
+                        if app.milestone_form_edit_id.is_some() || !app.milestone_desc_focused =>
+                    {
+                        events::submit_milestone_form(client.clone(), app, &jobs);
+                    }
+                    KeyCode::Backspace => events::milestone_form_input_backspace(app),
+                    KeyCode::Char(c) => events::milestone_form_input_push(app, c),
+                    _ => {}
+                }
+            } else if app.composing_project {
                 match key.code {
                     KeyCode::Esc => events::cancel_composing_project(app),
                     KeyCode::Enter => events::submit_project_input(client.clone(), app, &jobs),
@@ -511,10 +528,17 @@ async fn run_loop(
                 match key.code {
                     KeyCode::Esc | KeyCode::Char('q') => events::close_projects(app),
                     KeyCode::Char('a') => events::start_composing_project(app),
+                    KeyCode::Char('n') if app.projects_detail_focused => {
+                        events::start_create_milestone(app);
+                    }
+                    KeyCode::Char('e') if app.projects_detail_focused => {
+                        events::start_edit_milestone(client.clone(), app, &jobs);
+                    }
                     KeyCode::Char('L') => events::toggle_live_projects(client.clone(), app, &jobs),
                     KeyCode::Tab => events::toggle_projects_focus(app),
                     KeyCode::Char('j') | KeyCode::Down => {
                         if app.projects_detail_focused {
+                            events::move_milestone_selection(app, 1);
                             app.projects_scroll.by(1);
                         } else {
                             events::move_project_selection(app, 1);
@@ -522,6 +546,7 @@ async fn run_loop(
                     }
                     KeyCode::Char('k') | KeyCode::Up => {
                         if app.projects_detail_focused {
+                            events::move_milestone_selection(app, -1);
                             app.projects_scroll.by(-1);
                         } else {
                             events::move_project_selection(app, -1);

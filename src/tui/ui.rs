@@ -252,11 +252,22 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
                 "Proyectos guardados",
                 "  a               agregar uno nuevo por ID",
                 "  Tab             alternar foco (guardados / detalle)",
-                "  j/k, ↓/↑        mover selección / scroll del detalle",
+                "  j/k, ↓/↑        mover selección / milestones del detalle",
                 "  Enter           elegir el resaltado",
                 "  c               copiar el link del resaltado",
                 "  L               listar proyectos en vivo",
                 "  Esc, q          cerrar",
+                "",
+                "Detalle (foco con Tab)",
+                "  n               crear milestone",
+                "  e               editar el milestone resaltado",
+                "  j/k, ↓/↑        resaltar milestone",
+                "",
+                "Formulario de milestone",
+                "  Tab             alternar nombre / descripción (solo al crear)",
+                "  Enter / Ctrl+S  guardar",
+                "  Esc             cancelar",
+                "  (edit)          nombre fijo — Hteam no permite renombrar",
                 "",
                 "Escribiendo un project id nuevo",
                 "  Enter           confirmar",
@@ -1328,7 +1339,13 @@ fn wrapped_line_count(text: &str, width: u16) -> u16 {
 fn draw_projects_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(80, 75, frame.area());
 
-    let title = if app.composing_project {
+    let title = if app.composing_milestone {
+        if app.milestone_form_edit_id.is_some() {
+            " Editar milestone ".to_string()
+        } else {
+            " Nuevo milestone ".to_string()
+        }
+    } else if app.composing_project {
         " Nuevo project id ".to_string()
     } else if app.show_live_projects {
         format!(
@@ -1347,7 +1364,14 @@ fn draw_projects_popup(frame: &mut Frame, app: &App) {
         app.theme.foreground,
     );
 
-    let rows = if app.composing_project {
+    let rows = if app.composing_milestone {
+        Layout::vertical([
+            Constraint::Min(0),
+            Constraint::Length(3),
+            Constraint::Length(3),
+        ])
+        .split(inner)
+    } else if app.composing_project {
         Layout::vertical([Constraint::Min(0), Constraint::Length(3)]).split(inner)
     } else {
         Layout::vertical([Constraint::Min(0)]).split(inner)
@@ -1361,7 +1385,9 @@ fn draw_projects_popup(frame: &mut Frame, app: &App) {
         draw_project_detail(frame, app, cols[1]);
     }
 
-    if app.composing_project {
+    if app.composing_milestone {
+        draw_milestone_form(frame, app, rows[1], rows[2]);
+    } else if app.composing_project {
         draw_project_input(frame, app, rows[1]);
     }
 }
@@ -1459,14 +1485,56 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
         return;
     };
 
+    // Sticky footer so create/edit shortcuts stay visible while the body scrolls.
+    let body_area = if app.projects_detail_focused && !app.composing_milestone {
+        let rows = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(inner);
+        let footer = Line::from(vec![
+            Span::styled(" n ", Style::default().add_modifier(Modifier::BOLD)),
+            Span::styled("crear  ", Style::default().fg(app.theme.muted)),
+            Span::styled("e ", Style::default().add_modifier(Modifier::BOLD)),
+            Span::styled("editar  ", Style::default().fg(app.theme.muted)),
+            Span::styled("j/k ", Style::default().add_modifier(Modifier::BOLD)),
+            Span::styled("seleccionar  ", Style::default().fg(app.theme.muted)),
+            Span::styled("? ", Style::default().add_modifier(Modifier::BOLD)),
+            Span::styled("ayuda", Style::default().fg(app.theme.muted)),
+        ]);
+        frame.render_widget(Paragraph::new(footer), rows[1]);
+        rows[0]
+    } else if !app.projects_detail_focused && !app.composing_milestone {
+        let rows = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(inner);
+        let footer = Line::from(vec![
+            Span::styled(" Tab ", Style::default().add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "foco aquí para crear/editar milestones",
+                Style::default().fg(app.theme.muted),
+            ),
+        ]);
+        frame.render_widget(Paragraph::new(footer), rows[1]);
+        rows[0]
+    } else {
+        inner
+    };
+
     let mut lines = vec![format!("Proyecto #{}", id), String::new()];
 
     if app.project_milestones.is_empty() {
         lines.push("Sin milestones.".to_string());
     } else {
         lines.push("Milestones:".to_string());
-        for m in &app.project_milestones {
-            lines.push(format!("  {} {}", progress_bar(m.progress), m.name));
+        for (i, m) in app.project_milestones.iter().enumerate() {
+            let marker = if app.projects_detail_focused && i == app.selected_milestone_idx {
+                "▶"
+            } else {
+                " "
+            };
+            let id_suffix = m.id().map(|id| format!(" #{id}")).unwrap_or_default();
+            lines.push(format!(
+                "{} {} {}{}",
+                marker,
+                progress_bar(m.progress),
+                m.name,
+                id_suffix
+            ));
         }
     }
 
@@ -1485,7 +1553,7 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
     let p = Paragraph::new(lines.join("\n"))
         .wrap(Wrap { trim: true })
         .scroll((app.projects_scroll.offset(), 0));
-    frame.render_widget(p, inner);
+    frame.render_widget(p, body_area);
 }
 
 fn draw_project_input(frame: &mut Frame, app: &App, area: Rect) {
@@ -1495,6 +1563,63 @@ fn draw_project_input(frame: &mut Frame, app: &App, area: Rect) {
     let inner = block.inner(area);
     frame.render_widget(block, area);
     frame.render_widget(Paragraph::new(app.project_input.as_str()), inner);
+}
+
+fn draw_milestone_form(frame: &mut Frame, app: &App, name_area: Rect, desc_area: Rect) {
+    let name_locked = app.milestone_form_edit_id.is_some();
+    let name_title = if name_locked {
+        " Nombre (fijo — Hteam no renombra) "
+    } else if app.milestone_desc_focused {
+        " Nombre "
+    } else {
+        " Nombre ● "
+    };
+    let name_block = Block::default()
+        .title(name_title)
+        .borders(Borders::ALL)
+        .border_style(if name_locked {
+            Style::default().fg(app.theme.muted)
+        } else if !app.milestone_desc_focused {
+            Style::default().fg(app.theme.border_active)
+        } else {
+            Style::default()
+        });
+    let name_inner = name_block.inner(name_area);
+    frame.render_widget(name_block, name_area);
+    let name_style = if name_locked {
+        Style::default().fg(app.theme.muted)
+    } else {
+        Style::default()
+    };
+    frame.render_widget(
+        Paragraph::new(app.milestone_name_input.as_str()).style(name_style),
+        name_inner,
+    );
+
+    let desc_hint = if name_locked {
+        " Descripción "
+    } else {
+        " Descripción (opcional) "
+    };
+    let desc_title = if app.milestone_desc_focused || name_locked {
+        format!("{desc_hint}● ")
+    } else {
+        desc_hint.to_string()
+    };
+    let desc_block = Block::default()
+        .title(desc_title)
+        .borders(Borders::ALL)
+        .border_style(if app.milestone_desc_focused || name_locked {
+            Style::default().fg(app.theme.border_active)
+        } else {
+            Style::default()
+        });
+    let desc_inner = desc_block.inner(desc_area);
+    frame.render_widget(desc_block, desc_area);
+    frame.render_widget(
+        Paragraph::new(app.milestone_desc_input.as_str()),
+        desc_inner,
+    );
 }
 
 /// Milestone progress comes as 0.0–1.0 from the API — a simple 10-segment bar.
