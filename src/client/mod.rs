@@ -1764,6 +1764,43 @@ impl HteamClient {
         self.get_project_tasks_page(project_id, None).await
     }
 
+    pub async fn update_project_members(&self, project_id: u64, member_ids: &[u64]) -> Result<()> {
+        let config = self.config.lock().await;
+        let url = format!(
+            "{}/project-new/care/projects/{project_id}/update_members/",
+            self.api_base_url
+        );
+        let headers = self.build_headers(&config)?;
+        drop(config);
+
+        let body = member_ids
+            .iter()
+            .map(|id| format!("members={id}"))
+            .collect::<Vec<_>>()
+            .join("&");
+        let response = self
+            .client
+            .post(&url)
+            .headers(headers)
+            .header(
+                CONTENT_TYPE,
+                "application/x-www-form-urlencoded; charset=UTF-8",
+            )
+            .body(body)
+            .send()
+            .await
+            .context("Error al actualizar miembros del proyecto")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+        Ok(())
+    }
+
     pub async fn get_project_times(&self, project_id: u64) -> Result<serde_json::Value> {
         let config = self.config.lock().await;
         let url = format!(
