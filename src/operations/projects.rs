@@ -2,7 +2,10 @@ use anyhow::{Context, Result};
 
 use crate::client::HteamClient;
 use crate::config::Config;
-use crate::models::{ProjectMilestone, ProjectSummary, ProjectTaskTreeNode, ProjectTasksResponse};
+use crate::models::{
+    ProjectDueTask, ProjectMilestone, ProjectStatusSummary, ProjectSummary, ProjectTaskTreeNode,
+    ProjectTasksResponse,
+};
 
 /// Los mismos radios de estado que `/projects/` en el sitio, en su mismo
 /// orden — única fuente de verdad para el filtro tanto en `hteam project
@@ -25,6 +28,53 @@ pub async fn tasks(client: &HteamClient, project_id: u64) -> Result<ProjectTasks
 
 pub async fn task_tree(client: &HteamClient, project_id: u64) -> Result<Vec<ProjectTaskTreeNode>> {
     client.get_project_task_tree(project_id).await
+}
+
+pub async fn status(client: &HteamClient, project_id: u64) -> Result<ProjectStatusSummary> {
+    let project = list(client, Some("All"))
+        .await?
+        .into_iter()
+        .find(|project| project.id == project_id)
+        .with_context(|| format!("proyecto {project_id} no encontrado"))?;
+    let milestones = milestones(client, project_id).await?;
+    let tasks = tasks(client, project_id).await?;
+    let today = chrono::Local::now().date_naive();
+    let upcoming_limit = today + chrono::Days::new(7);
+    let mut overdue_tasks = Vec::new();
+    let mut upcoming_tasks = Vec::new();
+
+    for task in &tasks.results {
+        if task.closed {
+            continue;
+        }
+        let detail = client.get_project_task_detail(task.id).await?;
+        let Some(due_date) = detail.due_date else {
+            continue;
+        };
+        let date =
+            chrono::NaiveDate::parse_from_str(&due_date[..due_date.len().min(10)], "%Y-%m-%d").ok();
+        let due_task = ProjectDueTask {
+            id: task.id,
+            number: task.number,
+            name: task.name.clone(),
+            due_date,
+        };
+        match date {
+            Some(date) if date < today => overdue_tasks.push(due_task),
+            Some(date) if date <= upcoming_limit => upcoming_tasks.push(due_task),
+            _ => {}
+        }
+    }
+
+    Ok(ProjectStatusSummary {
+        project,
+        milestones,
+        total_tasks: tasks.count,
+        closed_tasks: tasks.results.iter().filter(|task| task.closed).count() as u64,
+        overdue_tasks,
+        upcoming_tasks,
+        times: client.get_project_times(project_id).await?,
+    })
 }
 
 /// URL pública de la página de detalle de un proyecto (`/projects/{id}/`).

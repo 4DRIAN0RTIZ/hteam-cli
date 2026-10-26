@@ -427,6 +427,9 @@ _hteam() {
             hteam__subcmd__help__subcmd__project,milestones)
                 cmd="hteam__subcmd__help__subcmd__project__subcmd__milestones"
                 ;;
+            hteam__subcmd__help__subcmd__project,status)
+                cmd="hteam__subcmd__help__subcmd__project__subcmd__status"
+                ;;
             hteam__subcmd__help__subcmd__project,task-create)
                 cmd="hteam__subcmd__help__subcmd__project__subcmd__task__subcmd__create"
                 ;;
@@ -487,6 +490,9 @@ _hteam() {
             hteam__subcmd__project,milestones)
                 cmd="hteam__subcmd__project__subcmd__milestones"
                 ;;
+            hteam__subcmd__project,status)
+                cmd="hteam__subcmd__project__subcmd__status"
+                ;;
             hteam__subcmd__project,task-create)
                 cmd="hteam__subcmd__project__subcmd__task__subcmd__create"
                 ;;
@@ -516,6 +522,9 @@ _hteam() {
                 ;;
             hteam__subcmd__project__subcmd__help,milestones)
                 cmd="hteam__subcmd__project__subcmd__help__subcmd__milestones"
+                ;;
+            hteam__subcmd__project__subcmd__help,status)
+                cmd="hteam__subcmd__project__subcmd__help__subcmd__status"
                 ;;
             hteam__subcmd__project__subcmd__help,task-create)
                 cmd="hteam__subcmd__project__subcmd__help__subcmd__task__subcmd__create"
@@ -2756,7 +2765,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__help__subcmd__project)
-            opts="list milestones milestone-create milestone-edit task-create task-edit tasks task-tree link"
+            opts="list milestones milestone-create milestone-edit task-create task-edit tasks status task-tree link"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2826,6 +2835,20 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__help__subcmd__project__subcmd__milestones)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__help__subcmd__project__subcmd__status)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -3304,7 +3327,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__project)
-            opts="-b -h --json --board --family --help list milestones milestone-create milestone-edit task-create task-edit tasks task-tree link help"
+            opts="-b -h --json --board --family --help list milestones milestone-create milestone-edit task-create task-edit tasks status task-tree link help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3330,7 +3353,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__project__subcmd__help)
-            opts="list milestones milestone-create milestone-edit task-create task-edit tasks task-tree link help"
+            opts="list milestones milestone-create milestone-edit task-create task-edit tasks status task-tree link help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3414,6 +3437,20 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__project__subcmd__help__subcmd__milestones)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__project__subcmd__help__subcmd__status)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -3612,6 +3649,32 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__project__subcmd__milestones)
+            opts="-b -h --json --board --family --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --board)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__project__subcmd__status)
             opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )

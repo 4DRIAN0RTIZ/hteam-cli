@@ -888,6 +888,17 @@ impl HteamMcpServer {
         ok(tree)
     }
 
+    #[tool(description = "Resumir progreso, fechas y tiempos de un proyecto")]
+    async fn project_status(
+        &self,
+        Parameters(ProjectParams { project_id }): Parameters<ProjectParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let summary = operations::projects::status(&self.client, project_id)
+            .await
+            .map_err(err)?;
+        ok(summary)
+    }
+
     // ── usuarios / misc ──────────────────────────────────────────────────
 
     #[tool(description = "Buscar usuarios por username o nombre")]
