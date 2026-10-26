@@ -6,7 +6,7 @@ CLI en Rust para gestionar boards de Hteam, con REPL, TUI tipo kanban y servidor
 
 - Autenticación con cookies de sesión (`sessionid` + `csrftoken`)
 - REPL interactivo con historial (`~/.hteam_history`)
-- Servidor MCP sobre stdio: 42 tools
+- Servidor MCP sobre stdio: 43 tools
 - Multi-board, temas del TUI y self-update
 - `--json` en la mayoría de los comandos (ver abajo: no es universal)
 
@@ -121,6 +121,7 @@ hteam project list --status All
 hteam project milestones 99
 hteam project milestone-create 99 --name "Sprint 1" --description "Initial scope"
 hteam project milestone-edit 99 835 --name "Sprint 1.1"
+hteam project milestone-delete 99 835
 hteam project task-create 99 835 --name "Implement auth" --estimate "2h" --responsible egaleana --priority 2
 hteam project tasks 99
 hteam project status 99
@@ -215,7 +216,7 @@ cp completions/hteam.fish ~/.config/fish/completions/hteam.fish
 
 ## MCP
 
-42 tools, una por `#[tool]` en `src/mcp/mod.rs`: 
+43 tools, una por `#[tool]` en `src/mcp/mod.rs`: 
 
 | Herramienta | Descripción |
 |---|---|
@@ -249,6 +250,7 @@ cp completions/hteam.fish ~/.config/fish/completions/hteam.fish
 | `project_milestones` | Milestones de un proyecto |
 | `project_milestone_create` | Crear milestone |
 | `project_milestone_edit` | Editar milestone |
+| `project_milestone_delete` | Eliminar milestone vacío |
 | `project_task_create` | Crear una task dentro de un milestone |
 | `project_task_edit` | Editar milestone, dependencia o fecha de inicio de una task |
 | `project_tasks` | Tasks de un proyecto |

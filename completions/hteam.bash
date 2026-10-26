@@ -424,6 +424,9 @@ _hteam() {
             hteam__subcmd__help__subcmd__project,milestone-create)
                 cmd="hteam__subcmd__help__subcmd__project__subcmd__milestone__subcmd__create"
                 ;;
+            hteam__subcmd__help__subcmd__project,milestone-delete)
+                cmd="hteam__subcmd__help__subcmd__project__subcmd__milestone__subcmd__delete"
+                ;;
             hteam__subcmd__help__subcmd__project,milestone-edit)
                 cmd="hteam__subcmd__help__subcmd__project__subcmd__milestone__subcmd__edit"
                 ;;
@@ -490,6 +493,9 @@ _hteam() {
             hteam__subcmd__project,milestone-create)
                 cmd="hteam__subcmd__project__subcmd__milestone__subcmd__create"
                 ;;
+            hteam__subcmd__project,milestone-delete)
+                cmd="hteam__subcmd__project__subcmd__milestone__subcmd__delete"
+                ;;
             hteam__subcmd__project,milestone-edit)
                 cmd="hteam__subcmd__project__subcmd__milestone__subcmd__edit"
                 ;;
@@ -525,6 +531,9 @@ _hteam() {
                 ;;
             hteam__subcmd__project__subcmd__help,milestone-create)
                 cmd="hteam__subcmd__project__subcmd__help__subcmd__milestone__subcmd__create"
+                ;;
+            hteam__subcmd__project__subcmd__help,milestone-delete)
+                cmd="hteam__subcmd__project__subcmd__help__subcmd__milestone__subcmd__delete"
                 ;;
             hteam__subcmd__project__subcmd__help,milestone-edit)
                 cmd="hteam__subcmd__project__subcmd__help__subcmd__milestone__subcmd__edit"
@@ -2774,7 +2783,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__help__subcmd__project)
-            opts="list milestones milestone-create milestone-edit task-create task-edit tasks status members-set task-tree link"
+            opts="list milestones milestone-create milestone-edit milestone-delete task-create task-edit tasks status members-set task-tree link"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2830,6 +2839,20 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__help__subcmd__project__subcmd__milestone__subcmd__create)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__help__subcmd__project__subcmd__milestone__subcmd__delete)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -3350,7 +3373,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__project)
-            opts="-b -h --json --board --family --help list milestones milestone-create milestone-edit task-create task-edit tasks status members-set task-tree link help"
+            opts="-b -h --json --board --family --help list milestones milestone-create milestone-edit milestone-delete task-create task-edit tasks status members-set task-tree link help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3376,7 +3399,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__project__subcmd__help)
-            opts="list milestones milestone-create milestone-edit task-create task-edit tasks status members-set task-tree link help"
+            opts="list milestones milestone-create milestone-edit milestone-delete task-create task-edit tasks status members-set task-tree link help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3446,6 +3469,20 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__project__subcmd__help__subcmd__milestone__subcmd__create)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__project__subcmd__help__subcmd__milestone__subcmd__delete)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -3658,6 +3695,32 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --board)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__project__subcmd__milestone__subcmd__delete)
+            opts="-b -h --json --board --family --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
                 --board)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0

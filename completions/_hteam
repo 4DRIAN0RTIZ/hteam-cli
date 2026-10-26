@@ -813,6 +813,18 @@ _arguments "${_arguments_options[@]}" : \
 ':milestone_id -- ID del milestone:_default' \
 && ret=0
 ;;
+(milestone-delete)
+_arguments "${_arguments_options[@]}" : \
+'-b+[ID del board a usar (operación o proyecto según --family)]:BOARD:_default' \
+'--board=[ID del board a usar (operación o proyecto según --family)]:BOARD:_default' \
+'--family=[Familia del tablero\: operation (default) o project]:FAMILY:_default' \
+'--json[Mostrar salida en formato JSON]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':project_id:_default' \
+':milestone_id:_default' \
+&& ret=0
+;;
 (task-create)
 _arguments "${_arguments_options[@]}" : \
 '--name=[Nombre de la task]:NAME:_default' \
@@ -929,6 +941,10 @@ _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (milestone-edit)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(milestone-delete)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
@@ -1484,6 +1500,10 @@ _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (milestone-edit)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(milestone-delete)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
@@ -2345,6 +2365,7 @@ _hteam__subcmd__help__subcmd__project_commands() {
 'milestones:Ver progreso de milestones de un proyecto' \
 'milestone-create:Crear un milestone en un proyecto' \
 'milestone-edit:Editar un milestone de un proyecto' \
+'milestone-delete:Eliminar un milestone de un proyecto' \
 'task-create:Crear una task de proyecto dentro de un milestone' \
 'task-edit:Editar milestone, dependencia o fecha de inicio de una task de proyecto' \
 'tasks:Ver tasks de un proyecto' \
@@ -2374,6 +2395,11 @@ _hteam__subcmd__help__subcmd__project__subcmd__members-set_commands() {
 _hteam__subcmd__help__subcmd__project__subcmd__milestone-create_commands() {
     local commands; commands=()
     _describe -t commands 'hteam help project milestone-create commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__help__subcmd__project__subcmd__milestone-delete_commands] )) ||
+_hteam__subcmd__help__subcmd__project__subcmd__milestone-delete_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam help project milestone-delete commands' commands "$@"
 }
 (( $+functions[_hteam__subcmd__help__subcmd__project__subcmd__milestone-edit_commands] )) ||
 _hteam__subcmd__help__subcmd__project__subcmd__milestone-edit_commands() {
@@ -2542,6 +2568,7 @@ _hteam__subcmd__project_commands() {
 'milestones:Ver progreso de milestones de un proyecto' \
 'milestone-create:Crear un milestone en un proyecto' \
 'milestone-edit:Editar un milestone de un proyecto' \
+'milestone-delete:Eliminar un milestone de un proyecto' \
 'task-create:Crear una task de proyecto dentro de un milestone' \
 'task-edit:Editar milestone, dependencia o fecha de inicio de una task de proyecto' \
 'tasks:Ver tasks de un proyecto' \
@@ -2560,6 +2587,7 @@ _hteam__subcmd__project__subcmd__help_commands() {
 'milestones:Ver progreso de milestones de un proyecto' \
 'milestone-create:Crear un milestone en un proyecto' \
 'milestone-edit:Editar un milestone de un proyecto' \
+'milestone-delete:Eliminar un milestone de un proyecto' \
 'task-create:Crear una task de proyecto dentro de un milestone' \
 'task-edit:Editar milestone, dependencia o fecha de inicio de una task de proyecto' \
 'tasks:Ver tasks de un proyecto' \
@@ -2595,6 +2623,11 @@ _hteam__subcmd__project__subcmd__help__subcmd__members-set_commands() {
 _hteam__subcmd__project__subcmd__help__subcmd__milestone-create_commands() {
     local commands; commands=()
     _describe -t commands 'hteam project help milestone-create commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__project__subcmd__help__subcmd__milestone-delete_commands] )) ||
+_hteam__subcmd__project__subcmd__help__subcmd__milestone-delete_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam project help milestone-delete commands' commands "$@"
 }
 (( $+functions[_hteam__subcmd__project__subcmd__help__subcmd__milestone-edit_commands] )) ||
 _hteam__subcmd__project__subcmd__help__subcmd__milestone-edit_commands() {
@@ -2650,6 +2683,11 @@ _hteam__subcmd__project__subcmd__members-set_commands() {
 _hteam__subcmd__project__subcmd__milestone-create_commands() {
     local commands; commands=()
     _describe -t commands 'hteam project milestone-create commands' commands "$@"
+}
+(( $+functions[_hteam__subcmd__project__subcmd__milestone-delete_commands] )) ||
+_hteam__subcmd__project__subcmd__milestone-delete_commands() {
+    local commands; commands=()
+    _describe -t commands 'hteam project milestone-delete commands' commands "$@"
 }
 (( $+functions[_hteam__subcmd__project__subcmd__milestone-edit_commands] )) ||
 _hteam__subcmd__project__subcmd__milestone-edit_commands() {

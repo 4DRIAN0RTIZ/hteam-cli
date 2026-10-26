@@ -2059,6 +2059,65 @@ impl HteamClient {
         .await
     }
 
+    pub async fn delete_project_milestone(&self, project_id: u64, milestone_id: u64) -> Result<()> {
+        use scraper::{Html, Selector};
+
+        let url = format!(
+            "{}/projects/{project_id}/milestones/{milestone_id}/delete/",
+            self.site_base_url
+        );
+        let (headers, csrf_config) = {
+            let config = self.config.lock().await;
+            (
+                self.build_headers(&config)?,
+                config.auth.csrf_token.clone().unwrap_or_default(),
+            )
+        };
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers.clone())
+            .send()
+            .await?;
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+        let html = response.text().await?;
+        let csrf = {
+            let doc = Html::parse_document(&html);
+            let selector = Selector::parse(r#"input[name="csrfmiddlewaretoken"]"#)
+                .map_err(|e| anyhow::anyhow!("{e:?}"))?;
+            doc.select(&selector)
+                .next()
+                .and_then(|input| input.value().attr("value"))
+                .unwrap_or(&csrf_config)
+                .to_string()
+        };
+        let response = self
+            .client
+            .post(&url)
+            .headers(headers)
+            .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header("Origin", self.site_base_url.as_str())
+            .header(REFERER, &url)
+            .body(format!("csrfmiddlewaretoken={}", encode_form_value(&csrf)))
+            .send()
+            .await?;
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().await?;
+            if body.to_ascii_lowercase().contains("task") {
+                anyhow::bail!("no se puede eliminar un milestone con tasks asociadas: {body}");
+            }
+            anyhow::bail!("Error HTTP {status}: {body}");
+        }
+        Ok(())
+    }
+
     async fn post_milestone_form(
         &self,
         url: &str,
