@@ -2465,6 +2465,41 @@ El formulario de edit suele rechazar renombres; la descripción sí se puede cam
         })
     }
 
+    /// Loads milestone / dependence / start_date from the project-task edit form.
+    pub async fn get_project_task_form(
+        &self,
+        project_id: u64,
+        task_id: u64,
+    ) -> Result<TaskEditFormBaseline> {
+        let url = format!(
+            "{}/projects/{project_id}/tasks/{task_id}/edit/",
+            self.site_base_url
+        );
+        let headers = {
+            let config = self.config.lock().await;
+            self.build_headers(&config)?
+        };
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers)
+            .send()
+            .await
+            .context("Error al cargar formulario de task de proyecto")?;
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await.unwrap_or_default()
+            );
+        }
+        let baseline = parse_task_edit_form(&response.text().await.unwrap_or_default());
+        if baseline.name.is_empty() && baseline.milestone.is_empty() {
+            anyhow::bail!("no se encontró el formulario de task de proyecto en {url}");
+        }
+        Ok(baseline)
+    }
+
     pub async fn edit_project_task(
         &self,
         project_id: u64,

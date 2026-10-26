@@ -37,6 +37,14 @@ pub enum HelpContext {
     TaskDetail,
 }
 
+/// Which list is active inside the projects detail panel (right side).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ProjectDetailSection {
+    #[default]
+    Milestones,
+    Tasks,
+}
+
 /// Editable rows in the task-detail popup (`d` / `e`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DetailField {
@@ -187,6 +195,10 @@ pub struct App {
     /// Highlighted milestone inside the projects detail panel (create/edit).
     pub selected_milestone_idx: usize,
     pub project_tasks: Vec<ProjectTask>,
+    /// Highlighted task inside the projects detail panel.
+    pub selected_task_idx: usize,
+    /// Milestones vs tasks list when the detail panel has focus.
+    pub projects_detail_section: ProjectDetailSection,
     pub show_projects: bool,
     /// Proyectos en vivo (`hteam project list`, status "Execution"),
     /// cargados al presionar 'L' dentro del popup de proyectos — distinto de
@@ -223,6 +235,17 @@ pub struct App {
     pub milestone_desc_input: TextInput,
     /// `false` = name field focused; `true` = description.
     pub milestone_desc_focused: bool,
+    /// Create/edit a project task (under the selected milestone, or edit fields).
+    pub composing_project_task: bool,
+    /// `None` = create under selected milestone; `Some(id)` = edit that task.
+    pub project_task_form_edit_id: Option<u64>,
+    pub project_task_name_input: TextInput,
+    pub project_task_desc_input: TextInput,
+    pub project_task_milestone_input: TextInput,
+    pub project_task_dependence_input: TextInput,
+    pub project_task_start_date_input: TextInput,
+    /// Field index in the active project-task form (create or edit).
+    pub project_task_form_field: usize,
     /// True while typing a new card's name for `new_card_list_id`.
     pub composing_card: bool,
     pub new_card_input: TextInput,
@@ -277,6 +300,8 @@ pub struct RequestIds {
     pub projects: u64,
     pub project_milestone_write: u64,
     pub project_milestone_form: u64,
+    pub project_task_write: u64,
+    pub project_task_form: u64,
     pub live_projects: u64,
     pub boards_popup: u64,
     pub move_card: u64,
@@ -319,6 +344,12 @@ impl RequestIds {
     }
     pub fn bump_project_milestone_form(&mut self) -> u64 {
         Self::bump(&mut self.project_milestone_form)
+    }
+    pub fn bump_project_task_write(&mut self) -> u64 {
+        Self::bump(&mut self.project_task_write)
+    }
+    pub fn bump_project_task_form(&mut self) -> u64 {
+        Self::bump(&mut self.project_task_form)
     }
     pub fn bump_live_projects(&mut self) -> u64 {
         Self::bump(&mut self.live_projects)
@@ -427,6 +458,8 @@ impl App {
             project_milestones: Vec::new(),
             selected_milestone_idx: 0,
             project_tasks: Vec::new(),
+            selected_task_idx: 0,
+            projects_detail_section: ProjectDetailSection::default(),
             show_projects: false,
             live_projects: Vec::new(),
             show_live_projects: false,
@@ -451,6 +484,14 @@ impl App {
             milestone_name_input: TextInput::default(),
             milestone_desc_input: TextInput::default(),
             milestone_desc_focused: false,
+            composing_project_task: false,
+            project_task_form_edit_id: None,
+            project_task_name_input: TextInput::default(),
+            project_task_desc_input: TextInput::default(),
+            project_task_milestone_input: TextInput::default(),
+            project_task_dependence_input: TextInput::default(),
+            project_task_start_date_input: TextInput::default(),
+            project_task_form_field: 0,
             composing_card: false,
             new_card_input: TextInput::default(),
             new_card_list_id: None,

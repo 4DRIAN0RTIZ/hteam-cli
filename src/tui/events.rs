@@ -7,7 +7,7 @@ use crate::client::HteamClient;
 use crate::models::Card;
 use crate::operations;
 
-use super::app::{App, DetailField, HelpContext, UpdateAvailableInfo};
+use super::app::{App, DetailField, HelpContext, ProjectDetailSection, UpdateAvailableInfo};
 use super::net::{self, JobOutcome, Jobs, WeeklyObjectivesLoaded};
 
 /// Abre el popup de ayuda mostrando solo la sección de `ctx` — ver
@@ -1528,11 +1528,14 @@ pub fn close_projects(app: &mut App) {
     app.composing_project = false;
     app.project_input.clear();
     cancel_milestone_form(app);
+    cancel_project_task_form(app);
     app.projects_detail_focused = false;
     app.show_live_projects = false;
     app.requests.bump_projects();
     app.requests.bump_project_milestone_write();
     app.requests.bump_project_milestone_form();
+    app.requests.bump_project_task_write();
+    app.requests.bump_project_task_form();
     app.requests.bump_live_projects();
 }
 
@@ -1687,7 +1690,10 @@ fn load_project(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs, project_id
     app.project_milestones.clear();
     app.selected_milestone_idx = 0;
     app.project_tasks.clear();
+    app.selected_task_idx = 0;
+    app.projects_detail_section = ProjectDetailSection::Milestones;
     cancel_milestone_form(app);
+    cancel_project_task_form(app);
 
     let id = app.requests.bump_projects();
     app.begin_busy("Cargando proyecto...");
@@ -1730,6 +1736,7 @@ pub fn start_create_milestone(app: &mut App) {
     app.milestone_desc_input.clear();
     app.milestone_desc_focused = false;
     app.projects_detail_focused = true;
+    app.projects_detail_section = ProjectDetailSection::Milestones;
 }
 
 /// Loads the server edit form and opens the TUI form seeded with name + description.
@@ -1753,6 +1760,7 @@ pub fn start_edit_milestone(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs
     app.milestone_desc_input.clear();
     app.milestone_desc_focused = false;
     app.projects_detail_focused = true;
+    app.projects_detail_section = ProjectDetailSection::Milestones;
     app.composing_milestone = false;
 
     let id = app.requests.bump_project_milestone_form();
@@ -1902,6 +1910,336 @@ pub fn submit_milestone_form(client: Arc<HteamClient>, app: &mut App, jobs: &Job
             refresh,
         }
     });
+}
+
+/// h/l when detail is focused: milestones list ↔ tasks list.
+pub fn cycle_projects_detail_section(app: &mut App, _delta: i32) {
+    if app.composing_milestone || app.composing_project_task {
+        return;
+    }
+    app.projects_detail_section = match app.projects_detail_section {
+        ProjectDetailSection::Milestones => ProjectDetailSection::Tasks,
+        ProjectDetailSection::Tasks => ProjectDetailSection::Milestones,
+    };
+}
+
+pub fn move_detail_selection(app: &mut App, delta: i32) {
+    match app.projects_detail_section {
+        ProjectDetailSection::Milestones => move_milestone_selection(app, delta),
+        ProjectDetailSection::Tasks => move_task_selection(app, delta),
+    }
+}
+
+pub fn move_task_selection(app: &mut App, delta: i32) {
+    if app.project_tasks.is_empty() {
+        return;
+    }
+    let len = app.project_tasks.len() as i32;
+    let next = (app.selected_task_idx as i32 + delta).clamp(0, len - 1);
+    app.selected_task_idx = next as usize;
+}
+
+/// Create a task under the highlighted milestone.
+pub fn start_create_project_task(app: &mut App) {
+    if app.active_project.is_none() {
+        app.set_status("Elegí un proyecto antes de crear una task.");
+        return;
+    }
+    let Some(milestone) = app.project_milestones.get(app.selected_milestone_idx) else {
+        app.set_status("Seleccioná un milestone (h/l → Milestones, j/k) antes de crear la task.");
+        return;
+    };
+    if milestone.id().is_none() {
+        app.set_status("No se pudo leer el id del milestone resaltado.");
+        return;
+    }
+    app.composing_project_task = true;
+    app.project_task_form_edit_id = None;
+    app.project_task_name_input.clear();
+    app.project_task_desc_input.clear();
+    app.project_task_milestone_input.clear();
+    app.project_task_dependence_input.clear();
+    app.project_task_start_date_input.clear();
+    app.project_task_form_field = 0;
+    app.projects_detail_focused = true;
+    app.projects_detail_section = ProjectDetailSection::Tasks;
+}
+
+/// Load edit form for the highlighted task (milestone / dependence / start_date).
+pub fn start_edit_project_task(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    let Some(project_id) = app.active_project else {
+        app.set_status("Elegí un proyecto antes de editar una task.");
+        return;
+    };
+    let Some(task) = app.project_tasks.get(app.selected_task_idx) else {
+        app.set_status("No hay tasks para editar.");
+        return;
+    };
+    if task.id == 0 {
+        app.set_status("La task resaltada no tiene id interno.");
+        return;
+    }
+    let task_id = task.id;
+    app.project_task_form_edit_id = Some(task_id);
+    app.projects_detail_focused = true;
+    app.projects_detail_section = ProjectDetailSection::Tasks;
+    app.composing_project_task = false;
+
+    let id = app.requests.bump_project_task_form();
+    app.begin_busy("Cargando task...");
+    jobs.spawn(async move {
+        let result = operations::projects::task_form(&client, project_id, task_id)
+            .await
+            .map_err(|e| e.to_string());
+        JobOutcome::ProjectTaskFormLoaded {
+            id,
+            project_id,
+            task_id,
+            result,
+        }
+    });
+}
+
+pub fn open_project_task_edit_form(
+    app: &mut App,
+    task_id: u64,
+    milestone: String,
+    dependence: String,
+    start_date: String,
+) {
+    app.composing_project_task = true;
+    app.project_task_form_edit_id = Some(task_id);
+    app.project_task_name_input.clear();
+    app.project_task_desc_input.clear();
+    app.project_task_milestone_input.set(milestone);
+    app.project_task_dependence_input.set(dependence);
+    app.project_task_start_date_input.set(start_date);
+    app.project_task_form_field = 0;
+    app.projects_detail_focused = true;
+    app.projects_detail_section = ProjectDetailSection::Tasks;
+}
+
+pub fn cancel_project_task_form(app: &mut App) {
+    app.composing_project_task = false;
+    app.project_task_form_edit_id = None;
+    app.project_task_name_input.clear();
+    app.project_task_desc_input.clear();
+    app.project_task_milestone_input.clear();
+    app.project_task_dependence_input.clear();
+    app.project_task_start_date_input.clear();
+    app.project_task_form_field = 0;
+}
+
+fn project_task_form_field_count(app: &App) -> usize {
+    if app.project_task_form_edit_id.is_some() {
+        3 // milestone, dependence, start_date
+    } else {
+        4 // name, description, start_date, dependence
+    }
+}
+
+pub fn toggle_project_task_form_field(app: &mut App) {
+    let n = project_task_form_field_count(app);
+    app.project_task_form_field = (app.project_task_form_field + 1) % n;
+}
+
+fn project_task_active_input(app: &mut App) -> &mut super::widgets::TextInput {
+    if app.project_task_form_edit_id.is_some() {
+        match app.project_task_form_field {
+            0 => &mut app.project_task_milestone_input,
+            1 => &mut app.project_task_dependence_input,
+            _ => &mut app.project_task_start_date_input,
+        }
+    } else {
+        match app.project_task_form_field {
+            0 => &mut app.project_task_name_input,
+            1 => &mut app.project_task_desc_input,
+            2 => &mut app.project_task_start_date_input,
+            _ => &mut app.project_task_dependence_input,
+        }
+    }
+}
+
+pub fn project_task_form_input_push(app: &mut App, ch: char) {
+    let field = app.project_task_form_field;
+    let edit = app.project_task_form_edit_id.is_some();
+    let numericish = if edit { true } else { field == 2 || field == 3 };
+    if numericish && !(ch.is_ascii_digit() || ch == '-') {
+        return;
+    }
+    project_task_active_input(app).push(ch);
+}
+
+pub fn project_task_form_input_backspace(app: &mut App) {
+    project_task_active_input(app).backspace();
+}
+
+pub fn submit_project_task_form(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    let Some(project_id) = app.active_project else {
+        cancel_project_task_form(app);
+        return;
+    };
+    let edit_id = app.project_task_form_edit_id;
+
+    if let Some(task_id) = edit_id {
+        let milestone_raw = app.project_task_milestone_input.trim().to_string();
+        let dependence_raw = app.project_task_dependence_input.trim().to_string();
+        let start_date_raw = app.project_task_start_date_input.trim().to_string();
+        let milestone_id = if milestone_raw.is_empty() {
+            None
+        } else {
+            match milestone_raw.parse::<u64>() {
+                Ok(id) => Some(id),
+                Err(_) => {
+                    app.set_status("Milestone debe ser un id numérico.");
+                    return;
+                }
+            }
+        };
+        let dependence = if dependence_raw.is_empty() {
+            None
+        } else {
+            match dependence_raw.parse::<u64>() {
+                Ok(id) => Some(id),
+                Err(_) => {
+                    app.set_status("Dependence debe ser un id numérico.");
+                    return;
+                }
+            }
+        };
+        let start_date = if start_date_raw.is_empty() {
+            None
+        } else {
+            Some(start_date_raw)
+        };
+        if milestone_id.is_none() && dependence.is_none() && start_date.is_none() {
+            app.set_status("Indicá milestone, dependence o start_date.");
+            return;
+        }
+        cancel_project_task_form(app);
+        let id = app.requests.bump_project_task_write();
+        app.begin_busy("Guardando task...");
+        jobs.spawn(async move {
+            let start_ref = start_date.as_deref();
+            let result = operations::projects::edit_task(
+                &client,
+                project_id,
+                task_id,
+                operations::projects::ProjectTaskEdit {
+                    milestone_id,
+                    dependence,
+                    start_date: start_ref,
+                },
+            )
+            .await
+            .map(|w| format!("Task actualizada: {}", w.name))
+            .map_err(|e| e.to_string());
+            let refresh = project_detail_refresh(&client, project_id, result.is_ok()).await;
+            JobOutcome::ProjectTaskSaved {
+                id,
+                project_id,
+                result,
+                refresh,
+            }
+        });
+        return;
+    }
+
+    let name = app.project_task_name_input.trim().to_string();
+    if name.is_empty() {
+        app.set_status("El nombre de la task no puede estar vacío.");
+        return;
+    }
+    let Some(milestone) = app.project_milestones.get(app.selected_milestone_idx) else {
+        app.set_status("Seleccioná un milestone para la task.");
+        return;
+    };
+    let Some(milestone_id) = milestone.id() else {
+        app.set_status("No se pudo leer el id del milestone.");
+        return;
+    };
+    let description = {
+        let d = app.project_task_desc_input.trim().to_string();
+        if d.is_empty() {
+            None
+        } else {
+            Some(d)
+        }
+    };
+    let start_date = {
+        let d = app.project_task_start_date_input.trim().to_string();
+        if d.is_empty() {
+            None
+        } else {
+            Some(d)
+        }
+    };
+    let dependence = {
+        let d = app.project_task_dependence_input.trim().to_string();
+        if d.is_empty() {
+            None
+        } else {
+            match d.parse::<u64>() {
+                Ok(id) => Some(id),
+                Err(_) => {
+                    app.set_status("Dependence debe ser un id numérico.");
+                    return;
+                }
+            }
+        }
+    };
+    cancel_project_task_form(app);
+    let id = app.requests.bump_project_task_write();
+    app.begin_busy("Creando task...");
+    jobs.spawn(async move {
+        let desc_ref = description.as_deref();
+        let start_ref = start_date.as_deref();
+        let result = operations::projects::create_task(
+            &client,
+            project_id,
+            milestone_id,
+            operations::projects::ProjectTaskCreate {
+                name: &name,
+                description: desc_ref,
+                time_estimated: None,
+                start_date: start_ref,
+                dependence,
+                responsible: None,
+                priority: None,
+            },
+        )
+        .await
+        .map(|w| format!("Task creada: {}", w.name))
+        .map_err(|e| e.to_string());
+        let refresh = project_detail_refresh(&client, project_id, result.is_ok()).await;
+        JobOutcome::ProjectTaskSaved {
+            id,
+            project_id,
+            result,
+            refresh,
+        }
+    });
+}
+
+async fn project_detail_refresh(
+    client: &HteamClient,
+    project_id: u64,
+    ok: bool,
+) -> Option<(
+    Result<Vec<crate::models::ProjectMilestone>, String>,
+    Result<Vec<crate::models::ProjectTask>, String>,
+)> {
+    if !ok {
+        return None;
+    }
+    let milestones = operations::projects::milestones(client, project_id)
+        .await
+        .map_err(|e| e.to_string());
+    let tasks = operations::projects::tasks(client, project_id)
+        .await
+        .map(|resp| resp.results)
+        .map_err(|e| e.to_string());
+    Some((milestones, tasks))
 }
 
 /// Moves `id` to the front of the known-projects MRU list (deduping) and
@@ -2165,7 +2503,7 @@ fn persist_board_switch(id: u64) -> Result<()> {
 
 /// Alterna el foco entre la lista de proyectos guardados (izquierda) y el panel de detalle (derecha).
 pub fn toggle_projects_focus(app: &mut App) {
-    if app.composing_milestone {
+    if app.composing_milestone || app.composing_project_task {
         return;
     }
     app.projects_detail_focused = !app.projects_detail_focused;
@@ -2176,7 +2514,7 @@ pub fn toggle_projects_focus(app: &mut App) {
 mod tests {
     use super::*;
     use crate::config::WorkingHoursConfig;
-    use crate::models::{Comment, Label, ProjectMilestone, Reminder};
+    use crate::models::{Comment, Label, ProjectMilestone, ProjectTask, Reminder};
     use crate::tui::theme::Theme;
     use std::collections::HashSet;
     use std::time::Duration;
@@ -2285,6 +2623,56 @@ mod tests {
 
         move_milestone_selection(&mut app, 1);
         assert_eq!(app.selected_milestone_idx, 0); // only one item
+    }
+
+    #[test]
+    fn project_task_form_create_requires_milestone_and_cycles_fields() {
+        let mut app = test_app();
+        app.active_project = Some(500);
+        start_create_project_task(&mut app);
+        assert!(!app.composing_project_task); // no milestones yet
+
+        app.project_milestones = vec![ProjectMilestone {
+            name: "M1".into(),
+            progress: 0.0,
+            url: "/projects/500/milestones/10/".into(),
+        }];
+        app.selected_milestone_idx = 0;
+        start_create_project_task(&mut app);
+        assert!(app.composing_project_task);
+        assert!(app.project_task_form_edit_id.is_none());
+        assert_eq!(app.projects_detail_section, ProjectDetailSection::Tasks);
+
+        project_task_form_input_push(&mut app, 'A');
+        assert_eq!(app.project_task_name_input.as_str(), "A");
+        toggle_project_task_form_field(&mut app);
+        assert_eq!(app.project_task_form_field, 1);
+        project_task_form_input_push(&mut app, 'd');
+        assert_eq!(app.project_task_desc_input.as_str(), "d");
+
+        open_project_task_edit_form(&mut app, 99, "10".into(), "12".into(), "2026-10-01".into());
+        assert_eq!(app.project_task_form_edit_id, Some(99));
+        assert_eq!(app.project_task_milestone_input.as_str(), "10");
+        assert_eq!(app.project_task_dependence_input.as_str(), "12");
+        assert_eq!(app.project_task_start_date_input.as_str(), "2026-10-01");
+
+        app.project_tasks = vec![ProjectTask {
+            id: 99,
+            number: 1,
+            name: "T".into(),
+            milestone: None,
+            progress: 0.0,
+            closed: false,
+            responsible: None,
+        }];
+        move_task_selection(&mut app, 1);
+        assert_eq!(app.selected_task_idx, 0);
+        cancel_project_task_form(&mut app);
+        cycle_projects_detail_section(&mut app, 1);
+        assert_eq!(
+            app.projects_detail_section,
+            ProjectDetailSection::Milestones
+        );
     }
 
     #[test]

@@ -476,7 +476,21 @@ async fn run_loop(
         }
 
         if app.show_projects {
-            if app.composing_milestone {
+            if app.composing_project_task {
+                match key.code {
+                    KeyCode::Esc => events::cancel_project_task_form(app),
+                    KeyCode::Tab => events::toggle_project_task_form_field(app),
+                    KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        events::submit_project_task_form(client.clone(), app, &jobs);
+                    }
+                    KeyCode::Enter => {
+                        events::submit_project_task_form(client.clone(), app, &jobs);
+                    }
+                    KeyCode::Backspace => events::project_task_form_input_backspace(app),
+                    KeyCode::Char(c) => events::project_task_form_input_push(app, c),
+                    _ => {}
+                }
+            } else if app.composing_milestone {
                 match key.code {
                     KeyCode::Esc => events::cancel_milestone_form(app),
                     KeyCode::Tab => events::toggle_milestone_form_field(app),
@@ -529,16 +543,36 @@ async fn run_loop(
                     KeyCode::Esc | KeyCode::Char('q') => events::close_projects(app),
                     KeyCode::Char('a') => events::start_composing_project(app),
                     KeyCode::Char('n') if app.projects_detail_focused => {
-                        events::start_create_milestone(app);
+                        match app.projects_detail_section {
+                            app::ProjectDetailSection::Milestones => {
+                                events::start_create_milestone(app);
+                            }
+                            app::ProjectDetailSection::Tasks => {
+                                events::start_create_project_task(app);
+                            }
+                        }
                     }
                     KeyCode::Char('e') if app.projects_detail_focused => {
-                        events::start_edit_milestone(client.clone(), app, &jobs);
+                        match app.projects_detail_section {
+                            app::ProjectDetailSection::Milestones => {
+                                events::start_edit_milestone(client.clone(), app, &jobs);
+                            }
+                            app::ProjectDetailSection::Tasks => {
+                                events::start_edit_project_task(client.clone(), app, &jobs);
+                            }
+                        }
                     }
                     KeyCode::Char('L') => events::toggle_live_projects(client.clone(), app, &jobs),
                     KeyCode::Tab => events::toggle_projects_focus(app),
+                    KeyCode::Char('h') | KeyCode::Left if app.projects_detail_focused => {
+                        events::cycle_projects_detail_section(app, -1);
+                    }
+                    KeyCode::Char('l') | KeyCode::Right if app.projects_detail_focused => {
+                        events::cycle_projects_detail_section(app, 1);
+                    }
                     KeyCode::Char('j') | KeyCode::Down => {
                         if app.projects_detail_focused {
-                            events::move_milestone_selection(app, 1);
+                            events::move_detail_selection(app, 1);
                             app.projects_scroll.by(1);
                         } else {
                             events::move_project_selection(app, 1);
@@ -546,7 +580,7 @@ async fn run_loop(
                     }
                     KeyCode::Char('k') | KeyCode::Up => {
                         if app.projects_detail_focused {
-                            events::move_milestone_selection(app, -1);
+                            events::move_detail_selection(app, -1);
                             app.projects_scroll.by(-1);
                         } else {
                             events::move_project_selection(app, -1);

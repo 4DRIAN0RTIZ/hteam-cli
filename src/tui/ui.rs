@@ -8,7 +8,7 @@ use ratatui::{
 
 use crate::operations;
 
-use super::app::{App, DetailField, HelpContext};
+use super::app::{App, DetailField, HelpContext, ProjectDetailSection};
 use super::widgets::{centered_rect, draw_frame};
 
 pub fn draw(frame: &mut Frame, app: &App) {
@@ -259,15 +259,23 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
                 "  Esc, q          cerrar",
                 "",
                 "Detalle (foco con Tab)",
-                "  n               crear milestone",
-                "  e               editar el milestone resaltado",
-                "  j/k, ↓/↑        resaltar milestone",
+                "  h/l, ←/→        sección Milestones ↔ Tasks",
+                "  j/k, ↓/↑        resaltar ítem de la sección",
+                "  n               crear (milestone o task según sección)",
+                "  e               editar el resaltado",
                 "",
                 "Formulario de milestone",
                 "  Tab             alternar nombre / descripción (solo al crear)",
                 "  Enter / Ctrl+S  guardar",
                 "  Esc             cancelar",
                 "  (edit)          nombre fijo — Hteam no permite renombrar",
+                "",
+                "Formulario de task",
+                "  (create)        nombre, desc, start_date, dependence",
+                "  (edit)          milestone, dependence, start_date",
+                "  Tab             siguiente campo",
+                "  Enter / Ctrl+S  guardar",
+                "  Esc             cancelar",
                 "",
                 "Escribiendo un project id nuevo",
                 "  Enter           confirmar",
@@ -1339,7 +1347,13 @@ fn wrapped_line_count(text: &str, width: u16) -> u16 {
 fn draw_projects_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(80, 75, frame.area());
 
-    let title = if app.composing_milestone {
+    let title = if app.composing_project_task {
+        if app.project_task_form_edit_id.is_some() {
+            " Editar task de proyecto ".to_string()
+        } else {
+            " Nueva task de proyecto ".to_string()
+        }
+    } else if app.composing_milestone {
         if app.milestone_form_edit_id.is_some() {
             " Editar milestone ".to_string()
         } else {
@@ -1364,15 +1378,26 @@ fn draw_projects_popup(frame: &mut Frame, app: &App) {
         app.theme.foreground,
     );
 
-    let rows = if app.composing_milestone {
-        Layout::vertical([
-            Constraint::Min(0),
-            Constraint::Length(3),
-            Constraint::Length(3),
-        ])
-        .split(inner)
+    let form_rows = if app.composing_project_task {
+        if app.project_task_form_edit_id.is_some() {
+            3
+        } else {
+            4
+        }
+    } else if app.composing_milestone {
+        2
     } else if app.composing_project {
-        Layout::vertical([Constraint::Min(0), Constraint::Length(3)]).split(inner)
+        1
+    } else {
+        0
+    };
+
+    let rows = if form_rows > 0 {
+        let mut constraints = vec![Constraint::Min(0)];
+        for _ in 0..form_rows {
+            constraints.push(Constraint::Length(3));
+        }
+        Layout::vertical(constraints).split(inner)
     } else {
         Layout::vertical([Constraint::Min(0)]).split(inner)
     };
@@ -1385,7 +1410,9 @@ fn draw_projects_popup(frame: &mut Frame, app: &App) {
         draw_project_detail(frame, app, cols[1]);
     }
 
-    if app.composing_milestone {
+    if app.composing_project_task {
+        draw_project_task_form(frame, app, &rows[1..]);
+    } else if app.composing_milestone {
         draw_milestone_form(frame, app, rows[1], rows[2]);
     } else if app.composing_project {
         draw_project_input(frame, app, rows[1]);
@@ -1485,27 +1512,34 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
         return;
     };
 
+    let composing = app.composing_milestone || app.composing_project_task;
     // Sticky footer so create/edit shortcuts stay visible while the body scrolls.
-    let body_area = if app.projects_detail_focused && !app.composing_milestone {
+    let body_area = if app.projects_detail_focused && !composing {
         let rows = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(inner);
+        let section = match app.projects_detail_section {
+            ProjectDetailSection::Milestones => "milestones",
+            ProjectDetailSection::Tasks => "tasks",
+        };
         let footer = Line::from(vec![
-            Span::styled(" n ", Style::default().add_modifier(Modifier::BOLD)),
+            Span::styled(" h/l ", Style::default().add_modifier(Modifier::BOLD)),
+            Span::styled(format!("{section}  "), Style::default().fg(app.theme.muted)),
+            Span::styled("n ", Style::default().add_modifier(Modifier::BOLD)),
             Span::styled("crear  ", Style::default().fg(app.theme.muted)),
             Span::styled("e ", Style::default().add_modifier(Modifier::BOLD)),
             Span::styled("editar  ", Style::default().fg(app.theme.muted)),
             Span::styled("j/k ", Style::default().add_modifier(Modifier::BOLD)),
-            Span::styled("seleccionar  ", Style::default().fg(app.theme.muted)),
+            Span::styled("sel  ", Style::default().fg(app.theme.muted)),
             Span::styled("? ", Style::default().add_modifier(Modifier::BOLD)),
             Span::styled("ayuda", Style::default().fg(app.theme.muted)),
         ]);
         frame.render_widget(Paragraph::new(footer), rows[1]);
         rows[0]
-    } else if !app.projects_detail_focused && !app.composing_milestone {
+    } else if !app.projects_detail_focused && !composing {
         let rows = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(inner);
         let footer = Line::from(vec![
             Span::styled(" Tab ", Style::default().add_modifier(Modifier::BOLD)),
             Span::styled(
-                "foco aquí para crear/editar milestones",
+                "foco aquí para milestones/tasks",
                 Style::default().fg(app.theme.muted),
             ),
         ]);
@@ -1516,13 +1550,29 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
     };
 
     let mut lines = vec![format!("Proyecto #{}", id), String::new()];
+    let ms_active = app.projects_detail_focused
+        && app.projects_detail_section == ProjectDetailSection::Milestones;
+    let task_active =
+        app.projects_detail_focused && app.projects_detail_section == ProjectDetailSection::Tasks;
 
     if app.project_milestones.is_empty() {
-        lines.push("Sin milestones.".to_string());
+        lines.push(if ms_active {
+            "Milestones: (vacío)".to_string()
+        } else {
+            "Milestones:".to_string()
+        });
+        if ms_active {
+            lines.push("  n crear milestone".to_string());
+        }
     } else {
-        lines.push("Milestones:".to_string());
+        let head = if ms_active {
+            "Milestones: ●".to_string()
+        } else {
+            "Milestones:".to_string()
+        };
+        lines.push(head);
         for (i, m) in app.project_milestones.iter().enumerate() {
-            let marker = if app.projects_detail_focused && i == app.selected_milestone_idx {
+            let marker = if ms_active && i == app.selected_milestone_idx {
                 "▶"
             } else {
                 " "
@@ -1541,12 +1591,37 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
     lines.push(String::new());
 
     if app.project_tasks.is_empty() {
-        lines.push("Sin tasks.".to_string());
+        lines.push(if task_active {
+            "Tasks: ● (vacío)".to_string()
+        } else {
+            "Tasks:".to_string()
+        });
+        if task_active {
+            lines.push("  n crear task (usa milestone resaltado)".to_string());
+        }
     } else {
-        lines.push("Tasks:".to_string());
-        for t in &app.project_tasks {
+        let head = if task_active {
+            "Tasks: ●".to_string()
+        } else {
+            "Tasks:".to_string()
+        };
+        lines.push(head);
+        for (i, t) in app.project_tasks.iter().enumerate() {
+            let marker = if task_active && i == app.selected_task_idx {
+                "▶"
+            } else {
+                " "
+            };
             let mark = if t.closed { "✅" } else { "🔲" };
-            lines.push(format!("  {} #{} {}", mark, t.number, t.name));
+            let ms = t
+                .milestone
+                .as_ref()
+                .map(|m| format!(" · m{}", m.id))
+                .unwrap_or_default();
+            lines.push(format!(
+                "{} {} #{} {}{}",
+                marker, mark, t.number, t.name, ms
+            ));
         }
     }
 
@@ -1563,6 +1638,61 @@ fn draw_project_input(frame: &mut Frame, app: &App, area: Rect) {
     let inner = block.inner(area);
     frame.render_widget(block, area);
     frame.render_widget(Paragraph::new(app.project_input.as_str()), inner);
+}
+
+fn draw_project_task_form(frame: &mut Frame, app: &App, areas: &[Rect]) {
+    let edit = app.project_task_form_edit_id.is_some();
+    let fields: &[(&str, &str)] = if edit {
+        &[
+            (" Milestone id ", app.project_task_milestone_input.as_str()),
+            (
+                " Dependence id (vacío = sin cambio) ",
+                app.project_task_dependence_input.as_str(),
+            ),
+            (
+                " Start date YYYY-MM-DD ",
+                app.project_task_start_date_input.as_str(),
+            ),
+        ]
+    } else {
+        &[
+            (" Nombre ", app.project_task_name_input.as_str()),
+            (
+                " Descripción (opcional) ",
+                app.project_task_desc_input.as_str(),
+            ),
+            (
+                " Start date YYYY-MM-DD (opcional) ",
+                app.project_task_start_date_input.as_str(),
+            ),
+            (
+                " Dependence id (opcional) ",
+                app.project_task_dependence_input.as_str(),
+            ),
+        ]
+    };
+    for (i, area) in areas.iter().enumerate() {
+        let Some((title_base, value)) = fields.get(i).copied() else {
+            break;
+        };
+        let focused = app.project_task_form_field == i;
+        let title = if focused {
+            format!("{title_base}● ")
+        } else {
+            title_base.to_string()
+        };
+        let block = Block::default()
+            .title(title)
+            .borders(Borders::ALL)
+            .border_style(if focused {
+                Style::default().fg(app.theme.border_active)
+            } else {
+                Style::default()
+            });
+        let inner = block.inner(*area);
+        frame.render_widget(block, *area);
+        frame.render_widget(Paragraph::new(value), inner);
+    }
 }
 
 fn draw_milestone_form(frame: &mut Frame, app: &App, name_area: Rect, desc_area: Rect) {
