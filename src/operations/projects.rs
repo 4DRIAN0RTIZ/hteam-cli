@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 
 use crate::client::HteamClient;
 use crate::config::Config;
-use crate::models::{ProjectMilestone, ProjectSummary, ProjectTasksResponse};
+use crate::models::{ProjectMilestone, ProjectSummary, ProjectTaskTreeNode, ProjectTasksResponse};
 
 /// Los mismos radios de estado que `/projects/` en el sitio, en su mismo
 /// orden — única fuente de verdad para el filtro tanto en `hteam project
@@ -21,6 +21,10 @@ pub async fn milestones(client: &HteamClient, project_id: u64) -> Result<Vec<Pro
 
 pub async fn tasks(client: &HteamClient, project_id: u64) -> Result<ProjectTasksResponse> {
     client.get_project_tasks(project_id).await
+}
+
+pub async fn task_tree(client: &HteamClient, project_id: u64) -> Result<Vec<ProjectTaskTreeNode>> {
+    client.get_project_task_tree(project_id).await
 }
 
 /// URL pública de la página de detalle de un proyecto (`/projects/{id}/`).
@@ -349,6 +353,29 @@ mod tests {
         assert_eq!(response.count, 1);
         assert_eq!(response.results[0].id, 42);
         assert_eq!(response.results[0].name, "Fix bug");
+    }
+
+    #[tokio::test]
+    async fn task_tree_parses_nested_dependencies() {
+        let mut server = mockito::Server::new_async().await;
+        let _tree = server
+            .mock("GET", "/projects/7/task-tree")
+            .with_status(200)
+            .with_body(
+                r#"<ul><li><a href="/projects/7/tasks/42/">Parent task</a><ul><li><span><a href="/projects/7/tasks/43/">Child task</a></span></li></ul></li></ul>"#,
+            )
+            .create_async()
+            .await;
+
+        let tree = task_tree(&client(&server.url()), 7)
+            .await
+            .expect("task tree");
+
+        assert_eq!(tree.len(), 1);
+        assert_eq!(tree[0].id, 42);
+        assert_eq!(tree[0].name, "Parent task");
+        assert_eq!(tree[0].children[0].id, 43);
+        assert_eq!(tree[0].children[0].name, "Child task");
     }
 
     #[tokio::test]

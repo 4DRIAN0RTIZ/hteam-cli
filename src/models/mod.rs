@@ -343,6 +343,13 @@ pub struct ProjectTasksResponse {
     pub results: Vec<ProjectTask>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct ProjectTaskTreeNode {
+    pub id: u64,
+    pub name: String,
+    pub children: Vec<ProjectTaskTreeNode>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Tabled)]
 pub struct ProjectTask {
     /// Internal record ID used by task detail and mutation routes.
