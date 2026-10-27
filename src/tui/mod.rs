@@ -550,6 +550,11 @@ async fn run_loop(
                             app::ProjectDetailSection::Tasks => {
                                 events::start_create_project_task(app);
                             }
+                            app::ProjectDetailSection::Tree => {
+                                app.set_status(
+                                    "El árbol es solo lectura. Creá tasks desde la sección Tasks.",
+                                );
+                            }
                         }
                     }
                     KeyCode::Char('e') if app.projects_detail_focused => {
@@ -559,6 +564,11 @@ async fn run_loop(
                             }
                             app::ProjectDetailSection::Tasks => {
                                 events::start_edit_project_task(client.clone(), app, &jobs);
+                            }
+                            app::ProjectDetailSection::Tree => {
+                                app.set_status(
+                                    "El árbol es solo lectura. Editá tasks desde la sección Tasks.",
+                                );
                             }
                         }
                     }
@@ -585,6 +595,12 @@ async fn run_loop(
                         } else {
                             events::move_project_selection(app, -1);
                         }
+                    }
+                    KeyCode::Enter | KeyCode::Char(' ')
+                        if app.projects_detail_focused
+                            && app.projects_detail_section == app::ProjectDetailSection::Tree =>
+                    {
+                        events::toggle_tree_node(app);
                     }
                     KeyCode::Enter if !app.projects_detail_focused => {
                         events::select_known_project(client.clone(), app, &jobs);

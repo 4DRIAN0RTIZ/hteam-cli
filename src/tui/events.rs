@@ -1691,6 +1691,9 @@ fn load_project(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs, project_id
     app.selected_milestone_idx = 0;
     app.project_tasks.clear();
     app.selected_task_idx = 0;
+    app.project_task_tree.clear();
+    app.project_tree_expanded.clear();
+    app.selected_tree_idx = 0;
     app.projects_detail_section = ProjectDetailSection::Milestones;
     cancel_milestone_form(app);
     cancel_project_task_form(app);
@@ -1705,11 +1708,15 @@ fn load_project(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs, project_id
             .await
             .map(|resp| resp.results)
             .map_err(|e| e.to_string());
+        let tree = operations::projects::task_tree(&client, project_id)
+            .await
+            .map_err(|e| e.to_string());
         JobOutcome::ProjectLoaded {
             id,
             project_id,
             milestones,
             tasks,
+            tree,
         }
     });
 }
@@ -1890,18 +1897,7 @@ pub fn submit_milestone_form(client: Arc<HteamClient>, app: &mut App, jobs: &Job
             }
         };
 
-        let refresh = if result.is_ok() {
-            let milestones = operations::projects::milestones(&client, project_id)
-                .await
-                .map_err(|e| e.to_string());
-            let tasks = operations::projects::tasks(&client, project_id)
-                .await
-                .map(|resp| resp.results)
-                .map_err(|e| e.to_string());
-            Some((milestones, tasks))
-        } else {
-            None
-        };
+        let refresh = project_detail_refresh(&client, project_id, result.is_ok()).await;
 
         JobOutcome::ProjectMilestoneSaved {
             id,
@@ -1912,21 +1908,35 @@ pub fn submit_milestone_form(client: Arc<HteamClient>, app: &mut App, jobs: &Job
     });
 }
 
-/// h/l when detail is focused: milestones list ↔ tasks list.
-pub fn cycle_projects_detail_section(app: &mut App, _delta: i32) {
+/// h/l when detail is focused: milestones → tasks → tree (and back).
+pub fn cycle_projects_detail_section(app: &mut App, delta: i32) {
     if app.composing_milestone || app.composing_project_task {
         return;
     }
-    app.projects_detail_section = match app.projects_detail_section {
-        ProjectDetailSection::Milestones => ProjectDetailSection::Tasks,
-        ProjectDetailSection::Tasks => ProjectDetailSection::Milestones,
+    const ORDER: [ProjectDetailSection; 3] = [
+        ProjectDetailSection::Milestones,
+        ProjectDetailSection::Tasks,
+        ProjectDetailSection::Tree,
+    ];
+    let idx = ORDER
+        .iter()
+        .position(|&s| s == app.projects_detail_section)
+        .unwrap_or(0) as i32;
+    let len = ORDER.len() as i32;
+    let next = if delta >= 0 {
+        (idx + 1).rem_euclid(len)
+    } else {
+        (idx - 1).rem_euclid(len)
     };
+    app.projects_detail_section = ORDER[next as usize];
+    app.projects_scroll.reset();
 }
 
 pub fn move_detail_selection(app: &mut App, delta: i32) {
     match app.projects_detail_section {
         ProjectDetailSection::Milestones => move_milestone_selection(app, delta),
         ProjectDetailSection::Tasks => move_task_selection(app, delta),
+        ProjectDetailSection::Tree => move_tree_selection(app, delta),
     }
 }
 
@@ -1937,6 +1947,127 @@ pub fn move_task_selection(app: &mut App, delta: i32) {
     let len = app.project_tasks.len() as i32;
     let next = (app.selected_task_idx as i32 + delta).clamp(0, len - 1);
     app.selected_task_idx = next as usize;
+}
+
+/// Total nodes in the full tree (including collapsed descendants).
+pub fn project_task_tree_len(nodes: &[crate::models::ProjectTaskTreeNode]) -> usize {
+    nodes
+        .iter()
+        .map(|n| 1 + project_task_tree_len(&n.children))
+        .sum()
+}
+
+/// Visible rows under the current expand set (roots always visible).
+pub fn project_task_tree_visible_len(
+    nodes: &[crate::models::ProjectTaskTreeNode],
+    expanded: &std::collections::HashSet<u64>,
+) -> usize {
+    nodes
+        .iter()
+        .map(|n| {
+            let kids = if !n.children.is_empty() && expanded.contains(&n.id) {
+                project_task_tree_visible_len(&n.children, expanded)
+            } else {
+                0
+            };
+            1 + kids
+        })
+        .sum()
+}
+
+/// DFS ids of currently visible rows (same order as the tree draw).
+pub fn project_task_tree_visible_ids(
+    nodes: &[crate::models::ProjectTaskTreeNode],
+    expanded: &std::collections::HashSet<u64>,
+) -> Vec<u64> {
+    let mut out = Vec::new();
+    collect_visible_ids(nodes, expanded, &mut out);
+    out
+}
+
+fn collect_visible_ids(
+    nodes: &[crate::models::ProjectTaskTreeNode],
+    expanded: &std::collections::HashSet<u64>,
+    out: &mut Vec<u64>,
+) {
+    for n in nodes {
+        out.push(n.id);
+        if !n.children.is_empty() && expanded.contains(&n.id) {
+            collect_visible_ids(&n.children, expanded, out);
+        }
+    }
+}
+
+fn clamp_tree_selection(app: &mut App) {
+    let len = project_task_tree_visible_len(&app.project_task_tree, &app.project_tree_expanded);
+    if len == 0 {
+        app.selected_tree_idx = 0;
+    } else if app.selected_tree_idx >= len {
+        app.selected_tree_idx = len - 1;
+    }
+}
+
+pub fn move_tree_selection(app: &mut App, delta: i32) {
+    let len =
+        project_task_tree_visible_len(&app.project_task_tree, &app.project_tree_expanded) as i32;
+    if len == 0 {
+        return;
+    }
+    let next = (app.selected_tree_idx as i32 + delta).clamp(0, len - 1);
+    app.selected_tree_idx = next as usize;
+}
+
+/// Enter/Space on the tree section: expand or collapse the highlighted node.
+pub fn toggle_tree_node(app: &mut App) {
+    let ids = project_task_tree_visible_ids(&app.project_task_tree, &app.project_tree_expanded);
+    let Some(&id) = ids.get(app.selected_tree_idx) else {
+        return;
+    };
+    let Some(node) = find_tree_node(&app.project_task_tree, id) else {
+        return;
+    };
+    if node.children.is_empty() {
+        app.set_status("Esa task no tiene dependientes.");
+        return;
+    }
+    if app.project_tree_expanded.contains(&id) {
+        collapse_tree_node(app, id);
+    } else {
+        app.project_tree_expanded.insert(id);
+    }
+    clamp_tree_selection(app);
+}
+
+fn collapse_tree_node(app: &mut App, id: u64) {
+    let mut drop_ids = vec![id];
+    if let Some(node) = find_tree_node(&app.project_task_tree, id) {
+        collect_descendant_ids(node, &mut drop_ids);
+    }
+    for drop_id in drop_ids {
+        app.project_tree_expanded.remove(&drop_id);
+    }
+}
+
+fn collect_descendant_ids(node: &crate::models::ProjectTaskTreeNode, out: &mut Vec<u64>) {
+    for child in &node.children {
+        out.push(child.id);
+        collect_descendant_ids(child, out);
+    }
+}
+
+fn find_tree_node(
+    nodes: &[crate::models::ProjectTaskTreeNode],
+    id: u64,
+) -> Option<&crate::models::ProjectTaskTreeNode> {
+    for n in nodes {
+        if n.id == id {
+            return Some(n);
+        }
+        if let Some(found) = find_tree_node(&n.children, id) {
+            return Some(found);
+        }
+    }
+    None
 }
 
 /// Create a task under the highlighted milestone.
@@ -2228,6 +2359,7 @@ async fn project_detail_refresh(
 ) -> Option<(
     Result<Vec<crate::models::ProjectMilestone>, String>,
     Result<Vec<crate::models::ProjectTask>, String>,
+    Result<Vec<crate::models::ProjectTaskTreeNode>, String>,
 )> {
     if !ok {
         return None;
@@ -2239,7 +2371,10 @@ async fn project_detail_refresh(
         .await
         .map(|resp| resp.results)
         .map_err(|e| e.to_string());
-    Some((milestones, tasks))
+    let tree = operations::projects::task_tree(client, project_id)
+        .await
+        .map_err(|e| e.to_string());
+    Some((milestones, tasks, tree))
 }
 
 /// Moves `id` to the front of the known-projects MRU list (deduping) and
@@ -2514,7 +2649,9 @@ pub fn toggle_projects_focus(app: &mut App) {
 mod tests {
     use super::*;
     use crate::config::WorkingHoursConfig;
-    use crate::models::{Comment, Label, ProjectMilestone, ProjectTask, Reminder};
+    use crate::models::{
+        Comment, Label, ProjectMilestone, ProjectTask, ProjectTaskTreeNode, Reminder,
+    };
     use crate::tui::theme::Theme;
     use std::collections::HashSet;
     use std::time::Duration;
@@ -2669,10 +2806,63 @@ mod tests {
         assert_eq!(app.selected_task_idx, 0);
         cancel_project_task_form(&mut app);
         cycle_projects_detail_section(&mut app, 1);
+        assert_eq!(app.projects_detail_section, ProjectDetailSection::Tree);
+        cycle_projects_detail_section(&mut app, 1);
         assert_eq!(
             app.projects_detail_section,
             ProjectDetailSection::Milestones
         );
+    }
+
+    #[test]
+    fn project_task_tree_section_cycles_and_selects_flat_rows() {
+        let mut app = test_app();
+        app.projects_detail_focused = true;
+        app.projects_detail_section = ProjectDetailSection::Tasks;
+        cycle_projects_detail_section(&mut app, 1);
+        assert_eq!(app.projects_detail_section, ProjectDetailSection::Tree);
+        cycle_projects_detail_section(&mut app, -1);
+        assert_eq!(app.projects_detail_section, ProjectDetailSection::Tasks);
+
+        app.project_task_tree = vec![ProjectTaskTreeNode {
+            id: 1,
+            name: "Parent".into(),
+            children: vec![ProjectTaskTreeNode {
+                id: 2,
+                name: "Child".into(),
+                children: Vec::new(),
+            }],
+        }];
+        assert_eq!(project_task_tree_len(&app.project_task_tree), 2);
+        // Collapsed: only the root is visible.
+        assert_eq!(
+            project_task_tree_visible_len(&app.project_task_tree, &app.project_tree_expanded),
+            1
+        );
+        app.projects_detail_section = ProjectDetailSection::Tree;
+        app.selected_tree_idx = 0;
+        move_tree_selection(&mut app, 1);
+        assert_eq!(app.selected_tree_idx, 0);
+
+        toggle_tree_node(&mut app);
+        assert!(app.project_tree_expanded.contains(&1));
+        assert_eq!(
+            project_task_tree_visible_len(&app.project_task_tree, &app.project_tree_expanded),
+            2
+        );
+        move_tree_selection(&mut app, 1);
+        assert_eq!(app.selected_tree_idx, 1);
+        move_tree_selection(&mut app, 1);
+        assert_eq!(app.selected_tree_idx, 1);
+
+        // Collapse again hides the child and clamps selection.
+        app.selected_tree_idx = 1;
+        toggle_tree_node(&mut app); // selected is child (leaf) — no-op expand
+        assert!(app.project_tree_expanded.contains(&1));
+        app.selected_tree_idx = 0;
+        toggle_tree_node(&mut app);
+        assert!(!app.project_tree_expanded.contains(&1));
+        assert_eq!(app.selected_tree_idx, 0);
     }
 
     #[test]

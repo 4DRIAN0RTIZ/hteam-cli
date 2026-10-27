@@ -6,7 +6,8 @@ use std::time::{Duration, Instant};
 use crate::config::WorkingHoursConfig;
 use crate::models::{
     BoardEntry, Card, CardDetail, Comment, FollowUp, Label, List, ProjectMilestone, ProjectSummary,
-    ProjectTask, Reminder, UserSuggestion, WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
+    ProjectTask, ProjectTaskTreeNode, Reminder, UserSuggestion, WeeklyObjectivesSet,
+    WorkShiftRecord, WorkingOnStatus,
 };
 use crate::operations::cards::CardSearchFilters;
 
@@ -43,6 +44,8 @@ pub enum ProjectDetailSection {
     #[default]
     Milestones,
     Tasks,
+    /// Read-only dependency hierarchy (`operations::projects::task_tree`).
+    Tree,
 }
 
 /// Editable rows in the task-detail popup (`d` / `e`).
@@ -197,7 +200,13 @@ pub struct App {
     pub project_tasks: Vec<ProjectTask>,
     /// Highlighted task inside the projects detail panel.
     pub selected_task_idx: usize,
-    /// Milestones vs tasks list when the detail panel has focus.
+    /// Dependency tree roots for the active project (read-only section).
+    pub project_task_tree: Vec<ProjectTaskTreeNode>,
+    /// Node ids currently expanded in the collapsible tree view.
+    pub project_tree_expanded: HashSet<u64>,
+    /// Highlighted row among *visible* tree rows (collapsed nodes hide descendants).
+    pub selected_tree_idx: usize,
+    /// Milestones / tasks / tree when the detail panel has focus.
     pub projects_detail_section: ProjectDetailSection,
     pub show_projects: bool,
     /// Proyectos en vivo (`hteam project list`, status "Execution"),
@@ -459,6 +468,9 @@ impl App {
             selected_milestone_idx: 0,
             project_tasks: Vec::new(),
             selected_task_idx: 0,
+            project_task_tree: Vec::new(),
+            project_tree_expanded: HashSet::new(),
+            selected_tree_idx: 0,
             projects_detail_section: ProjectDetailSection::default(),
             show_projects: false,
             live_projects: Vec::new(),

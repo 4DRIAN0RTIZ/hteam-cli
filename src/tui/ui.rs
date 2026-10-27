@@ -259,10 +259,16 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
                 "  Esc, q          cerrar",
                 "",
                 "Detalle (foco con Tab)",
-                "  h/l, ←/→        sección Milestones ↔ Tasks",
+                "  h/l, ←/→        sección Milestones → Tasks → Árbol",
                 "  j/k, ↓/↑        resaltar ítem de la sección",
-                "  n               crear (milestone o task según sección)",
-                "  e               editar el resaltado",
+                "  n               crear (milestone o task; no en Árbol)",
+                "  e               editar el resaltado (no en Árbol)",
+                "",
+                "Árbol de dependencias",
+                "  (colapsado)     solo raíces al abrir",
+                "  Enter, Espacio  expandir / plegar el resaltado",
+                "  ▸ / ▾           tiene hijos (plegado / expandido)",
+                "  ·               hoja sin dependientes",
                 "",
                 "Formulario de milestone",
                 "  Tab             alternar nombre / descripción (solo al crear)",
@@ -1493,7 +1499,7 @@ fn draw_live_projects_list(frame: &mut Frame, app: &App, area: Rect) {
 
 fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
     let block = Block::default()
-        .title(" Milestones / Tasks ")
+        .title(" Milestones / Tasks / Árbol ")
         .borders(Borders::ALL)
         .border_style(if app.projects_detail_focused {
             Style::default().fg(app.theme.border_active)
@@ -1519,19 +1525,33 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
         let section = match app.projects_detail_section {
             ProjectDetailSection::Milestones => "milestones",
             ProjectDetailSection::Tasks => "tasks",
+            ProjectDetailSection::Tree => "árbol",
         };
-        let footer = Line::from(vec![
-            Span::styled(" h/l ", Style::default().add_modifier(Modifier::BOLD)),
-            Span::styled(format!("{section}  "), Style::default().fg(app.theme.muted)),
-            Span::styled("n ", Style::default().add_modifier(Modifier::BOLD)),
-            Span::styled("crear  ", Style::default().fg(app.theme.muted)),
-            Span::styled("e ", Style::default().add_modifier(Modifier::BOLD)),
-            Span::styled("editar  ", Style::default().fg(app.theme.muted)),
-            Span::styled("j/k ", Style::default().add_modifier(Modifier::BOLD)),
-            Span::styled("sel  ", Style::default().fg(app.theme.muted)),
-            Span::styled("? ", Style::default().add_modifier(Modifier::BOLD)),
-            Span::styled("ayuda", Style::default().fg(app.theme.muted)),
-        ]);
+        let footer = if app.projects_detail_section == ProjectDetailSection::Tree {
+            Line::from(vec![
+                Span::styled(" h/l ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled(format!("{section}  "), Style::default().fg(app.theme.muted)),
+                Span::styled("j/k ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("sel  ", Style::default().fg(app.theme.muted)),
+                Span::styled("Enter ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("expande  ", Style::default().fg(app.theme.muted)),
+                Span::styled("? ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("ayuda", Style::default().fg(app.theme.muted)),
+            ])
+        } else {
+            Line::from(vec![
+                Span::styled(" h/l ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled(format!("{section}  "), Style::default().fg(app.theme.muted)),
+                Span::styled("n ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("crear  ", Style::default().fg(app.theme.muted)),
+                Span::styled("e ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("editar  ", Style::default().fg(app.theme.muted)),
+                Span::styled("j/k ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("sel  ", Style::default().fg(app.theme.muted)),
+                Span::styled("? ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("ayuda", Style::default().fg(app.theme.muted)),
+            ])
+        };
         frame.render_widget(Paragraph::new(footer), rows[1]);
         rows[0]
     } else if !app.projects_detail_focused && !composing {
@@ -1554,81 +1574,258 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
         && app.projects_detail_section == ProjectDetailSection::Milestones;
     let task_active =
         app.projects_detail_focused && app.projects_detail_section == ProjectDetailSection::Tasks;
+    let tree_active =
+        app.projects_detail_focused && app.projects_detail_section == ProjectDetailSection::Tree;
+    let tree_nodes = super::events::project_task_tree_len(&app.project_task_tree);
 
-    if app.project_milestones.is_empty() {
-        lines.push(if ms_active {
-            "Milestones: (vacío)".to_string()
+    if tree_active {
+        // Full-panel collapsible tree: roots only until Enter expands a node.
+        if app.project_task_tree.is_empty() {
+            lines.push("Árbol: ● (vacío)".to_string());
         } else {
-            "Milestones:".to_string()
-        });
-        if ms_active {
-            lines.push("  n crear milestone".to_string());
+            let visible = super::events::project_task_tree_visible_len(
+                &app.project_task_tree,
+                &app.project_tree_expanded,
+            );
+            lines.push(format!("Árbol: ● ({visible}/{tree_nodes})  Enter expande"));
+            let mut row = 0usize;
+            append_task_tree_roots(
+                &mut lines,
+                &app.project_task_tree,
+                &app.project_tree_expanded,
+                true,
+                app.selected_tree_idx,
+                &mut row,
+            );
         }
     } else {
-        let head = if ms_active {
-            "Milestones: ●".to_string()
-        } else {
-            "Milestones:".to_string()
-        };
-        lines.push(head);
-        for (i, m) in app.project_milestones.iter().enumerate() {
-            let marker = if ms_active && i == app.selected_milestone_idx {
-                "▶"
+        if app.project_milestones.is_empty() {
+            lines.push(if ms_active {
+                "Milestones: (vacío)".to_string()
             } else {
-                " "
+                "Milestones:".to_string()
+            });
+            if ms_active {
+                lines.push("  n crear milestone".to_string());
+            }
+        } else {
+            let head = if ms_active {
+                "Milestones: ●".to_string()
+            } else {
+                "Milestones:".to_string()
             };
-            let id_suffix = m.id().map(|id| format!(" #{id}")).unwrap_or_default();
-            lines.push(format!(
-                "{} {} {}{}",
-                marker,
-                progress_bar(m.progress),
-                m.name,
-                id_suffix
-            ));
+            lines.push(head);
+            for (i, m) in app.project_milestones.iter().enumerate() {
+                let marker = if ms_active && i == app.selected_milestone_idx {
+                    "▶"
+                } else {
+                    " "
+                };
+                let id_suffix = m.id().map(|id| format!(" #{id}")).unwrap_or_default();
+                lines.push(format!(
+                    "{} {} {}{}",
+                    marker,
+                    progress_bar(m.progress),
+                    m.name,
+                    id_suffix
+                ));
+            }
+        }
+
+        lines.push(String::new());
+
+        if app.project_tasks.is_empty() {
+            lines.push(if task_active {
+                "Tasks: ● (vacío)".to_string()
+            } else {
+                "Tasks:".to_string()
+            });
+            if task_active {
+                lines.push("  n crear task (usa milestone resaltado)".to_string());
+            }
+        } else {
+            let head = if task_active {
+                "Tasks: ●".to_string()
+            } else {
+                "Tasks:".to_string()
+            };
+            lines.push(head);
+            for (i, t) in app.project_tasks.iter().enumerate() {
+                let marker = if task_active && i == app.selected_task_idx {
+                    "▶"
+                } else {
+                    " "
+                };
+                let mark = if t.closed { "✅" } else { "🔲" };
+                let ms = t
+                    .milestone
+                    .as_ref()
+                    .map(|m| format!(" · m{}", m.id))
+                    .unwrap_or_default();
+                lines.push(format!(
+                    "{} {} #{} {}{}",
+                    marker, mark, t.number, t.name, ms
+                ));
+            }
+        }
+
+        lines.push(String::new());
+        if tree_nodes == 0 {
+            lines.push("Árbol: (vacío)".to_string());
+        } else {
+            lines.push(format!("Árbol: {tree_nodes} nodos · h/l para ver"));
         }
     }
 
-    lines.push(String::new());
-
-    if app.project_tasks.is_empty() {
-        lines.push(if task_active {
-            "Tasks: ● (vacío)".to_string()
-        } else {
-            "Tasks:".to_string()
-        });
-        if task_active {
-            lines.push("  n crear task (usa milestone resaltado)".to_string());
-        }
-    } else {
-        let head = if task_active {
-            "Tasks: ●".to_string()
-        } else {
-            "Tasks:".to_string()
-        };
-        lines.push(head);
-        for (i, t) in app.project_tasks.iter().enumerate() {
-            let marker = if task_active && i == app.selected_task_idx {
-                "▶"
-            } else {
-                " "
-            };
-            let mark = if t.closed { "✅" } else { "🔲" };
-            let ms = t
-                .milestone
-                .as_ref()
-                .map(|m| format!(" · m{}", m.id))
-                .unwrap_or_default();
-            lines.push(format!(
-                "{} {} #{} {}{}",
-                marker, mark, t.number, t.name, ms
-            ));
-        }
-    }
-
+    // trim:false keeps leading spaces and box-drawing columns of the tree.
     let p = Paragraph::new(lines.join("\n"))
-        .wrap(Wrap { trim: true })
+        .wrap(Wrap { trim: false })
         .scroll((app.projects_scroll.offset(), 0));
     frame.render_widget(p, body_area);
+}
+
+fn tree_expand_glyph(has_children: bool, expanded: bool) -> &'static str {
+    if !has_children {
+        "· "
+    } else if expanded {
+        "▾ "
+    } else {
+        "▸ "
+    }
+}
+
+fn append_task_tree_roots(
+    lines: &mut Vec<String>,
+    nodes: &[crate::models::ProjectTaskTreeNode],
+    expanded: &std::collections::HashSet<u64>,
+    active: bool,
+    selected_idx: usize,
+    row: &mut usize,
+) {
+    for node in nodes {
+        let marker = if active && *row == selected_idx {
+            "▶"
+        } else {
+            " "
+        };
+        let has_children = !node.children.is_empty();
+        let is_open = has_children && expanded.contains(&node.id);
+        let glyph = tree_expand_glyph(has_children, is_open);
+        lines.push(format!("{marker} {glyph}#{} {}", node.id, node.name));
+        *row += 1;
+        if is_open {
+            append_task_tree_children(
+                lines,
+                &node.children,
+                "",
+                expanded,
+                active,
+                selected_idx,
+                row,
+            );
+        }
+    }
+}
+
+/// Box-drawing children: `├─` / `└─` with `│` column continuations.
+/// Only walks into nodes present in `expanded`.
+fn append_task_tree_children(
+    lines: &mut Vec<String>,
+    nodes: &[crate::models::ProjectTaskTreeNode],
+    prefix: &str,
+    expanded: &std::collections::HashSet<u64>,
+    active: bool,
+    selected_idx: usize,
+    row: &mut usize,
+) {
+    let last = nodes.len().saturating_sub(1);
+    for (i, node) in nodes.iter().enumerate() {
+        let is_last = i == last;
+        let marker = if active && *row == selected_idx {
+            "▶"
+        } else {
+            " "
+        };
+        let has_children = !node.children.is_empty();
+        let is_open = has_children && expanded.contains(&node.id);
+        let elbow = if is_last { "└─ " } else { "├─ " };
+        let glyph = tree_expand_glyph(has_children, is_open);
+        lines.push(format!(
+            "{marker} {prefix}{elbow}{glyph}#{} {}",
+            node.id, node.name
+        ));
+        *row += 1;
+        if is_open {
+            let next_prefix = format!("{prefix}{}", if is_last { "   " } else { "│  " });
+            append_task_tree_children(
+                lines,
+                &node.children,
+                &next_prefix,
+                expanded,
+                active,
+                selected_idx,
+                row,
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod task_tree_draw_tests {
+    use super::*;
+    use crate::models::ProjectTaskTreeNode;
+    use std::collections::HashSet;
+
+    fn sample_tree() -> Vec<ProjectTaskTreeNode> {
+        vec![ProjectTaskTreeNode {
+            id: 1,
+            name: "Root".into(),
+            children: vec![
+                ProjectTaskTreeNode {
+                    id: 2,
+                    name: "Child A".into(),
+                    children: vec![ProjectTaskTreeNode {
+                        id: 3,
+                        name: "Grand".into(),
+                        children: Vec::new(),
+                    }],
+                },
+                ProjectTaskTreeNode {
+                    id: 4,
+                    name: "Child B".into(),
+                    children: Vec::new(),
+                },
+            ],
+        }]
+    }
+
+    #[test]
+    fn collapsed_roots_hide_children() {
+        let tree = sample_tree();
+        let expanded = HashSet::new();
+        let mut lines = Vec::new();
+        let mut row = 0;
+        append_task_tree_roots(&mut lines, &tree, &expanded, true, 0, &mut row);
+        assert_eq!(lines, vec!["▶ ▸ #1 Root".to_string()]);
+    }
+
+    #[test]
+    fn box_drawing_shows_nested_structure_when_expanded() {
+        let tree = sample_tree();
+        let expanded: HashSet<u64> = [1, 2].into_iter().collect();
+        let mut lines = Vec::new();
+        let mut row = 0;
+        append_task_tree_roots(&mut lines, &tree, &expanded, true, 2, &mut row);
+        assert_eq!(
+            lines,
+            vec![
+                "  ▾ #1 Root".to_string(),
+                "  ├─ ▾ #2 Child A".to_string(),
+                "▶ │  └─ · #3 Grand".to_string(),
+                "  └─ · #4 Child B".to_string(),
+            ]
+        );
+    }
 }
 
 fn draw_project_input(frame: &mut Frame, app: &App, area: Rect) {
