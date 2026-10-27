@@ -259,7 +259,7 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
                 "  Esc, q          cerrar",
                 "",
                 "Detalle (foco con Tab)",
-                "  h/l, ←/→        sección Milestones → Tasks → Árbol → Resumen",
+                "  h/l, ←/→        una sección a la vez (carga al entrar)",
                 "  j/k, ↓/↑        resaltar ítem / scroll del resumen",
                 "  n               crear (milestone o task; no en Árbol/Resumen)",
                 "  e               editar el resaltado (no en Árbol/Resumen)",
@@ -267,6 +267,12 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
                 "Resumen de proyecto",
                 "  (lazy)          se carga al entrar a la sección",
                 "  j/k             scroll (vencidas / próximas)",
+                "",
+                "Miembros de proyecto",
+                "  (lazy)          se carga al entrar a la sección",
+                "  a / n           agregar username o id",
+                "  d / x           quitar el resaltado (sin guardar)",
+                "  s / Ctrl+S      guardar lista completa",
                 "",
                 "Árbol de dependencias",
                 "  (colapsado)     solo raíces al abrir",
@@ -1357,7 +1363,9 @@ fn wrapped_line_count(text: &str, width: u16) -> u16 {
 fn draw_projects_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(80, 75, frame.area());
 
-    let title = if app.composing_project_task {
+    let title = if app.composing_member {
+        " Agregar miembro ".to_string()
+    } else if app.composing_project_task {
         if app.project_task_form_edit_id.is_some() {
             " Editar task de proyecto ".to_string()
         } else {
@@ -1396,7 +1404,7 @@ fn draw_projects_popup(frame: &mut Frame, app: &App) {
         }
     } else if app.composing_milestone {
         2
-    } else if app.composing_project {
+    } else if app.composing_project || app.composing_member {
         1
     } else {
         0
@@ -1424,6 +1432,8 @@ fn draw_projects_popup(frame: &mut Frame, app: &App) {
         draw_project_task_form(frame, app, &rows[1..]);
     } else if app.composing_milestone {
         draw_milestone_form(frame, app, rows[1], rows[2]);
+    } else if app.composing_member {
+        draw_member_input(frame, app, rows[1]);
     } else if app.composing_project {
         draw_project_input(frame, app, rows[1]);
     }
@@ -1447,18 +1457,18 @@ fn draw_known_projects_list(frame: &mut Frame, app: &App, area: Rect) {
         app.known_projects
             .iter()
             .enumerate()
-            .map(|(i, id)| {
+            .map(|(i, p)| {
                 let marker = if i == app.selected_project_idx {
                     "▶"
                 } else {
                     " "
                 };
-                let active = if Some(*id) == app.active_project {
+                let active = if Some(p.id) == app.active_project {
                     " •"
                 } else {
                     ""
                 };
-                format!("{} #{}{}", marker, id, active)
+                format!("{marker} #{}{}", p.id, active)
             })
             .collect::<Vec<_>>()
             .join("\n")
@@ -1503,7 +1513,13 @@ fn draw_live_projects_list(frame: &mut Frame, app: &App, area: Rect) {
 
 fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
     let block = Block::default()
-        .title(" Milestones / Tasks / Árbol / Resumen ")
+        .title(match app.projects_detail_section {
+            ProjectDetailSection::Milestones => " Milestones ",
+            ProjectDetailSection::Tasks => " Tasks ",
+            ProjectDetailSection::Tree => " Árbol ",
+            ProjectDetailSection::Status => " Resumen ",
+            ProjectDetailSection::Members => " Miembros ",
+        })
         .borders(Borders::ALL)
         .border_style(if app.projects_detail_focused {
             Style::default().fg(app.theme.border_active)
@@ -1522,7 +1538,7 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
         return;
     };
 
-    let composing = app.composing_milestone || app.composing_project_task;
+    let composing = app.composing_milestone || app.composing_project_task || app.composing_member;
     // Sticky footer so create/edit shortcuts stay visible while the body scrolls.
     let body_area = if app.projects_detail_focused && !composing {
         let rows = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(inner);
@@ -1531,6 +1547,7 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
             ProjectDetailSection::Tasks => "tasks",
             ProjectDetailSection::Tree => "árbol",
             ProjectDetailSection::Status => "resumen",
+            ProjectDetailSection::Members => "miembros",
         };
         let footer = if app.projects_detail_section == ProjectDetailSection::Tree {
             Line::from(vec![
@@ -1550,6 +1567,27 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
                 Span::styled("j/k ", Style::default().add_modifier(Modifier::BOLD)),
                 Span::styled("scroll  ", Style::default().fg(app.theme.muted)),
                 Span::styled("(solo lectura)  ", Style::default().fg(app.theme.muted)),
+                Span::styled("? ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("ayuda", Style::default().fg(app.theme.muted)),
+            ])
+        } else if app.projects_detail_section == ProjectDetailSection::Members {
+            let dirty = if super::events::project_members_dirty(app) {
+                "* "
+            } else {
+                ""
+            };
+            Line::from(vec![
+                Span::styled(" h/l ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!("{section}{dirty}  "),
+                    Style::default().fg(app.theme.muted),
+                ),
+                Span::styled("a ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("add  ", Style::default().fg(app.theme.muted)),
+                Span::styled("d ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("del  ", Style::default().fg(app.theme.muted)),
+                Span::styled("s ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("guardar  ", Style::default().fg(app.theme.muted)),
                 Span::styled("? ", Style::default().add_modifier(Modifier::BOLD)),
                 Span::styled("ayuda", Style::default().fg(app.theme.muted)),
             ])
@@ -1574,7 +1612,7 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
         let footer = Line::from(vec![
             Span::styled(" Tab ", Style::default().add_modifier(Modifier::BOLD)),
             Span::styled(
-                "foco aquí para milestones/tasks",
+                "foco aquí · h/l cambia de sección",
                 Style::default().fg(app.theme.muted),
             ),
         ]);
@@ -1584,121 +1622,26 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
         inner
     };
 
-    let mut lines = vec![format!("Proyecto #{}", id), String::new()];
-    let ms_active = app.projects_detail_focused
-        && app.projects_detail_section == ProjectDetailSection::Milestones;
-    let task_active =
-        app.projects_detail_focused && app.projects_detail_section == ProjectDetailSection::Tasks;
-    let tree_active =
-        app.projects_detail_focused && app.projects_detail_section == ProjectDetailSection::Tree;
-    let status_active =
-        app.projects_detail_focused && app.projects_detail_section == ProjectDetailSection::Status;
-    let tree_nodes = super::events::project_task_tree_len(&app.project_task_tree);
-
-    if status_active {
-        lines.extend(project_status_lines(app));
-    } else if tree_active {
-        // Full-panel collapsible tree: roots only until Enter expands a node.
-        if app.project_task_tree.is_empty() {
-            lines.push("Árbol: ● (vacío)".to_string());
-        } else {
-            let visible = super::events::project_task_tree_visible_len(
-                &app.project_task_tree,
-                &app.project_tree_expanded,
-            );
-            lines.push(format!("Árbol: ● ({visible}/{tree_nodes})  Enter expande"));
-            let mut row = 0usize;
-            append_task_tree_roots(
-                &mut lines,
-                &app.project_task_tree,
-                &app.project_tree_expanded,
-                true,
-                app.selected_tree_idx,
-                &mut row,
-            );
+    let header = match app.active_project_name.as_deref() {
+        Some(name) if !name.is_empty() => format!("{name} (#{id})"),
+        _ => format!("Proyecto #{id}"),
+    };
+    let mut lines = vec![header, String::new()];
+    match app.projects_detail_section {
+        ProjectDetailSection::Milestones => {
+            lines.extend(project_milestones_lines(app));
         }
-    } else {
-        if app.project_milestones.is_empty() {
-            lines.push(if ms_active {
-                "Milestones: (vacío)".to_string()
-            } else {
-                "Milestones:".to_string()
-            });
-            if ms_active {
-                lines.push("  n crear milestone".to_string());
-            }
-        } else {
-            let head = if ms_active {
-                "Milestones: ●".to_string()
-            } else {
-                "Milestones:".to_string()
-            };
-            lines.push(head);
-            for (i, m) in app.project_milestones.iter().enumerate() {
-                let marker = if ms_active && i == app.selected_milestone_idx {
-                    "▶"
-                } else {
-                    " "
-                };
-                let id_suffix = m.id().map(|id| format!(" #{id}")).unwrap_or_default();
-                lines.push(format!(
-                    "{} {} {}{}",
-                    marker,
-                    progress_bar(m.progress),
-                    m.name,
-                    id_suffix
-                ));
-            }
+        ProjectDetailSection::Tasks => {
+            lines.extend(project_tasks_lines(app));
         }
-
-        lines.push(String::new());
-
-        if app.project_tasks.is_empty() {
-            lines.push(if task_active {
-                "Tasks: ● (vacío)".to_string()
-            } else {
-                "Tasks:".to_string()
-            });
-            if task_active {
-                lines.push("  n crear task (usa milestone resaltado)".to_string());
-            }
-        } else {
-            let head = if task_active {
-                "Tasks: ●".to_string()
-            } else {
-                "Tasks:".to_string()
-            };
-            lines.push(head);
-            for (i, t) in app.project_tasks.iter().enumerate() {
-                let marker = if task_active && i == app.selected_task_idx {
-                    "▶"
-                } else {
-                    " "
-                };
-                let mark = if t.closed { "✅" } else { "🔲" };
-                let ms = t
-                    .milestone
-                    .as_ref()
-                    .map(|m| format!(" · m{}", m.id))
-                    .unwrap_or_default();
-                lines.push(format!(
-                    "{} {} #{} {}{}",
-                    marker, mark, t.number, t.name, ms
-                ));
-            }
+        ProjectDetailSection::Tree => {
+            lines.extend(project_tree_lines(app));
         }
-
-        lines.push(String::new());
-        if tree_nodes == 0 {
-            lines.push("Árbol: (vacío)".to_string());
-        } else {
-            lines.push(format!("Árbol: {tree_nodes} nodos · h/l para ver"));
+        ProjectDetailSection::Status => {
+            lines.extend(project_status_lines(app));
         }
-        lines.push(String::new());
-        if app.project_status.is_some() {
-            lines.push("Resumen: cargado · h/l para ver".to_string());
-        } else {
-            lines.push("Resumen: h/l para cargar".to_string());
+        ProjectDetailSection::Members => {
+            lines.extend(project_members_lines(app));
         }
     }
 
@@ -1707,6 +1650,139 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
         .wrap(Wrap { trim: false })
         .scroll((app.projects_scroll.offset(), 0));
     frame.render_widget(p, body_area);
+}
+
+fn project_milestones_lines(app: &App) -> Vec<String> {
+    let mut lines = Vec::new();
+    if !app.project_milestones_loaded {
+        lines.push("Milestones:".to_string());
+        lines.push("Cargando…".to_string());
+        return lines;
+    }
+    if app.project_milestones.is_empty() {
+        lines.push("Milestones: (vacío)".to_string());
+        lines.push("  n crear milestone".to_string());
+        return lines;
+    }
+    lines.push(format!("Milestones: ({})", app.project_milestones.len()));
+    for (i, m) in app.project_milestones.iter().enumerate() {
+        let marker = if i == app.selected_milestone_idx {
+            "▶"
+        } else {
+            " "
+        };
+        let id_suffix = m.id().map(|id| format!(" #{id}")).unwrap_or_default();
+        lines.push(format!(
+            "{} {} {}{}",
+            marker,
+            progress_bar(m.progress),
+            m.name,
+            id_suffix
+        ));
+    }
+    lines
+}
+
+fn project_tasks_lines(app: &App) -> Vec<String> {
+    let mut lines = Vec::new();
+    if !app.project_tasks_loaded {
+        lines.push("Tasks:".to_string());
+        lines.push("Cargando…".to_string());
+        return lines;
+    }
+    if app.project_tasks.is_empty() {
+        lines.push("Tasks: (vacío)".to_string());
+        lines.push("  n crear task (usa milestone resaltado en sección Milestones)".to_string());
+        return lines;
+    }
+    lines.push(format!("Tasks: ({})", app.project_tasks.len()));
+    for (i, t) in app.project_tasks.iter().enumerate() {
+        let marker = if i == app.selected_task_idx {
+            "▶"
+        } else {
+            " "
+        };
+        let mark = if t.closed { "✅" } else { "🔲" };
+        let ms = t
+            .milestone
+            .as_ref()
+            .map(|m| format!(" · m{}", m.id))
+            .unwrap_or_default();
+        lines.push(format!(
+            "{} {} #{} {}{}",
+            marker, mark, t.number, t.name, ms
+        ));
+    }
+    lines
+}
+
+fn project_tree_lines(app: &App) -> Vec<String> {
+    let mut lines = Vec::new();
+    if !app.project_task_tree_loaded {
+        lines.push("Árbol:".to_string());
+        lines.push("Cargando…".to_string());
+        return lines;
+    }
+    let tree_nodes = super::events::project_task_tree_len(&app.project_task_tree);
+    if app.project_task_tree.is_empty() {
+        lines.push("Árbol: (vacío)".to_string());
+        return lines;
+    }
+    let visible = super::events::project_task_tree_visible_len(
+        &app.project_task_tree,
+        &app.project_tree_expanded,
+    );
+    lines.push(format!("Árbol: ({visible}/{tree_nodes})  Enter expande"));
+    let mut row = 0usize;
+    append_task_tree_roots(
+        &mut lines,
+        &app.project_task_tree,
+        &app.project_tree_expanded,
+        true,
+        app.selected_tree_idx,
+        &mut row,
+    );
+    lines
+}
+
+fn project_members_lines(app: &App) -> Vec<String> {
+    let mut lines = Vec::new();
+    let dirty = if super::events::project_members_dirty(app) {
+        " *"
+    } else {
+        ""
+    };
+    let Some(members) = app.project_members.as_ref() else {
+        lines.push(format!("Miembros: ●{dirty}"));
+        lines.push("Cargando…".to_string());
+        return lines;
+    };
+    lines.push(format!("Miembros: ●{dirty} ({})", members.len()));
+    if members.is_empty() {
+        lines.push("  (vacío — a agrega, s guarda)".to_string());
+    } else {
+        for (i, m) in members.iter().enumerate() {
+            let marker = if i == app.selected_member_idx {
+                "▶"
+            } else {
+                " "
+            };
+            lines.push(format!("{marker} {}", m.label));
+        }
+    }
+    lines.push(String::new());
+    lines.push("a agregar · d quitar · s guardar lista".to_string());
+    lines
+}
+
+fn draw_member_input(frame: &mut Frame, app: &App, area: Rect) {
+    let block = Block::default()
+        .title(" Username o id ")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(app.theme.border_active));
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+    frame.render_widget(Paragraph::new(app.member_input.as_str()), inner);
 }
 
 fn project_status_lines(app: &App) -> Vec<String> {
@@ -1922,11 +1998,23 @@ fn draw_project_input(frame: &mut Frame, app: &App, area: Rect) {
 
 fn draw_project_task_form(frame: &mut Frame, app: &App, areas: &[Rect]) {
     let edit = app.project_task_form_edit_id.is_some();
-    let fields: &[(&str, &str)] = if edit {
-        &[
+    let dep_title = if edit {
+        match (
+            app.project_task_dependence_input.trim().is_empty(),
+            app.project_task_dependence_label.as_deref(),
+        ) {
+            (true, _) => " Dependence (sin dependencia · id para setear) ".to_string(),
+            (false, Some(label)) => format!(" Dependence id · {label} "),
+            (false, None) => " Dependence id (vacío = quitar) ".to_string(),
+        }
+    } else {
+        " Dependence id (opcional) ".to_string()
+    };
+    let fields: Vec<(&str, &str)> = if edit {
+        vec![
             (" Milestone id ", app.project_task_milestone_input.as_str()),
             (
-                " Dependence id (vacío = sin cambio) ",
+                dep_title.as_str(),
                 app.project_task_dependence_input.as_str(),
             ),
             (
@@ -1935,7 +2023,7 @@ fn draw_project_task_form(frame: &mut Frame, app: &App, areas: &[Rect]) {
             ),
         ]
     } else {
-        &[
+        vec![
             (" Nombre ", app.project_task_name_input.as_str()),
             (
                 " Descripción (opcional) ",
@@ -1946,7 +2034,7 @@ fn draw_project_task_form(frame: &mut Frame, app: &App, areas: &[Rect]) {
                 app.project_task_start_date_input.as_str(),
             ),
             (
-                " Dependence id (opcional) ",
+                dep_title.as_str(),
                 app.project_task_dependence_input.as_str(),
             ),
         ]
@@ -2032,11 +2120,28 @@ fn draw_milestone_form(frame: &mut Frame, app: &App, name_area: Rect, desc_area:
     );
 }
 
-/// Milestone progress comes as 0.0–1.0 from the API — a simple 10-segment bar.
+/// Progress bar for milestones (0.0–1.0) and project `clc_project_progress` (0–100).
 fn progress_bar(v: f64) -> String {
-    let pct = (v.clamp(0.0, 1.0) * 100.0).round() as usize;
-    let filled = pct / 10;
+    let pct = if v <= 1.0 {
+        (v.clamp(0.0, 1.0) * 100.0).round() as usize
+    } else {
+        v.clamp(0.0, 100.0).round() as usize
+    };
+    let filled = (pct / 10).min(10);
     format!("{}{} {}%", "█".repeat(filled), "░".repeat(10 - filled), pct)
+}
+
+#[cfg(test)]
+mod progress_bar_tests {
+    use super::progress_bar;
+
+    #[test]
+    fn accepts_fraction_and_percentage_scales() {
+        assert!(progress_bar(0.08).contains("8%"));
+        assert!(progress_bar(8.3).contains("8%"));
+        assert!(progress_bar(100.0).contains("100%"));
+        assert!(progress_bar(1.0).contains("100%")); // fraction full
+    }
 }
 
 fn draw_board_switch_popup(frame: &mut Frame, app: &App) {

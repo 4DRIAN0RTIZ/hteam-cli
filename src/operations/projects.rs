@@ -34,6 +34,14 @@ pub async fn set_members(client: &HteamClient, project_id: u64, member_ids: &[u6
     client.update_project_members(project_id, member_ids).await
 }
 
+/// Project name + members (id, username) from the project edit form.
+pub async fn members(
+    client: &HteamClient,
+    project_id: u64,
+) -> Result<(String, Vec<(u64, String)>)> {
+    client.get_project_members(project_id).await
+}
+
 pub async fn status(client: &HteamClient, project_id: u64) -> Result<ProjectStatusSummary> {
     let project = list(client, Some("All"))
         .await?
@@ -287,9 +295,24 @@ pub async fn create_task(
 
 /// Moves `id` to the front of the known-projects MRU list (deduping) and
 /// persists it to `config.toml`'s `[tui] known_projects`.
-pub fn remember_project(config: &mut Config, id: u64) -> Result<()> {
-    config.tui.known_projects.retain(|&p| p != id);
-    config.tui.known_projects.insert(0, id);
+/// When `name` is `Some`, it updates the cached display name.
+pub fn remember_project(config: &mut Config, id: u64, name: Option<&str>) -> Result<()> {
+    let kept_name = config
+        .tui
+        .known_projects
+        .iter()
+        .find(|p| p.id == id)
+        .and_then(|p| p.name.clone());
+    let name = name
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+        .or(kept_name);
+    config.tui.known_projects.retain(|p| p.id != id);
+    config
+        .tui
+        .known_projects
+        .insert(0, crate::config::KnownProject::new(id, name));
     config.save()
 }
 
@@ -469,6 +492,26 @@ mod tests {
         assert_eq!(response.count, 1);
         assert_eq!(response.results[0].id, 42);
         assert_eq!(response.results[0].name, "Fix bug");
+    }
+
+    #[tokio::test]
+    async fn members_reads_selected_usernames_from_edit_form() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/projects/7/edit/")
+            .with_status(200)
+            .with_body(
+                r#"<form><input name="name" value="Proj X"><select name="members"><option value="8">oscarc</option><option value="140" selected>adrian.ortiz</option><option value="114" selected>egaleana</option></select></form>"#,
+            )
+            .create_async()
+            .await;
+
+        let (name, members) = members(&client(&server.url()), 7).await.expect("members");
+        assert_eq!(name, "Proj X");
+        assert_eq!(
+            members,
+            vec![(140, "adrian.ortiz".into()), (114, "egaleana".into()),]
+        );
     }
 
     #[tokio::test]
