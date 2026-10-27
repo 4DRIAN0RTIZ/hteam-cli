@@ -81,6 +81,30 @@ pub async fn status(client: &HteamClient, project_id: u64) -> Result<ProjectStat
     })
 }
 
+/// Sum estimated / spent hours from the project times table payload.
+pub fn status_hours(times: &serde_json::Value) -> (f64, f64) {
+    times
+        .as_array()
+        .into_iter()
+        .flatten()
+        .skip(1)
+        .filter_map(|row| row.as_array())
+        .fold((0.0, 0.0), |(estimated, spent), row| {
+            (
+                estimated
+                    + row
+                        .get(1)
+                        .and_then(serde_json::Value::as_f64)
+                        .unwrap_or(0.0),
+                spent
+                    + row
+                        .get(2)
+                        .and_then(serde_json::Value::as_f64)
+                        .unwrap_or(0.0),
+            )
+        })
+}
+
 /// URL pública de la página de detalle de un proyecto (`/projects/{id}/`).
 pub fn project_url(client: &HteamClient, project_id: u64) -> String {
     client.project_url(project_id)
@@ -418,6 +442,14 @@ mod tests {
         let url = project_url(&client("https://hteam.mx"), 472);
 
         assert_eq!(url, "https://hteam.mx/projects/472/");
+    }
+
+    #[test]
+    fn status_hours_sums_rows_skipping_header() {
+        let times =
+            serde_json::json!([["label", "est", "spent"], ["a", 10.5, 2.0], ["b", 1.5, 0.5]]);
+        assert_eq!(status_hours(&times), (12.0, 2.5));
+        assert_eq!(status_hours(&serde_json::json!([])), (0.0, 0.0));
     }
 
     #[tokio::test]

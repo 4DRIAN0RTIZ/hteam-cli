@@ -7,9 +7,9 @@ use tokio::task::JoinSet;
 
 use crate::client::HteamClient;
 use crate::models::{
-    BoardEntry, Card, CardDetail, Comment, FollowUp, Label, List, ProjectMilestone, ProjectSummary,
-    ProjectTask, ProjectTaskTreeNode, Reminder, UserSuggestion, WeeklyObjectivesSet,
-    WorkShiftRecord, WorkingOnStatus,
+    BoardEntry, Card, CardDetail, Comment, FollowUp, Label, List, ProjectMilestone,
+    ProjectStatusSummary, ProjectSummary, ProjectTask, ProjectTaskTreeNode, Reminder,
+    UserSuggestion, WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
 };
 use crate::operations;
 
@@ -125,6 +125,11 @@ pub enum JobOutcome {
         milestones: Result<Vec<ProjectMilestone>, String>,
         tasks: Result<Vec<ProjectTask>, String>,
         tree: Result<Vec<ProjectTaskTreeNode>, String>,
+    },
+    ProjectStatusLoaded {
+        id: u64,
+        project_id: u64,
+        result: Result<ProjectStatusSummary, String>,
     },
     ProjectMilestoneSaved {
         id: u64,
@@ -366,6 +371,9 @@ fn apply_project_write_result(
     match result {
         Ok(msg) => {
             app.set_status(msg);
+            // Status is lazy and expensive; drop cache so the next visit refetches.
+            app.project_status = None;
+            app.requests.bump_project_status();
             if let Some((milestones, tasks, tree)) = refresh {
                 match milestones {
                     Ok(list) => {
@@ -744,6 +752,23 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
                 Err(e) => app.set_status(format!("Error cargando tasks: {}", e)),
             }
             apply_project_task_tree(app, tree, false);
+        }
+        JobOutcome::ProjectStatusLoaded {
+            id,
+            project_id,
+            result,
+        } => {
+            if app.requests.project_status != id || app.active_project != Some(project_id) {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            match result {
+                Ok(summary) => {
+                    app.project_status = Some(summary);
+                }
+                Err(e) => app.set_status(format!("Error cargando resumen: {e}")),
+            }
         }
         JobOutcome::MilestoneFormLoaded {
             id,

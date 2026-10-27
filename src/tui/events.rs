@@ -1536,6 +1536,7 @@ pub fn close_projects(app: &mut App) {
     app.requests.bump_project_milestone_form();
     app.requests.bump_project_task_write();
     app.requests.bump_project_task_form();
+    app.requests.bump_project_status();
     app.requests.bump_live_projects();
 }
 
@@ -1694,6 +1695,8 @@ fn load_project(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs, project_id
     app.project_task_tree.clear();
     app.project_tree_expanded.clear();
     app.selected_tree_idx = 0;
+    app.project_status = None;
+    app.requests.bump_project_status();
     app.projects_detail_section = ProjectDetailSection::Milestones;
     cancel_milestone_form(app);
     cancel_project_task_form(app);
@@ -1908,15 +1911,16 @@ pub fn submit_milestone_form(client: Arc<HteamClient>, app: &mut App, jobs: &Job
     });
 }
 
-/// h/l when detail is focused: milestones → tasks → tree (and back).
+/// h/l when detail is focused: milestones → tasks → tree → status (and back).
 pub fn cycle_projects_detail_section(app: &mut App, delta: i32) {
     if app.composing_milestone || app.composing_project_task {
         return;
     }
-    const ORDER: [ProjectDetailSection; 3] = [
+    const ORDER: [ProjectDetailSection; 4] = [
         ProjectDetailSection::Milestones,
         ProjectDetailSection::Tasks,
         ProjectDetailSection::Tree,
+        ProjectDetailSection::Status,
     ];
     let idx = ORDER
         .iter()
@@ -1932,11 +1936,39 @@ pub fn cycle_projects_detail_section(app: &mut App, delta: i32) {
     app.projects_scroll.reset();
 }
 
+/// Lazy-load status when the Status section is focused (expensive N+1 due dates).
+pub fn maybe_load_project_status(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    if app.projects_detail_section != ProjectDetailSection::Status {
+        return;
+    }
+    let Some(project_id) = app.active_project else {
+        return;
+    };
+    if app.project_status.is_some() {
+        return;
+    }
+    let id = app.requests.bump_project_status();
+    app.begin_busy("Cargando resumen...");
+    jobs.spawn(async move {
+        let result = operations::projects::status(&client, project_id)
+            .await
+            .map_err(|e| e.to_string());
+        JobOutcome::ProjectStatusLoaded {
+            id,
+            project_id,
+            result,
+        }
+    });
+}
+
 pub fn move_detail_selection(app: &mut App, delta: i32) {
     match app.projects_detail_section {
         ProjectDetailSection::Milestones => move_milestone_selection(app, delta),
         ProjectDetailSection::Tasks => move_task_selection(app, delta),
         ProjectDetailSection::Tree => move_tree_selection(app, delta),
+        ProjectDetailSection::Status => {
+            // Status is a scrollable sheet; j/k only moves the panel scroll in mod.rs.
+        }
     }
 }
 
@@ -2807,6 +2839,8 @@ mod tests {
         cancel_project_task_form(&mut app);
         cycle_projects_detail_section(&mut app, 1);
         assert_eq!(app.projects_detail_section, ProjectDetailSection::Tree);
+        cycle_projects_detail_section(&mut app, 1);
+        assert_eq!(app.projects_detail_section, ProjectDetailSection::Status);
         cycle_projects_detail_section(&mut app, 1);
         assert_eq!(
             app.projects_detail_section,

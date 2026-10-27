@@ -555,6 +555,11 @@ async fn run_loop(
                                     "El árbol es solo lectura. Creá tasks desde la sección Tasks.",
                                 );
                             }
+                            app::ProjectDetailSection::Status => {
+                                app.set_status(
+                                    "El resumen es solo lectura. Creá desde Milestones o Tasks.",
+                                );
+                            }
                         }
                     }
                     KeyCode::Char('e') if app.projects_detail_focused => {
@@ -570,15 +575,20 @@ async fn run_loop(
                                     "El árbol es solo lectura. Editá tasks desde la sección Tasks.",
                                 );
                             }
+                            app::ProjectDetailSection::Status => {
+                                app.set_status("El resumen es solo lectura.");
+                            }
                         }
                     }
                     KeyCode::Char('L') => events::toggle_live_projects(client.clone(), app, &jobs),
                     KeyCode::Tab => events::toggle_projects_focus(app),
                     KeyCode::Char('h') | KeyCode::Left if app.projects_detail_focused => {
                         events::cycle_projects_detail_section(app, -1);
+                        events::maybe_load_project_status(client.clone(), app, &jobs);
                     }
                     KeyCode::Char('l') | KeyCode::Right if app.projects_detail_focused => {
                         events::cycle_projects_detail_section(app, 1);
+                        events::maybe_load_project_status(client.clone(), app, &jobs);
                     }
                     KeyCode::Char('j') | KeyCode::Down => {
                         if app.projects_detail_focused {
