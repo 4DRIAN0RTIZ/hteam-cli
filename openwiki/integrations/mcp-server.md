@@ -5,7 +5,7 @@ description: The Hteam MCP server exposes board, card, comment, working, project
 tags: [mcp, stdio, integration, tools, hteam]
 verified:
   - by: openwiki/0.7.2
-    at: 2026-08-29T04:34:19.305Z
+    at: 2026-10-27T23:40:03.433Z
 sources:
   - id: openwiki-source-2d189e28b5edbe9715440baf
     resource: repo://src/cli/mod.rs
@@ -23,13 +23,12 @@ sources:
     resource: repo://src/operations/session.rs
   - id: openwiki-source-bca472904c30f6adc5315e1f
     resource: repo://src/operations/working.rs
-generated: { by: "openwiki/0.7.2", at: "2026-08-29T04:34:19.305Z" }
+generated: { by: "openwiki/0.7.2", at: "2026-10-27T23:40:03.433Z" }
 ---
 
 # MCP Server Integration
 
-<!-- openwiki: broken internal link [../openwiki/architecture/system-overview.md] file "../openwiki/architecture/system-overview.md" does not exist. Fix the href or restore the target, then delete this comment. -->
-`hteam mcp` is the Model Context Protocol (MCP) delivery surface for Hteam. The CLI dispatches `mcp::run`, which opens one authenticated [`Session`](../openwiki/architecture/system-overview.md) and serves an `HteamMcpServer` over rmcp's stdio transport. The MCP layer is intentionally thin: handlers map JSON-RPC tool inputs into shared `operations` functions, and those operations in turn use `HteamClient`. The server does not duplicate HTTP, patching, or presentation logic; it preserves the same domain workflow and defaults as the terminal-facing application.
+`hteam mcp` is the Model Context Protocol (MCP) delivery surface for Hteam. The CLI dispatches `crate::mcp::run()`, which opens one authenticated `Session` and serves an `HteamMcpServer` over rmcp's stdio transport. The MCP layer is intentionally thin: handlers map JSON-RPC tool inputs into shared `operations` functions, and those operations in turn use `HteamClient`. The server does not duplicate HTTP, patching, or presentation logic; it preserves the same domain workflow and defaults as the terminal-facing application.
 
 ## Startup and lifetime
 
@@ -67,6 +66,8 @@ sequenceDiagram
     end
 ```
 
+This flow shows the request path from JSON-RPC input to shared operations and back to MCP result formatting.
+
 ## Schema-to-operation adapter
 
 Each tool method is registered by `#[tool_router(server_handler)]`, and each structured argument is a `Parameters<T>` wrapper around a Rust type that derives both `Deserialize` and `JsonSchema`. That means the same parameter struct drives runtime deserialization and the JSON Schema published to MCP clients. Required Rust fields become required tool inputs; `Option<T>` fields become optional tool inputs.
@@ -85,18 +86,18 @@ The adapter rules are deliberate:
 
 Do not add request-shaping, URL construction, or output formatting code to a tool handler. If a new MCP capability is needed, first add or reuse a shared operation that accepts `&HteamClient`, then add the schema parameter type and a thin handler that translates fields and selects the MCP result form.
 
-## Tool groups
+## Tool families
 
-The server currently registers 22 tools. The groups below describe the public surface; the remote endpoints and mutation protocols remain in the shared operations and `HteamClient` contract.
+The server currently registers 43 tools. The compact index below describes the public surface; the remote endpoints and mutation protocols remain in the shared operations and `HteamClient` contract.
 
 | Domain | Tools | Purpose and key inputs |
 | --- | --- | --- |
 | Board and card reads | `lists`, `cards_list`, `cards_open`, `cards_closed`, `card_detail`, `card_labels`, `cards_search` | List board lists; list a specified list; read the conventionally Open or Closed cards; retrieve a card or its labels; and search cards by text, responsible, priority, labels, and optional board/list scope. |
-| Card mutations | `card_create`, `card_move`, `card_update_desc`, `card_update`, `card_remind` | Create by name, move between lists, update only description, apply a full card patch, or create a reminder. `card_move` uses Open list 1 when `from_list` is omitted. |
+| Card mutations | `card_create`, `card_move`, `card_update_desc`, `card_update`, `card_remind`, `card_labels_set`, `card_labels_add`, `card_labels_remove` | Create by name, move between lists, update only description, apply a full card patch, create a reminder, or replace/add/remove labels. `card_move` uses Open list 1 when `from_list` is omitted. |
 | Comments and follow-ups | `card_comments`, `card_comment`, `card_follow_up`, `card_follow_up_complete`, `card_follow_up_cancel` | Retrieve comments, post a comment with optional board/follow/date fields, inspect a follow-up, or complete/cancel a follow-up by its follow-up id. |
 | Working on it | `working_list`, `working_start`, `working_stop` | Read active work, start it for a card, or stop it by `working_id`. |
-| Projects | `project_milestones`, `project_tasks` | Read a project's milestone progress or task/status/responsibility data by `project_id`. |
-| People and activity | `users_search`, `reminders`, `check_in`, `daily_work` | Search users, list pending reminders, check in, and read daily-work history with optional filters. |
+| Projects | `project_milestones`, `project_milestone_create`, `project_milestone_delete`, `project_milestone_edit`, `project_task_create`, `project_task_edit`, `project_tasks`, `project_task_tree`, `project_members_set`, `project_status` | Read milestone progress, create/edit/delete milestones, create/edit tasks, inspect task collections and dependency trees, replace project members, or summarize project status. |
+| People and activity | `users_search`, `reminders`, `reminders_cancel`, `check_in`, `daily_work`, `dashboard` | Search users, list or cancel reminders, check in, read daily-work history, and load the personal dashboard snapshot. |
 
 Tool names are stable integration names, independent of the CLI command hierarchy. Tools return domain models rather than terminal tables; for example, `cards_list` returns only the card vector even though the shared operation also resolves the selected board.
 
@@ -110,10 +111,25 @@ Operation failures and serialization failures both become MCP internal errors. T
 
 The tool surface is split between read-only queries and mutations:
 
-- Read-only: `lists`, `cards_list`, `cards_open`, `cards_closed`, `card_detail`, `card_labels`, `cards_search`, `card_comments`, `card_follow_up`, `working_list`, `project_milestones`, `project_tasks`, `users_search`, `reminders`, `check_in`, and `daily_work`.
-- Mutating: `card_create`, `card_move`, `card_update_desc`, `card_update`, `card_remind`, `card_comment`, `card_follow_up_complete`, `card_follow_up_cancel`, `working_start`, and `working_stop`.
+- Read-only: `lists`, `cards_list`, `cards_open`, `cards_closed`, `card_detail`, `card_labels`, `cards_search`, `card_comments`, `card_follow_up`, `working_list`, `project_milestones`, `project_tasks`, `project_task_tree`, `project_status`, `users_search`, `reminders`, `dashboard`, `check_in`, and `daily_work`.
+- Mutating: `card_create`, `card_move`, `card_labels_set`, `card_labels_add`, `card_labels_remove`, `card_update_desc`, `card_update`, `card_remind`, `card_comment`, `card_follow_up_complete`, `card_follow_up_cancel`, `working_start`, `working_stop`, `project_milestone_create`, `project_milestone_delete`, `project_milestone_edit`, `project_task_create`, `project_task_edit`, `project_members_set`, and `reminders_cancel`.
 
 This distinction matters operationally. Read-only tools can be retried without changing server state, while mutating tools should be treated as state-changing operations that may have already succeeded remotely if the transport is interrupted after the request leaves the client. The MCP layer does not invent compensation logic; it simply propagates the shared operation outcome.
+
+## Shared-session behavior and default differences
+
+The MCP server keeps one authenticated session in memory for the whole process. Every tool handler reuses the same `Arc<HteamClient>`, so board resolution, cookies, and any client-side caches stay shared across calls. That differs from the CLI's one-command model, where each invocation may resolve its own session and then exit, and from the TUI, which maintains its own interactive state while running.
+
+Several MCP tools also differ from the CLI or TUI in defaults or argument shape:
+
+- `cards_open` and `cards_closed` expose the board-scoped list reads as tools with optional `board` and `family`, whereas CLI commands lean on global `--board` and `--family` flags.
+- `card_move` defaults `from_list` to Open list `1` when it is omitted. That matches the shared operation default and is convenient for MCP callers, but the TUI always supplies the visible source list so it does not accidentally move from Open when the card came from another list.
+- `card_comment` defaults `follow` to `false` when the field is omitted. The CLI exposes follow-through flags directly, while MCP makes the checkbox-like field optional and lets operations apply the shared local-time comment-date parsing.
+- `working_stop` requires `working_id`, not a card id. Callers must read `working_list` or another working-on-it source first to obtain the record id to stop.
+- `daily_work` defaults `range` to `today` when omitted, mirroring the CLI default and keeping the JSON schema optional for callers that just want the current day.
+- `card_update` requires an explicit `board`, while many read tools let the shared client fall back to session state when board is omitted. That stricter requirement reflects the full-edit workflow, which must resolve the correct edit form before posting.
+
+These defaults matter because they are part of the tool contract, not just implementation convenience.
 
 ## Safe extension and verification
 

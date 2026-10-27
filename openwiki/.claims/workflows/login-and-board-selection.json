@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:c4bb258decbf430ed9d226b95c8036f5aa56bec1fc35e442e1d1035379b9a41d",
+  "claims": [
+    {
+      "id": "claim_45b7cb8dc9ec425a830efd757adee13d",
+      "statement": "`hteam login` prompts for or accepts `sessionid` and `csrftoken`, probes the live boards list through a temporary authenticated `HteamClient`, and refuses to write local config when the auth probe returns unauthorized or fails with a network error.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/login.rs#L26-L62",
+          "version": "repo-lines-v1:sha256:a133b91c8e7657b0e851467ce66fd88447ecfa3ad2d5fc50a318268748ac5fd0:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2OGMwNDEwYzc3ZDgyMjBkNTUzZTc0YTc5MDIwOGEzNjFiMjQzYjhkMGI4ZTcxYzY4MTUwZGRkMTJmMDRhYjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFkOWUxMjU0NjQyNTU3NmQzZGVhZThjOWI5ZGJmMTI4ZDVkNmRkYWY1ZDdmZTg1NzkzNDkyN2RlZmZhM2I5ZGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlmMDk2MzJhZTc1ODMyZGMxNjRlZDhlOWNlNmI1YzUxMDk5ZWY2MTAwYTQ5ODM4OTE5NjI1NDBhMjZiOGI1NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImExM2UzNDg4ZDkxN2JmZDEwZWY1NTA2MGU2MWFmY2U3MWJkZTAzODYyNjFkZDEyZDc4MjU4MWI5ZDMzMTczMTUifQ"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L54-L60",
+          "version": "repo-lines-v1:sha256:b12ea10a2b11edd0403d75e348b381a369f0c70108364b256f0334a9b4b34566:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmEzYTNjMWVmZWEwZmFjZmYyNjBkNmQ4OWViMzI5YzM5NTkyMDJhMjcxNzkzY2Y5MGRjM2U3NTFlZDk1N2Y0ZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTAyOTFkOWNjNTYzNzI5ZGM1ZTQwN2E0ZDhjODI4NGNlMDY5OWM5YmIxOTczNjc2MmY1MzJlNTI0OGY3MWE3YyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODI4MTI3YjQ4OWNkZDBlMTg0MDkzNTdiYzEzM2FhZDJiNGE0MDAzYWZmODUzYTNlYjZjOWQ0YTlmMzg3NWJkOSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_8e81179f0ff94f55ba1515e5c2f2f262",
+      "statement": "After a successful auth probe, login resolves the default board by precedence: explicit `--board`, still-visible configured board, single visible board, otherwise manual selection or no board when the account exposes multiple boards or none.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/login.rs#L64-L95",
+          "version": "repo-lines-v1:sha256:a7160f6f3ec0fc7ebd527647f593ad93f6533f084fdeb537a355f008ff5a87c5:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4ZGQ1YTI0NDQ5M2QxYjE4MDA2YmUwYzNiMThlNmM1NTE4MjI4YzcwODcwY2Y0NTIzZTM5MGY2YTNkMzBhODAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEzN2U3NGE3NDZmM2U0ZmE5OGQ3Y2I5OGRiMDdkMzBiZmY2NWNlZjY3NmYxN2FiMWVhNDkzYWM0ODQ5MDY4MTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjExZmIzNmYwNDZkNDFlYmExZjMyMzRjOTg0MmFiNGIyZDM0NzUyNmQxNjQ3OTY4YjU4NWU5MGMxMThlYWU1ZGEifQ"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L62-L98",
+          "version": "repo-lines-v1:sha256:21f4ba5cef156d18dad448845b2478a8dcddc330a6cb7da9761da3251a4ed22c:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkYzI5OTNlMjMxN2MwNDI2ZWEwOTdhNTIzOWYzNDBmZGIyZDE2MTVlZjY5YjYyOGVjMmI3N2NmZmU5MjRkZmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA5YTNhOGVjM2NlZmE3M2Y3YmY2MWZkMTFhNDRmMzNlOTMzY2I4YWE4NjlhYTk0ZTk5MWQ1YjcwYmMzOGM2MDUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_75c76461005a4cc08e029f4dec1c88d6",
+      "statement": "When login persists a selected board, it stores the active board number, saves the last selected ticket, and updates the in-memory boards map with the board name and a fresh `last_used` timestamp; when board resolution yields `NeedsSwitch` or `NoneAvailable`, it still saves cookies but skips board persistence.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/login.rs#L64-L73",
+          "version": "repo-lines-v1:sha256:d827409b202601e4505c565495378fdfd95756b5311f131d04802e9addc5dc62:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4ZGQ1YTI0NDQ5M2QxYjE4MDA2YmUwYzNiMThlNmM1NTE4MjI4YzcwODcwY2Y0NTIzZTM5MGY2YTNkMzBhODAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEzN2U3NGE3NDZmM2U0ZmE5OGQ3Y2I5OGRiMDdkMzBiZmY2NWNlZjY3NmYxN2FiMWVhNDkzYWM0ODQ5MDY4MTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFlYWQ4MDFmMDQxODYwNDZhZTJiMDVjZTk0ZDllMGU2NTZhMzk1ZTAyYjgyYjAwZjg4N2NkOTI5ODM3MWQ3YTkifQ"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L100-L125",
+          "version": "repo-lines-v1:sha256:98dfa93c30be28effa9ec48294e12689523a9f9262d6b362fa1c549d1a426881:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkwOWQwZmFiYTkzZmEyNDU5OWQ4ZmM2NWZiNWQwYzI3OWJhZTAwZWE5ODllYTc4OTE5YzVmMTg3ZDYyZWU4MmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiYzk4ZDZiMGRjNDkyYzUwMTZkZjEwODA1YTNhNTRlYjljMTg0YTVhNjEzN2U3ZjRiZWNmYTBjMjIwNTUwZDAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8d40378d825b4c6d92f243f2863536a2",
+      "statement": "A successful login prints distinct user-visible outcomes for selected boards, multi-board accounts, empty board lists, and a missing explicit board, including a manual `hteam board switch <id>` prompt when login cannot pick a board automatically.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/login.rs#L74-L95",
+          "version": "repo-lines-v1:sha256:0453cafd08bb3e639282f2ab72347f77c0f36045d75595fa5d9fa26be506f0dc:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2MmE0ZTNkZjQ0OGY5MTdhZDBlY2EwMjc0MDRkNjliNGJjMjljZjU3ZmJkNDA4NGY4YjA1YjVjMDBkMWYxNTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY2ZTIxOTFmMzljYTMzYWM4ZDI3Y2NmMTdhNzU1ZjA1YzdlNTEzOTNlMzBkYTI4OTIyODAxZjM0NWUyYmUxNGYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjExZmIzNmYwNDZkNDFlYmExZjMyMzRjOTg0MmFiNGIyZDM0NzUyNmQxNjQ3OTY4YjU4NWU5MGMxMThlYWU1ZGEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d2452199630441bba7910e7fb2eac762",
+      "statement": "The board-resolution helper is independently tested for explicit-board preference, configured-board reuse, single-board auto-selection, multi-board manual selection, missing explicit board, and empty-board handling, while auth probing maps 403 responses to unauthorized.",
+      "evidence": [
+        {
+          "resource": "repo://src/operations/session.rs#L127-L285",
+          "version": "repo-lines-v1:sha256:ec2f1e54f5925f35993230dffe7a866f2c2342712db73c75f62b60142a13b41b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTU5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIyNWNmNWZjMjNmMmE2ZDIzYzNlYTUxZTcyZjVlODk2Yzc1NTVmYmFhMDVjZDViMWVhMTgyYmY5NjE4YThlODFiIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIzNWY2ZjQ2NmU1OWNmYzMwNzAzYzQ1ZjcyYWY2NWRlNTRhYzM2M2QzNTRjYzFhMzMzMDM1MGFjZDQ1MjQzNGM0IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+        }
+      ]
+    },
+    {
+      "id": "claim_6c4b2346e2654d428e853b16a0138adf",
+      "statement": "`hteam login` prompts for `sessionid` and `csrftoken` when they are not supplied as flags, then loads config in memory and probes authentication with a temporary client before mutating disk state.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/login.rs#L26-L62",
+          "version": "repo-lines-v1:sha256:a133b91c8e7657b0e851467ce66fd88447ecfa3ad2d5fc50a318268748ac5fd0:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2OGMwNDEwYzc3ZDgyMjBkNTUzZTc0YTc5MDIwOGEzNjFiMjQzYjhkMGI4ZTcxYzY4MTUwZGRkMTJmMDRhYjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFkOWUxMjU0NjQyNTU3NmQzZGVhZThjOWI5ZGJmMTI4ZDVkNmRkYWY1ZDdmZTg1NzkzNDkyN2RlZmZhM2I5ZGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlmMDk2MzJhZTc1ODMyZGMxNjRlZDhlOWNlNmI1YzUxMDk5ZWY2MTAwYTQ5ODM4OTE5NjI1NDBhMjZiOGI1NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImExM2UzNDg4ZDkxN2JmZDEwZWY1NTA2MGU2MWFmY2U3MWJkZTAzODYyNjFkZDEyZDc4MjU4MWI5ZDMzMTczMTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a96e18d395c84192a701cad0907d8f0b",
+      "statement": "Authentication validation for login is implemented by `operations::session::check_auth`, which probes the boards list endpoint and returns either the visible boards or an unauthorized result; network or unexpected request errors are surfaced separately.",
+      "evidence": [
+        {
+          "resource": "repo://src/operations/session.rs#L254-L284",
+          "version": "repo-lines-v1:sha256:718845a505f6f203ed6914673d111b1b1159c45d7e5c399ab6209686437e9566:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIxMWUyYTM2NDkyOWJlMmI1MDVkOTZhOWJmMzY2Y2M0Y2UwYWVkY2QxOWM4YThjZjIxNjUzNmQxNGI1NWYyYWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE3YTU4MDA3MGY1NTVjNGE5NWI4M2E2ZTA0NTk1NzVkODg1NGQ1YzEzODQ1MGJkNDMwZjE5NmM2NzcwNTcyYTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L33-L60",
+          "version": "repo-lines-v1:sha256:4a2d6a12199edb527fe3036d83e1374214f50158e5038618fc0bd059edd02674:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1MTdkOTZhMjlkMmY3YmExNWE4MzYxZTBhZDQ2MTViM2UzM2Q2NzdkNDAzN2NiYTM5YjllNDQ4YmYyMmRlZjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE1NjVjYWY5YzEyZWNmZmU5M2Q2ZTk4MjNmZjA4YTQ2YmUzODRmMDk5ZDJiYzRkYzI4NGJjZjg3Y2JkYTI0ZTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgyODEyN2I0ODljZGQwZTE4NDA5MzU3YmMxMzNhYWQyYjRhNDAwM2FmZjg1M2EzZWI2YzlkNGE5ZjM4NzViZDkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_2c6a1a2d4fab46b580b56db92ea9c65a",
+      "statement": "Login resolves the default board from the visible boards using this precedence: explicit `--board`, then a still-visible configured board, then a single visible board; if none of those apply, it returns either `NeedsSwitch`, `NoneAvailable`, or `NotFound`.",
+      "evidence": [
+        {
+          "resource": "repo://src/operations/session.rs#L190-L249",
+          "version": "repo-lines-v1:sha256:af2f346b831d3905c93e127a9458cebea149901941ed274cf685fbede395d06b:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBiNzg5YWRiNDdlMjc3YjY4YTk3ZmVhMjNhMjE0YjU1NjQ1MDU2Mjg5YmQ0MmQ3NGVjNzgwODNkMjI4YzgxZTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmNmRlOGE2MjdmNTY4YWUxYTFjZDhkZGQ0NjU5YWZiNzZlMWY2ZGE1YTM1YjdjZTc3NTA4MTRiMWZjYjQxZjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImEwMGRiMDQwZjI5MDliZjk3OGZmMGE5NTZhNTVlODNjNjUzNDE4ZGU2YmI2OGY4MDQxZGE5NzZmOGQzZDIyNzAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYyZDgyOGEwMzdhYzFjODE1MzViMWQ1NTAwODMyMzIzYmZiYjg2NmEzYTNmODdlN2E2OGMxM2EyYmFlNTZmZmYifQ"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L41-L52",
+          "version": "repo-lines-v1:sha256:c4f736ad3a76b90ac5317d6f3095fa301bc87ca4b44692261aa7ed08678db471:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBjNWRlMGUzMDk0YmIzY2FlOWQzMDdiZjhkM2IzMWM0ZWEwYmM5NjJiM2E0ODVmZmI0OGVjYWY0ZWI0ZDlkMzMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQxODAxN2ViMTY2YzQxNGFhMTU1YTM2N2MwNGNlMjdjMTRlYzRkNTcwODAwNzJjMTBmMzFlNTNmYmM1NzZmOTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY5M2IwMjRiZjAyNDI2Y2MzOWMzYTIxYTM1MzBiNDdmYzcwNzQ3NzZhMzE4MWNjMDFlY2MxZGVhM2NhNGMyYTYifQ"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L62-L98",
+          "version": "repo-lines-v1:sha256:21f4ba5cef156d18dad448845b2478a8dcddc330a6cb7da9761da3251a4ed22c:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkYzI5OTNlMjMxN2MwNDI2ZWEwOTdhNTIzOWYzNDBmZGIyZDE2MTVlZjY5YjYyOGVjMmI3N2NmZmU5MjRkZmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA5YTNhOGVjM2NlZmE3M2Y3YmY2MWZkMTFhNDRmMzNlOTMzY2I4YWE4NjlhYTk0ZTk5MWQ1YjcwYmMzOGM2MDUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_bed33e7fc47b4ae8a085b3e5f62be4b0",
+      "statement": "`persist_login` writes session cookies to config only after a successful auth check, and it persists board state only when a board was selected: that includes `board_number`, the last-ticket file, and the board cache entry with the board name and a fresh `last_used` timestamp.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L27-L31",
+          "version": "repo-lines-v1:sha256:f2cfb15f3f65721ec6b9582ba9bff67e6f5d7eae942aa660e96e88fcbbdc0228:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTc1YTViNmMxNTk2ZDA0YmYwMTEwYjhhMTY1MTQwMjAyZWI2NjAwMDUzN2QzNjY4OGRkNDRlMTgxY2E0OTVhZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDBiMzAwZTQxYjhmYjc1YzY5MjBiZjAyZmE1YTkxZDEzMTQxNDBhMWY2MjViM2JkNWE2Yjg0NTlkNjgyOTQwYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzIxNjA5MDVmMjRhZmM0NDQzNjVlYzQ1Y2QwZDliYTgzYjE1YzQxYWMwYmJjZjQ4ZjU4MzRiM2FjMWU3ODkwZSJ9"
+        },
+        {
+          "resource": "repo://src/operations/boards.rs#L12-L37",
+          "version": "repo-lines-v1:sha256:85469f3e74fbd402329ced477f9bfa2f61b0d15e68ecaa51a2716c1f13eabbb4:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkZDQzMWY2MmZmNjQxMjI5ZTdlNzJhOGMxYjJhYzFlOWE0MGI1OTE1MGU5MWE1Njk4YmU3M2Y4ZWFhMjIzNDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkxYzUxMjBlNmYwYTkzN2M1NzgxYmE0NzlmOTlmMDNmNzg0YjEwNjk1NDExMmVmNTFlYzI0Yjg3OTdiYzdlZjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkwNjM0Nzk1MzBmYTVkMmVlMTdlZDAzNTkzNmQzOTA1OTU0N2Q4ZTFlN2QwMmNhM2ExMWU3Nzk1ZDRhYmJiYjcifQ"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L100-L125",
+          "version": "repo-lines-v1:sha256:98dfa93c30be28effa9ec48294e12689523a9f9262d6b362fa1c549d1a426881:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkwOWQwZmFiYTkzZmEyNDU5OWQ4ZmM2NWZiNWQwYzI3OWJhZTAwZWE5ODllYTc4OTE5YzVmMTg3ZDYyZWU4MmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiYzk4ZDZiMGRjNDkyYzUwMTZkZjEwODA1YTNhNTRlYjljMTg0YTVhNjEzN2U3ZjRiZWNmYTBjMjIwNTUwZDAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3a345331e4e34360a6fee2fc40497c14",
+      "statement": "The login command prints a success message after a valid auth probe, but when board resolution yields `NeedsSwitch` or `NoneAvailable` it skips board persistence and asks the user to switch manually; when resolution yields `NotFound`, it still saves the cookies and then fails with a missing-board message.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/login.rs#L64-L97",
+          "version": "repo-lines-v1:sha256:5ffac28b89e8e085bfe7d203a227e9734190c3e8a566535ce3b040ec15b6355c:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4ZGQ1YTI0NDQ5M2QxYjE4MDA2YmUwYzNiMThlNmM1NTE4MjI4YzcwODcwY2Y0NTIzZTM5MGY2YTNkMzBhODAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4OTc3MWZlMWI2NjI4ODc1YWEyM2U3ZGJlNGFhNzE0NjFkMDBjZGZiNjZkZGYxMWI5ZDgyMGFjNTg5N2ZkZjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEzN2U3NGE3NDZmM2U0ZmE5OGQ3Y2I5OGRiMDdkMzBiZmY2NWNlZjY3NmYxN2FiMWVhNDkzYWM0ODQ5MDY4MTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_737a083c21224eedbbf5400148d3fabc",
+      "statement": "Manual board switching uses the same persistence pattern as login: it updates the active board number, saves the last-ticket file, upserts the board name in config, and records a fresh `last_used` timestamp.",
+      "evidence": [
+        {
+          "resource": "repo://src/operations/boards.rs#L12-L37",
+          "version": "repo-lines-v1:sha256:85469f3e74fbd402329ced477f9bfa2f61b0d15e68ecaa51a2716c1f13eabbb4:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkZDQzMWY2MmZmNjQxMjI5ZTdlNzJhOGMxYjJhYzFlOWE0MGI1OTE1MGU5MWE1Njk4YmU3M2Y4ZWFhMjIzNDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkxYzUxMjBlNmYwYTkzN2M1NzgxYmE0NzlmOTlmMDNmNzg0YjEwNjk1NDExMmVmNTFlYzI0Yjg3OTdiYzdlZjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkwNjM0Nzk1MzBmYTVkMmVlMTdlZDAzNTkzNmQzOTA1OTU0N2Q4ZTFlN2QwMmNhM2ExMWU3Nzk1ZDRhYmJiYjcifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-27T23:40:03.433Z"
+  }
+}

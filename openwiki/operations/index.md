@@ -1,3 +1,3 @@
 # Files
 
-- [Terminal Experiences](terminal-experiences.md) - How `hteam` routes one-shot CLI commands, delegates the REPL to the same handlers, and runs the stateful TUI with refresh, popups, board switching, and cleanup.
+- [Terminal Experiences](terminal-experiences.md) - Interactive terminal behavior for the one-shot CLI, REPL, and TUI, including command dispatch, history, raw-mode lifecycle, stderr redirection, startup notices, and theme resolution.

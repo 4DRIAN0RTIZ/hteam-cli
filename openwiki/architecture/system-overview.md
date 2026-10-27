@@ -1,11 +1,11 @@
 ---
-type: Reference
-title: System overview
-description: Architecture overview for the Hteam Rust binary. Explains how CLI, REPL, TUI, and MCP entrypoints share operations, and where configuration, session, and transport state are owned.
-tags: [architecture, delivery, client, operations, config, runtime]
+type: concept
+title: System Overview
+description: Architecture map for the Hteam Rust binary. Explains how CLI, TUI, and MCP entrypoints share one operations core and one reqwest-based client while keeping presentation adapters thin.
+tags: [architecture, runtime, cli, client, operations, tui, mcp]
 verified:
   - by: openwiki/0.7.2
-    at: 2026-08-29T04:34:19.305Z
+    at: 2026-10-27T23:40:03.433Z
 sources:
   - id: openwiki-source-730a6cb99277b4ce3292b050
     resource: repo://src/cli/interactive.rs
@@ -15,115 +15,101 @@ sources:
     resource: repo://src/cli/mod.rs
   - id: openwiki-source-3454eda491fb094684a56d2a
     resource: repo://src/client/mod.rs
+  - id: openwiki-source-ec936990c4b0348483afdd8c
+    resource: repo://src/config/mod.rs
   - id: openwiki-source-b55a21a31ede1b56cd31a6a6
     resource: repo://src/main.rs
   - id: openwiki-source-55d9f60b5eb1630419488cb7
     resource: repo://src/mcp/mod.rs
+  - id: openwiki-source-edfaedbce95f78cec712c59b
+    resource: repo://src/models/mod.rs
   - id: openwiki-source-d7c0e68afeedea2d27dd68f8
     resource: repo://src/operations/boards.rs
   - id: openwiki-source-a32e822ad3272b6a9b870734
     resource: repo://src/operations/cards.rs
+  - id: openwiki-source-d95bb0d4539bbe79de1e9186
+    resource: repo://src/operations/mod.rs
   - id: openwiki-source-0fc29dd590a674bf167ededd
     resource: repo://src/operations/session.rs
-generated: { by: "openwiki/0.7.2", at: "2026-08-29T04:34:19.305Z" }
+  - id: openwiki-source-344d0ae26e653accaaef1142
+    resource: repo://src/tui/mod.rs
+generated: { by: "openwiki/0.7.2", at: "2026-10-27T23:40:03.433Z" }
 ---
 
 # System overview
 
-The `hteam` binary has one application core shared by several terminal-facing delivery mechanisms. `main` starts the Tokio runtime and immediately calls `cli::run()`. From there, Clap dispatches conventional commands plus the long-lived `Interactive`, `Tui`, and `Mcp` modes. These are alternative presentation adapters, not separate implementations of Hteam behavior.
+`hteam` is a single Rust binary with several runtime domains, not a collection of separate apps. `src/main.rs` only starts Tokio and hands control to `cli::run()`. From there, the CLI router dispatches ordinary commands plus the long-lived `Interactive`, `Tui`, and `Mcp` modes. Those entrypoints are presentation adapters around one shared core.
 
-## Runtime domains
+## Owned runtime domains
 
-| Domain | Owns | Must not own |
-| --- | --- | --- |
-| CLI, REPL, TUI, MCP | Input parsing, protocol/UI event handling, rendering, and translating results into native output | Business decisions or direct HTTP calls to Hteam |
-| `operations` | Shared use cases and cross-surface rules, expressed in domain values | `println!`, Ratatui state/widgets, MCP result formatting, or transport implementation |
-| `client::HteamClient` | Hteam request construction, authentication headers/cookies, response status handling, endpoint quirks, and in-memory client cache | Terminal presentation or feature-specific UI policy |
-| `config::Config` | Local user state on disk | Remote API transport |
-| `models` | Serde representations and normalization of Hteam payload shapes | Network requests and workflow/presentation policy |
+The repository owns four main runtime domains:
+
+- **CLI**: parses commands, decides whether output is human-readable or JSON, and dispatches subcommands.
+- **TUI**: renders the kanban experience with `ratatui`, manages terminal lifecycle, and reacts to user input.
+- **MCP**: exposes the same domain actions over stdio using `rmcp`.
+- **Operations and transport**: hold shared use cases, board-resolution rules, session lifecycle, and the HTTP client that talks to Hteam.
 
 ```mermaid
 flowchart TD
-    User["User or MCP host"] --> CLI["CLI command parser"]
+    User["User or MCP host"] --> CLI["CLI parser and command router"]
     User --> REPL["Interactive REPL"]
     User --> TUI["Ratatui TUI"]
     User --> MCP["MCP stdio server"]
-    CLI --> OPS["operations shared use cases"]
+
+    CLI --> OPS["shared operations"]
     REPL --> CLI
     TUI --> OPS
     MCP --> OPS
-    OPS --> CLIENT["HteamClient transport"]
-    OPS --> CONFIG["Config local persistence"]
-    CLIENT --> CONFIG
+
+    OPS --> SESSION["operations::Session"]
+    SESSION --> CONFIG["Config load and save"]
+    SESSION --> CLIENT["HteamClient"]
     CLIENT --> MODELS["models payload types"]
     CLIENT --> API["hteam.mx API and site endpoints"]
 ```
 
-This diagram shows the intended request path: adapters present inputs and results, shared operations coordinate use cases, and only `HteamClient` crosses the remote boundary.
+The same authenticated session is the shared starting point for every surface. `operations::Session::open()` loads `Config` and opens `HteamClient::with_auth(config.clone())`, so CLI commands, the TUI, and MCP all begin from the same persisted credentials and local preferences.
 
-## Entrypoints and session lifecycle
+## Layering rule
 
-`#[tokio::main]` calls `cli::run()`. The CLI command tree includes ordinary command-line actions plus `Interactive`, `Tui`, and `Mcp` delivery modes. The MCP path opens a session once and then serves tools over stdio; the TUI opens a session, resolves a board, loads state, enters the alternate terminal screen, and runs its event loop.
+The repository follows a thin-adapter rule:
 
-`operations::Session::open()` is the common authenticated composition point. It loads `Config`, clones it into `HteamClient::with_auth`, and returns both values. Authentication requires both `session_id` and `csrf_token`; the client rejects an unauthenticated configuration before a request is made. Login is an adapter-level setup flow: it collects or accepts cookie values, optionally records the selected board, tests them through `HteamClient`, and saves only after successful verification.
+- **CLI, TUI, and MCP stay presentation-focused.** They parse input, shape output, handle UI state, and translate protocol-specific errors.
+- **Business logic lives in `src/operations`.** That layer owns reusable workflows, ordering rules, fallback precedence, and cross-surface invariants.
+- **`src/client` owns HTTP details.** It knows how to build requests, attach auth state, scrape or normalize remote quirks, and cache remote state when needed.
+- **`src/models` owns payload mapping and normalization.** It keeps callers away from ad hoc `serde_json::Value` parsing.
 
-**Change rule:** use `Session::open()` for a normal authenticated adapter entrypoint. Do not reimplement config loading, authentication checks, or client construction independently unless the use case has a concrete lifecycle reason.
+This boundary matters because the same behavior must remain consistent across human terminal output, interactive TUI flows, and machine-oriented MCP calls.
 
-## Shared operations contract
+## Shared session and board resolution
 
-`operations` is the seam for behavior that multiple delivery surfaces should share. Its modules cover boards, cards, check-in, comments, daily work, projects, reminders, users, working-on-it, and update-related helpers. Functions accept `&HteamClient`, plus `&mut Config` where a preference must be persisted, and return plain domain data or `Result<()>`. The MCP server demonstrates the intended boundary: tool handlers deserialize parameters, call `operations`, and serialize the result with MCP-specific `CallToolResult` formatting.
+`operations::resolve_board_number()` is the single fallback chain for board selection: explicit override, then `Config.auth.board_number`, then `~/.last_ticket`. The TUI uses that resolver before it starts. Login persistence also stays at the operation boundary: after successful auth probing, `persist_login()` writes cookies, optional default-board data, `~/.last_ticket`, and `config.toml` together so board selection and persistence stay consistent.
 
-Operations may establish meaningful defaults and multi-step workflows. For example, `operations::cards::move_card` defaults an omitted source list to Open (`1`), and `update_card_fields` / `update_card_full` GET the HTML task edit form, scrape a baseline, apply only the caller's patch, and POST the full form so unspecified fields are preserved. Task JSON alone is not enough for partial edits such as priority, dependence id, estimate, and `YYYY-MM-DD` dates. This policy belongs in operations/client because every surface needs the same outcome. Tests verify the default move payload and the form-preserving update sequence.
+Do not split board fallback logic across adapters. If a new surface needs a board, it should call the shared resolver rather than inventing its own precedence order.
 
-Board choice is another shared invariant. `resolve_board_number` uses this precedence:
+## Transport and payload boundary
 
-1. an explicit adapter override;
-2. `Config.auth.board_number`;
-3. the last board recorded in `~/.last_ticket`.
+`HteamClient` is the only layer that should know the remote API shape in detail. It owns request construction, CSRF and cookie handling, endpoint selection, and client-side caches such as discovered IDs. It also absorbs protocol quirks that callers should not reimplement, including board selection defaults, board-id invalidation, comment form scraping, and tolerant handling of irregular JSON shapes.
 
-The TUI uses that resolver before it begins. Board switching updates the configured board, writes the last-ticket file, upserts board display metadata, and persists `config.toml`. Do not create feature-local board fallback chains.
+`models` is the other hard boundary. It translates Hteam payloads into stable Rust types and normalizes inconsistent responses so callers do not parse `serde_json::Value` or compensate independently. If Hteam changes its payload shape, the adaptation belongs in `models` or immediately adjacent transport parsing, not in the CLI, TUI, or MCP layers.
 
-## Transport and remote-state boundary
+## Failure and output behavior
 
-`HteamClient` owns the concrete `reqwest` client, base URLs, a mutex-protected in-memory `Config`, and all Hteam endpoint interaction. It builds a consistent request identity: referer, manually constructed `sessionid`/`csrftoken` cookie header, `X-CSRFToken`, optional bearer token, AJAX header, and accept header. Its 30-second client timeout and contextual errors make transport failures observable at the adapter boundary.
+Two behaviors matter when changing the architecture:
 
-The client also contains remote protocol accommodations that must not leak upward:
+1. The CLI avoids writing the update notice on commands where extra stderr output would be misleading or would interfere with long-lived or machine-oriented modes.
+2. Adapters must not let rendering failures, partial refresh failures, or protocol changes redefine core semantics. When a mutation fails in the TUI, the UI may revert its local view, but the remote change still goes through `operations` and `HteamClient`.
 
-- It selects the configured or last-used board when an endpoint receives no board argument.
-- It caches `board_id` and invalidates it when the board number changes, preventing create/move actions from using an ID from the previous board.
-- It discovers and persists `user_id` when required, first from working-on-it data and then from the latest work-shift record.
-- It accepts working-on-it and reminder responses that may be empty, `null`, or multiple supported JSON shapes.
-- Comment posting fetches the task page first to extract the form tokens required by the site endpoint, then sends the encoded form.
+MCP turns successful domain values into JSON text content and converts `anyhow` failures into internal MCP errors. The CLI also supports `--json`, so stdout must stay clean of incidental notices. This is why transport and presentation concerns stay separated: the same use case needs to remain safe for human terminal output and machine consumption.
 
-These are transport and protocol responsibilities even when they involve several requests.
+## Extension rules
 
-**Non-negotiable boundary:** never add a `reqwest` call, Hteam URL, request header or cookie construction, or API-response workaround to `cli/`, `tui/`, `mcp/`, or the REPL. Add or extend an `HteamClient` method, expose the reusable behavior from `operations` where appropriate, then let each adapter present the returned result. Likewise, do not put a business decision in a delivery adapter merely because it is convenient for one interface.
+When adding behavior:
 
-## Local persistence and configuration
+1. Put reusable request sequences, defaults, and validations in `operations`.
+2. Put every new remote API concern in `HteamClient`.
+3. Extend `models` for external payload mapping or normalization.
+4. Keep durable state changes explicit through `Config`.
+5. Add only thin adapter glue in CLI, TUI, or MCP.
 
-`Config` is the local state owner. It reads and writes TOML at the platform configuration directory under `hteam/config.toml`; a missing file produces defaults, while read, parse, directory-creation, serialization, and write failures are propagated with context. Persisted state includes authentication material, default board and cached IDs, named-board metadata, variables, TUI preferences, working-hour settings, weekly objectives, theme selection, and update-check state. The separate `~/.last_ticket` file stores the fallback board used by session resolution.
-
-A client receives a cloned configuration and protects its own in-memory copy with `Arc<Mutex<Config>>`. That means a caller that changes a separate `Session.config` must deliberately persist it through the operation that owns that transition. Conversely, client-side caches such as discovered `user_id` can save themselves. Treat this as an ownership and lifecycle distinction rather than assuming all copies update automatically.
-
-## Models as the payload boundary
-
-`models` prevents external JSON details from becoming application-wide assumptions. It maps API field names such as card `title`, `subtitle`, `labels_list`, and list `total_board_cards` to stable Rust fields. It also deliberately normalizes irregular payloads: card-detail labels tolerate an array of label objects as well as scalar or string forms by yielding an empty label set for unsupported forms; working-on-it responses become `WorkingOnStatus`; project milestones deserialize from tuple-shaped API entries and normalize their progress representation for display.
-
-Keep this boundary honest: add serde aliases, custom deserialization, or conversion types here, or immediately alongside transport parsing, when Hteam payload variance is discovered. Do not make CLI, TUI, or MCP consumers parse `serde_json::Value` or compensate independently.
-
-## Adapter-specific state and failures
-
-Adapters are free to own ephemeral presentation state. The TUI owns selection, dialog state, visible-list filtering, redraw timing, and terminal cleanup. It performs an optimistic card move for responsiveness, but reverts its local card placement when the shared operation fails; the remote mutation still flows through `operations` and `HteamClient`. Its hidden-list preference is persisted through `Config` after the UI decision is made.
-
-MCP owns schema and parameter decoding and converts `anyhow` failures to MCP internal errors; it serializes successful domain values as JSON text content. The CLI owns Clap parsing and chooses JSON, tables, or messages. The REPL owns readline history in `~/.hteam_history` and command shortcuts, then delegates to CLI handlers. No adapter should let rendering, a partial refresh failure, or an interface protocol change redefine core business rules.
-
-## Safe extension checklist
-
-1. Define the operation in `operations` when the behavior, default, validation, or sequence is reusable; return models or plain values.
-2. Put every new Hteam request, auth or header requirement, response status check, and response-shape accommodation in `HteamClient`.
-3. Extend `models` for external payload mapping and normalization.
-4. Put durable user preference or credential changes in `Config` and make persistence explicit.
-5. Add thin adapter glue for CLI output, TUI interaction, REPL routing, or MCP schemas, not another implementation of the use case.
-6. Add focused tests at the ownership seam: operations tests use `HteamClient::new_for_test` with Mockito to assert request paths and payloads, and pure configuration or resolver rules use ordinary unit tests.
-
-For MCP-specific tool availability and stdio operation, see [MCP server](../integrations/mcp-server.md). For board and card terminology, see [cards and board state](../concepts/cards-and-board-state.md).
+For board and card terminology, see [cards and board state](../concepts/cards-and-board-state.md). For session persistence and credential handling, see [session configuration](../concepts/session-configuration.md). For API transport details, see [Hteam API](../integrations/hteam-api.md). For MCP tool behavior, see [MCP server](../integrations/mcp-server.md).

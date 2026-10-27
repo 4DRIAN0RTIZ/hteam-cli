@@ -4,7 +4,7 @@ okf_version: "0.2"
 
 # Files
 
-- [Quickstart](quickstart.md) - Concise onboarding for installing hteam, configuring credentials, authenticating, choosing a board, and entering the CLI, TUI, interactive REPL, or MCP server.
+- [Quickstart](quickstart.md) - Fast orientation for getting hteam running from a fresh checkout, authenticating safely, choosing a board, and routing to the CLI, TUI, REPL, or MCP docs.
 
 # Directories
 

@@ -1,38 +1,46 @@
 ---
-type: terminal runtime behavior
+type: operational runtime
 title: Terminal Experiences
-description: How `hteam` routes one-shot CLI commands, delegates the REPL to the same handlers, and runs the stateful TUI with refresh, popups, board switching, and cleanup.
-tags: [cli, repl, tui, terminal, operations]
+description: Interactive terminal behavior for the one-shot CLI, REPL, and TUI, including command dispatch, history, raw-mode lifecycle, stderr redirection, startup notices, and theme resolution.
+tags: [terminal, cli, repl, tui, runtime]
 verified:
   - by: openwiki/0.7.2
-    at: 2026-08-29T04:34:19.305Z
+    at: 2026-10-27T23:40:03.433Z
 sources:
   - id: openwiki-source-730a6cb99277b4ce3292b050
     resource: repo://src/cli/interactive.rs
   - id: openwiki-source-2d189e28b5edbe9715440baf
     resource: repo://src/cli/mod.rs
+  - id: openwiki-source-af2644667d0b644b5c92e850
+    resource: repo://src/cli/theme.rs
   - id: openwiki-source-ec936990c4b0348483afdd8c
     resource: repo://src/config/mod.rs
   - id: openwiki-source-d7c0e68afeedea2d27dd68f8
     resource: repo://src/operations/boards.rs
+  - id: openwiki-source-d498d54938db40c967e5c84b
+    resource: repo://src/tui/app.rs
+  - id: openwiki-source-7bcde87b884a289ae2ca3e61
+    resource: repo://src/tui/events.rs
   - id: openwiki-source-344d0ae26e653accaaef1142
     resource: repo://src/tui/mod.rs
-generated: { by: "openwiki/0.7.2", at: "2026-08-29T04:34:19.305Z" }
+  - id: openwiki-source-3947b3d25bcd2b561c4939cf
+    resource: repo://src/tui/net.rs
+generated: { by: "openwiki/0.7.2", at: "2026-10-27T23:40:03.433Z" }
 ---
 
 # Terminal Experiences
 
-`hteam` exposes three terminal-facing surfaces over the same authenticated client and operations layer:
+`hteam` exposes three terminal-facing surfaces on top of the same authenticated client and operations layer:
 
-- the one-shot Clap CLI for commands and terse human-readable output or JSON;
-- `hteam interactive`, a line-oriented REPL that reuses CLI handlers; and
+- the one-shot CLI for ordinary commands and human-readable or JSON output;
+- `hteam interactive`, a line-oriented REPL that reuses existing CLI handlers; and
 - `hteam tui`, a Ratatui/Crossterm board view with in-memory interaction state.
 
-The CLI router also exposes MCP, but that stdio server is a separate integration surface rather than a terminal UI. See [MCP server](../integrations/mcp-server.md). Shared board and card semantics are covered in [Cards and board state](../concepts/cards-and-board-state.md), while persisted credentials and board configuration are covered in [Session configuration](../concepts/session-configuration.md).
+The CLI router also exposes MCP, but that stdio server is a separate integration surface rather than a terminal UI. Shared board and card semantics are documented in [Cards and board state](../concepts/cards-and-board-state.md), while persisted credentials and board configuration are covered in [Session configuration](../concepts/session-configuration.md).
 
 ## One-shot CLI
 
-`Cli::parse()` builds the command tree, and `cli::run` dispatches exactly one selected subcommand asynchronously. The global `--board` option selects a board for commands that accept it, and global `--json` toggles machine-oriented output for most list and mutation handlers. The command set includes board management, list/card operations, open and closed views, working-on-it, projects, check-in, reminders, daily work, user search, the REPL, the TUI, MCP, and shell-completion generation.
+`Cli::parse()` builds the command tree, and `cli::run` dispatches exactly one selected subcommand asynchronously. The global `--board` option selects a board for commands that accept it, and global `--json` toggles machine-oriented output for most list and mutation handlers. The command set includes board management, list/card operations, open and closed views, working-on-it, projects, check-in, reminders, daily work, user search, the REPL, the TUI, MCP, update, and shell-completion generation.
 
 ```mermaid
 flowchart TD
@@ -52,7 +60,7 @@ This top-level router separates ordinary command execution from the REPL, TUI, M
 
 ### Output and failure behavior
 
-Card handlers open a `Session`, invoke `operations`, then either serialize returned values with `serde_json::to_string_pretty` or render a rounded `tabled` table and human-oriented messages. Empty result sets are still successful and are explained in text. Mutations such as move, description update, comment, update, and reminder return small success JSON objects when `--json` is selected. Errors from opening the session, resolving a required board, serialization, or an operation propagate as command errors rather than being converted to successful output.
+Card handlers open a `Session`, invoke `operations`, then either serialize returned values with `serde_json::to_string_pretty` or render rounded `tabled` output and human-oriented messages. Empty result sets are still successful and are explained in text. Mutations such as move, description update, comment, update, and reminder return small success JSON objects when `--json` is selected. Errors from opening the session, resolving a required board, serialization, or an operation propagate as command errors rather than being converted into successful output.
 
 Board commands behave a little differently: `board list` uses `--json`, but `board switch` and `board current` print human text. A board switch writes the active board into configuration, updates the board-name map and last-used time, and writes the last-ticket file. That durable active-board change is then available to every runtime.
 
@@ -68,7 +76,7 @@ The REPL splits input on whitespace, so it does not implement shell-style quotin
 
 ## TUI lifecycle and state ownership
 
-`hteam tui [--board N]` opens a session and resolves its initial board from the command-line override or configured/default board resolution. It loads `tui.hidden_lists`, `tui.known_projects`, and `[working_hours]` from `config.toml`, constructs `App`, performs an initial refresh, and only then enters raw mode and the alternate screen.
+`hteam tui [--board N]` opens a session and resolves its initial board from the command-line override or configured/default board resolution. It loads `tui.hidden_lists`, `tui.known_projects`, and `[working_hours]` from `config.toml`, resolves the active theme from `[theme] active`, constructs `App`, performs an initial refresh, and only then enters raw mode and the alternate screen.
 
 `App` owns the transient display and interaction state: downloaded lists, cards indexed by list, working-on records, current selection, popup/input flags, comments, reminders, fetched boards, project detail, scroll offsets, and the short-lived footer status. It intentionally fetches cards for all lists, including hidden ones, so unhiding a list does not require another card request. Selections are clamped after refresh, movement is bounded, and each list retains its own selected-card index.
 
@@ -97,7 +105,8 @@ stateDiagram-v2
     Refresh --> Board: reload lists cards and working state
     Board --> Switching: select board in live board popup
     Switching --> Refresh: clear board state and persist switch
-    Board --> [*]: q or Esc
+    Board --> Exit: q or Esc
+    Exit --> [*]
 ```
 
 An open popup consumes keys before normal board navigation, while refresh and board switching return to the same board loop.
@@ -134,8 +143,20 @@ flowchart TD
 
 This cleanup sequence only applies after a successfully constructed guard. `TerminalGuard::enter` enables raw mode before entering the alternate screen; if entering that screen itself fails, construction fails before a guard exists, so that partial-entry failure is not covered by `Drop`.
 
+## Startup notices, stderr redirection, and theme handling
+
+The TUI performs its first refresh before entering raw mode so startup messages can be prepared in the ordinary terminal. After that refresh it replays any startup changelog popup and any update-available popup, then applies a theme warning as a footer status if theme resolution reported one. The changelog and update notices are separate startup surfaces: the changelog is a popup, while the update notice is also routed through the same popup system after the changelog closes. A broken custom theme does not stop startup; the TUI falls back to the resolved theme and exposes the warning to the user.
+
+Terminal-specific stderr noise is isolated from the core operations layer by redirecting stderr to the same `~/.config/hteam/tui.log` file used for footer diagnostics while the TUI is active. On Unix, `TerminalGuard::enter` snapshots stderr with `dup`, redirects `STDERR_FILENO` to the log file with `dup2`, and stores the original descriptor for restoration. The guard’s `Drop` closes the alternate screen, disables raw mode, and restores stderr if it had been saved. If stderr redirection cannot be established, the TUI still proceeds; the redirect helper’s failure is recorded only as a best-effort startup concern.
+
+Theme selection is resolved once during TUI startup from `[theme] active`. Built-in presets are `default`, `solarized`, and `high-contrast`, and custom themes are validated when they are selected so malformed files fail early instead of surfacing only after the TUI starts. The `theme` CLI subcommand provides the same separation of concerns: `theme list` reports built-in and custom names, and `theme set` persists a new active theme in configuration but does not change the live TUI session.
+
+## Completion generation
+
+`hteam completions <shell>` uses `clap_complete::generate` against the live `Cli::command()` definition and writes the generated script to stdout. The surface is intentionally side-effect free: it does not open a session, does not mutate configuration, and is skipped by the post-command update notice so completion output stays clean.
+
 ## Change and test guidance
 
 Keep command parsing and presentation in `src/cli`, and put API behavior in `operations`; REPL additions should call existing CLI handlers when possible. TUI changes should add fields to `App` only for state that must survive redraws during the process, explicitly decide whether a user choice merits config persistence, and set a status for recoverable failures. Any mutation that changes the cached board must keep `App` and `HteamClient` synchronized before calling operations that resolve the board from client configuration.
 
-There are no TUI-specific test modules in the inspected source. The important focused coverage is in operation and client tests using `mockito`, including live-board list parsing and configured-board display behavior, plus card-operation delegation tests. Add tests around extraction-friendly state transitions or mocked operations when changing refresh, rollback, persistence, or board-switch semantics; UI drawing and terminal-mode cleanup currently rely on code review and integration-level manual verification.
+There are no TUI-specific test modules in the inspected source. The important focused coverage is in command parsing and completion snapshot tests, plus client and operation tests using `mockito`, including live-board list parsing and configured-board display behavior, and card-operation delegation tests. Add tests around extraction-friendly state transitions or mocked operations when changing refresh, rollback, persistence, or board-switch semantics; UI drawing and terminal-mode cleanup currently rely on code review and integration-level manual verification.
