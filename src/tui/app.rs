@@ -267,6 +267,8 @@ pub struct App {
     pub composing_milestone: bool,
     /// `None` = create; `Some(id)` = edit that milestone.
     pub milestone_form_edit_id: Option<u64>,
+    /// Milestone id waiting for a second `d`/Enter to confirm delete.
+    pub pending_milestone_delete: Option<u64>,
     pub milestone_name_input: TextInput,
     pub milestone_desc_input: TextInput,
     /// `false` = name field focused; `true` = description.
@@ -341,6 +343,7 @@ pub struct RequestIds {
     pub project_task_tree: u64,
     pub project_milestone_write: u64,
     pub project_milestone_form: u64,
+    pub project_milestone_delete: u64,
     pub project_task_write: u64,
     pub project_task_form: u64,
     pub project_status: u64,
@@ -397,6 +400,9 @@ impl RequestIds {
     }
     pub fn bump_project_milestone_form(&mut self) -> u64 {
         Self::bump(&mut self.project_milestone_form)
+    }
+    pub fn bump_project_milestone_delete(&mut self) -> u64 {
+        Self::bump(&mut self.project_milestone_delete)
     }
     pub fn bump_project_task_write(&mut self) -> u64 {
         Self::bump(&mut self.project_task_write)
@@ -556,6 +562,7 @@ impl App {
             project_input: TextInput::default(),
             composing_milestone: false,
             milestone_form_edit_id: None,
+            pending_milestone_delete: None,
             milestone_name_input: TextInput::default(),
             milestone_desc_input: TextInput::default(),
             milestone_desc_focused: false,

@@ -1536,6 +1536,7 @@ pub fn close_projects(app: &mut App) {
     app.requests.bump_projects();
     app.requests.bump_project_milestone_write();
     app.requests.bump_project_milestone_form();
+    app.requests.bump_project_milestone_delete();
     app.requests.bump_project_task_write();
     app.requests.bump_project_task_form();
     app.requests.bump_project_status();
@@ -1708,6 +1709,7 @@ fn load_project(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs, project_id
     remember_project(app, project_id, app.active_project_name.clone());
     clear_project_section_data(app);
     app.projects_detail_section = ProjectDetailSection::Milestones;
+    app.pending_milestone_delete = None;
     cancel_milestone_form(app);
     cancel_project_task_form(app);
     cancel_composing_member(app);
@@ -1746,6 +1748,9 @@ pub fn move_milestone_selection(app: &mut App, delta: i32) {
     }
     let len = app.project_milestones.len() as i32;
     let next = (app.selected_milestone_idx as i32 + delta).clamp(0, len - 1);
+    if next as usize != app.selected_milestone_idx {
+        app.pending_milestone_delete = None;
+    }
     app.selected_milestone_idx = next as usize;
 }
 
@@ -1826,6 +1831,70 @@ pub fn cancel_milestone_form(app: &mut App) {
     app.milestone_name_input.clear();
     app.milestone_desc_input.clear();
     app.milestone_desc_focused = false;
+}
+
+pub fn cancel_pending_milestone_delete(app: &mut App) {
+    if app.pending_milestone_delete.is_some() {
+        app.pending_milestone_delete = None;
+        app.set_status("Borrado de milestone cancelado.");
+    }
+}
+
+/// First `d`: arm confirm. Second `d`/Enter: delete via operations.
+pub fn request_or_confirm_milestone_delete(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    if app.composing_milestone || app.composing_project_task || app.composing_member {
+        return;
+    }
+    let Some(project_id) = app.active_project else {
+        app.set_status("Elegí un proyecto antes de borrar un milestone.");
+        return;
+    };
+    if !app.project_milestones_loaded {
+        app.set_status("Esperá a que carguen los milestones.");
+        return;
+    }
+    let Some(milestone) = app.project_milestones.get(app.selected_milestone_idx) else {
+        app.set_status("No hay milestones para borrar.");
+        return;
+    };
+    let Some(milestone_id) = milestone.id() else {
+        app.set_status("No se pudo leer el id del milestone resaltado.");
+        return;
+    };
+    let name = milestone.name.clone();
+
+    if app.pending_milestone_delete != Some(milestone_id) {
+        app.pending_milestone_delete = Some(milestone_id);
+        app.set_status(format!(
+            "Borrar «{name}» (#{milestone_id})? d/Enter confirma · Esc cancela",
+        ));
+        return;
+    }
+
+    app.pending_milestone_delete = None;
+    let id = app.requests.bump_project_milestone_delete();
+    app.begin_busy("Eliminando milestone...");
+    jobs.spawn(async move {
+        let result = operations::projects::delete_milestone(&client, project_id, milestone_id)
+            .await
+            .map(|_| format!("Milestone eliminado: {name} (#{milestone_id})"))
+            .map_err(|e| e.to_string());
+        let refresh = if result.is_ok() {
+            // Only milestones list matters here; keep tasks/tree invalidation light.
+            let milestones = operations::projects::milestones(&client, project_id)
+                .await
+                .map_err(|e| e.to_string());
+            Some(milestones)
+        } else {
+            None
+        };
+        JobOutcome::ProjectMilestoneDeleted {
+            id,
+            project_id,
+            result,
+            refresh,
+        }
+    });
 }
 
 /// Create: toggle name ↔ description. Edit: name is locked, stay on description.
@@ -1950,6 +2019,7 @@ pub fn cycle_projects_detail_section(app: &mut App, delta: i32) {
     };
     app.projects_detail_section = ORDER[next as usize];
     app.projects_scroll.reset();
+    app.pending_milestone_delete = None;
 }
 
 /// After h/l (or selecting a project), fetch only the focused section.
@@ -3235,6 +3305,34 @@ mod tests {
         toggle_tree_node(&mut app);
         assert!(!app.project_tree_expanded.contains(&1));
         assert_eq!(app.selected_tree_idx, 0);
+    }
+
+    #[test]
+    fn milestone_delete_pending_clears_on_cancel_and_selection() {
+        let mut app = test_app();
+        app.active_project = Some(500);
+        app.project_milestones_loaded = true;
+        app.project_milestones = vec![
+            ProjectMilestone {
+                name: "Temp".into(),
+                progress: 0.0,
+                url: "/projects/500/milestones/42/".into(),
+            },
+            ProjectMilestone {
+                name: "Other".into(),
+                progress: 0.0,
+                url: "/projects/500/milestones/43/".into(),
+            },
+        ];
+        app.selected_milestone_idx = 0;
+        app.pending_milestone_delete = Some(42);
+        cancel_pending_milestone_delete(&mut app);
+        assert!(app.pending_milestone_delete.is_none());
+
+        app.pending_milestone_delete = Some(42);
+        move_milestone_selection(&mut app, 1);
+        assert!(app.pending_milestone_delete.is_none());
+        assert_eq!(app.selected_milestone_idx, 1);
     }
 
     #[test]

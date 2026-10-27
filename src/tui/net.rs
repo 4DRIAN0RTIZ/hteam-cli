@@ -161,6 +161,13 @@ pub enum JobOutcome {
         /// Fresh milestones+tasks after a successful write; `None` on error.
         refresh: Option<ProjectDetailRefresh>,
     },
+    ProjectMilestoneDeleted {
+        id: u64,
+        project_id: u64,
+        result: Result<String, String>,
+        /// Fresh milestones list after a successful delete.
+        refresh: Option<Result<Vec<ProjectMilestone>, String>>,
+    },
     MilestoneFormLoaded {
         id: u64,
         project_id: u64,
@@ -933,6 +940,49 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
             }
             app.end_busy();
             apply_project_write_result(app, result, refresh, "milestone");
+        }
+        JobOutcome::ProjectMilestoneDeleted {
+            id,
+            project_id,
+            result,
+            refresh,
+        } => {
+            if app.requests.project_milestone_delete != id || app.active_project != Some(project_id)
+            {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            app.pending_milestone_delete = None;
+            match result {
+                Ok(msg) => {
+                    app.set_status(msg);
+                    app.project_status = None;
+                    app.requests.bump_project_status();
+                    app.project_task_tree_loaded = false;
+                    app.project_tasks_loaded = false;
+                    if let Some(milestones) = refresh {
+                        match milestones {
+                            Ok(list) => {
+                                app.project_milestones = list;
+                                app.project_milestones_loaded = true;
+                                if app.selected_milestone_idx >= app.project_milestones.len()
+                                    && !app.project_milestones.is_empty()
+                                {
+                                    app.selected_milestone_idx = app.project_milestones.len() - 1;
+                                }
+                                if app.project_milestones.is_empty() {
+                                    app.selected_milestone_idx = 0;
+                                }
+                            }
+                            Err(e) => app.set_status(format!(
+                                "Eliminado, pero falló el refresh de milestones: {e}"
+                            )),
+                        }
+                    }
+                }
+                Err(e) => app.set_status(format!("Error eliminando milestone: {e}")),
+            }
         }
         JobOutcome::ProjectTaskFormLoaded {
             id,

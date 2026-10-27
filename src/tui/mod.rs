@@ -550,6 +550,9 @@ async fn run_loop(
                 }
             } else {
                 match key.code {
+                    KeyCode::Esc if app.pending_milestone_delete.is_some() => {
+                        events::cancel_pending_milestone_delete(app);
+                    }
                     KeyCode::Esc | KeyCode::Char('q') => events::close_projects(app),
                     KeyCode::Char('a')
                         if app.projects_detail_focused
@@ -641,6 +644,21 @@ async fn run_loop(
                                 == app::ProjectDetailSection::Members =>
                     {
                         events::remove_selected_member(app);
+                    }
+                    KeyCode::Char('d')
+                        if app.projects_detail_focused
+                            && app.projects_detail_section
+                                == app::ProjectDetailSection::Milestones =>
+                    {
+                        events::request_or_confirm_milestone_delete(client.clone(), app, &jobs);
+                    }
+                    KeyCode::Enter
+                        if app.projects_detail_focused
+                            && app.projects_detail_section
+                                == app::ProjectDetailSection::Milestones
+                            && app.pending_milestone_delete.is_some() =>
+                    {
+                        events::request_or_confirm_milestone_delete(client.clone(), app, &jobs);
                     }
                     KeyCode::Char('s')
                         if app.projects_detail_focused
