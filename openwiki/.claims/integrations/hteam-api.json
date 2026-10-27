@@ -1,22 +1,22 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:f2c82e073264cd0ab218db31ba37f7d7ef53943ec1bdfb30c138f3be33ffe50f",
+  "pageVersion": "sha256:bb6c8aa91fe03ea2f6008f2d84d2c6592e2ddbbb57b9ca44e48883134846757e",
   "claims": [
     {
       "id": "claim_e6949d92123b4dd594ad13a5aa16fc96",
       "statement": "HteamClient is the HTTP integration boundary used by the shared operations layer, whose functions accept a client reference and return domain data while CLI, TUI, and MCP remain presentation adapters.",
       "evidence": [
         {
-          "resource": "repo://src/client/mod.rs#L79-L245",
-          "version": "repo-lines-v1:sha256:2876f3d07302c687f984e1c24154350a19f64d0833bdd4014f672259678b4314:eyJzZWxlY3RlZExpbmVDb3VudCI6MTY3LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJkZjk5ZWM0OGMzOGU0MzMxN2VmZTg5YjRmYjBhMjM3MGIxNGQ1NDdiNzY1ZWY5NzMwNWYxYmU3MWI3YmZiMWI3IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJmOWIxOTgyZThkZDc0ODExODE0NmIzOWEyZDAwNjJmNDA4MWUzNDc3OWI4Njc1YzIzNGM0ZmIxMjRkYzM5MzkwIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIyZWMzYzU0NDQyMGRiMDY1ODJhYWFjNGMwMjEwZmQxZDNlNGJlY2FjMzIyNzcyODg4NjA1Y2FlMmQ0NDZkOGZmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIyZThkOTg1NTA0YTc5OWIzNDBlZDZlZTQwN2JkMGFmNDkxMWNjZDg3MzIxMTNmOTI4MjhjMWUzMjYxYjhhMmY2In0"
+          "resource": "repo://src/client/mod.rs#L138-L538",
+          "version": "repo-lines-v1:sha256:e394f96c0052111952657a3d4d9b7cae45283e969c417c9ee8c01f5339e23de1:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJkZjk5ZWM0OGMzOGU0MzMxN2VmZTg5YjRmYjBhMjM3MGIxNGQ1NDdiNzY1ZWY5NzMwNWYxYmU3MWI3YmZiMWI3IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJmOWIxOTgyZThkZDc0ODExODE0NmIzOWEyZDAwNjJmNDA4MWUzNDc3OWI4Njc1YzIzNGM0ZmIxMjRkYzM5MzkwIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIyZWMzYzU0NDQyMGRiMDY1ODJhYWFjNGMwMjEwZmQxZDNlNGJlY2FjMzIyNzcyODg4NjA1Y2FlMmQ0NDZkOGZmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIyZThkOTg1NTA0YTc5OWIzNDBlZDZlZTQwN2JkMGFmNDkxMWNjZDg3MzIxMTNmOTI4MjhjMWUzMjYxYjhhMmY2In0"
         },
         {
-          "resource": "repo://src/mcp/mod.rs#L213-L217",
+          "resource": "repo://src/mcp/mod.rs#L321-L325",
           "version": "repo-lines-v1:sha256:6f84d889af274121f0c223eda499d2433dbb0e9154cd7bd2836edd95919f8e68:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiM2ZlYTNmMjAyZjZkZWRiZjFhYTAwZTZmMDMyYTI3YzE3ZjJkZjY5YWE2MmJmYTc1NzE5YTFjNTFhOWI3NDdkYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZGU5YThiZjQyNDEwOWYxZWYzNzFmMGU4Njg5MTQ5ZTczNjU4MWRjYjI2NWFkNTI2NDY5YjkxODBmM2JjYTU1MyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjMzZjFiY2I1MmEzNWIzZWZhYjJlM2MwODcwZjk0MzI0NTkzMmZlMTI2ZjczNmIyZWQxMTM0NDJjM2Q5YWRmNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjY3NzUyZTE2ZDhlMGUwZTU4ZjNmNTdhNTllMjgwNWQ3MTg2NjUzMjI3N2E1YTE3Yzk2NDQzNTRiMTk5MjEwYyJ9"
         },
         {
-          "resource": "repo://src/operations/mod.rs#L1-L20",
-          "version": "repo-lines-v1:sha256:420eae994a8be6144524348b9b78c89139cf1688c924589930af29dcc776c389:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE1OWRjZGI2YmQ4MmRlNTM5ZjZhMDIxNjMyM2Y1YjFiNDQ3NDEzODQ2ZTlhZWQ3YzRkZDQ5ZTY1ZGQ4M2Q2OTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI0YzdlOTBhNmUwNTVlOTBkZjJkYzVhMTdkMzUzZGZkZGM1YmM5NWJlZmE0NjA5Y2Y2OWFjM2RjOTMwZDk3NjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRiMTFhZDUzM2RjNGRjMjEyNDY3NzFiMWFjN2U5MTQ1Y2RmOTZhZjQ1OGZhZDhkODViN2E2ZjFiN2VjNWFiZWIifQ"
+          "resource": "repo://src/operations/mod.rs#L1-L22",
+          "version": "repo-lines-v1:sha256:8c275578f158464c8d2ccc506f6231f8654218df778f7f9fe043c4bad489df4d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE1OWRjZGI2YmQ4MmRlNTM5ZjZhMDIxNjMyM2Y1YjFiNDQ3NDEzODQ2ZTlhZWQ3YzRkZDQ5ZTY1ZGQ4M2Q2OTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI0YzdlOTBhNmUwNTVlOTBkZjJkYzVhMTdkMzUzZGZkZGM1YmM5NWJlZmE0NjA5Y2Y2OWFjM2RjOTMwZDk3NjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRiMTFhZDUzM2RjNGRjMjEyNDY3NzFiMWFjN2U5MTQ1Y2RmOTZhZjQ1OGZhZDhkODViN2E2ZjFiN2VjNWFiZWIifQ"
         }
       ]
     },
@@ -25,7 +25,7 @@
       "statement": "HteamClient uses fixed API and site base URLs, a 30-second reqwest client without a cookie store, and test-only construction can replace the two bases independently.",
       "evidence": [
         {
-          "resource": "repo://src/client/mod.rs#L2052-L2075",
+          "resource": "repo://src/client/mod.rs#L3504-L3527",
           "version": "repo-lines-v1:sha256:1da87777f668a0e895f9184e4a686b4a6932f85d29979f4d200d8120f84c0d32:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkxY2M0MDY4N2QyNDRlOWRhZjkxY2VkNDY1MjMyNjU2OWE0ZmI2ZGZjODFkMDNmYmU3MjNhNWVhM2NjYmU5ZGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ5ZDYzZTVhZGQ1MDAyMzAyYjcwNDcyYTBiMWY4OTBkMmJiMDkxMWE2MTA1ODg5MTIwZDQ4NDkwYWRlMzFhNDQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEyYTI4ZmMzMzc3ZjlhODA0N2QzZmE2OWFkZWIzYTIxNjY1ZmI0OWM2ZDc5NWE2NjQ5NGVkODA2MzY4OGFlZGEifQ"
         },
         {
@@ -33,7 +33,7 @@
           "version": "repo-lines-v1:sha256:2c3350be83267354aee7ffc708ea6431eaedd99515d854e30bcff05d251e81a7:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjUzMDgxNWU5YzFkNDYzZjBjZDEwNzgxYWVhYjM4MjhlZjA4ZDBlMzk4ZjIzNTlkMGFlOTgzN2Y1NTkyNzI1ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNWI5YjhlOTIzNWQ2YmQ0MzNkYTRmNjg2YWY0YzBiOTBlMGE4Y2JlYTJjYjI0MDQwOWMxZGZhMjMwMjJjODg4ZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzNlMzExNWIzMDYwN2MwNzJmMTljYzRhYjNkMzFkNjk0ZDMyZTEyZmMyOGNjOTEyOWExOTg2ZDJkMDdlMmI1NCJ9"
         },
         {
-          "resource": "repo://src/client/mod.rs#L231-L265",
+          "resource": "repo://src/client/mod.rs#L524-L558",
           "version": "repo-lines-v1:sha256:1e6cd85c6b28b91b36515b7a4f08df5b7f6090ed17a978603d14eb39f5033197:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMzNDE3YTU4ODMwMWI5ZWIzNzMzMGI4MThmMDNlMWZhMmIyYzM0N2MwMmEwODQ1ODAwYzc4ZDJlZWQ2ODU0MWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBmZWY0MjI0NTU0NGNmYmQ0MTVmODI0OTk2MDkyZTRmODUwZmFmMTc2NWVmZTI0Mjg5MDNmZTJiYzRhMDBhYmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZlMTc2YWU5OGQxZDc5MzIxODgxMjMyZmZhNmUzNTVkOWE3YjVjNWNkNzMwYjY0NTJmZmJmNTgyMjBkYzExMjMifQ"
         }
       ]
@@ -47,18 +47,8 @@
           "version": "repo-lines-v1:sha256:4bda12efba7bec127715c10ce80f00707f78f8213aaabcb0bc026343a737ee2f:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjUzMDgxNWU5YzFkNDYzZjBjZDEwNzgxYWVhYjM4MjhlZjA4ZDBlMzk4ZjIzNTlkMGFlOTgzN2Y1NTkyNzI1ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGU3NzI0ZTIwMTU0YTU2NjIwMWIxZDJlYzc4NzU3YTE3YjkxMzVhNGM4MDdiNTVlNjFlZDY1M2ZkODAwMjYyMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzA3ZWZhMmI0MjJhNDFkM2Q1ZWRjM2I0Y2QzMzQ1ZGI0NDUyZWZlNjI1MDc0MjJjN2Y2ZWRlNjJlYWFmMjA1ZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWI4NzA5N2NlZGU4YWZkYWU1YTc2Mzc3YjlmNWFhZDI4MjZlMDBjNDdjMWRmZjAyY2VlZmE0ZGI2MTJiYTM4NiJ9"
         },
         {
-          "resource": "repo://src/client/mod.rs#L231-L265",
+          "resource": "repo://src/client/mod.rs#L524-L558",
           "version": "repo-lines-v1:sha256:1e6cd85c6b28b91b36515b7a4f08df5b7f6090ed17a978603d14eb39f5033197:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMzNDE3YTU4ODMwMWI5ZWIzNzMzMGI4MThmMDNlMWZhMmIyYzM0N2MwMmEwODQ1ODAwYzc4ZDJlZWQ2ODU0MWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU0NjQ3OGQyMWUwNWZmNjUwYmY0Yzc4NTgwYzc4OTRjOWRmYWZjY2RmYzM4MWIwZDdiYzA4ZWU2MTQ0ZjU1ZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZlMTc2YWU5OGQxZDc5MzIxODgxMjMyZmZhNmUzNTVkOWE3YjVjNWNkNzMwYjY0NTJmZmJmNTgyMjBkYzExMjMifQ"
-        }
-      ]
-    },
-    {
-      "id": "claim_4224909445b6447c9487003b92664968",
-      "statement": "Card creation posts JSON containing the name, resolved user, board number, and optional list labels; successful empty or unusable card responses trigger a named-card lookup in the requested list and otherwise return an ID-0 placeholder.",
-      "evidence": [
-        {
-          "resource": "repo://src/client/mod.rs#L876-L960",
-          "version": "repo-lines-v1:sha256:1c130d976e3f1f0e88c1d5b2f85175c1319a8f8e2cb67362cd2c82e003b20dfe:eyJzZWxlY3RlZExpbmVDb3VudCI6ODUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU0N2NlNjI0MmI2ODllYTIzMzY3OGEzOGRlNTI2MTM3NDA3Y2ZjNDVmN2E1ZTg2ODVmZjk2ZDA4YmYwMDk4ZGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ0ZjVjOWJjZjMyYjYyNzY2NzQ3NjYzODIxMmQ2NzZlNmY1ZDBhZGY5MzE4MmI4OTgwNTA2MDRiMWNiMTQ2NWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFiNjI2MTU0YTZiYTY5NDE2MDM4ZGIyMjYwZGZkYWRlMmZkNTEyYWU5YWE5NDU4N2EyNGRlNzNiMzI4M2RjN2UifQ"
         }
       ]
     },
@@ -67,36 +57,8 @@
       "statement": "Card updates use a read-before-write patch: the operation fetches CardDetail, and the client posts a URL-encoded site form that retains non-patched detail values and supplies CSRF, Origin, and Referer.",
       "evidence": [
         {
-          "resource": "repo://src/client/mod.rs#L1336-L1440",
-          "version": "repo-lines-v1:sha256:031baaf643322b7551e3696d807d602fc745d3387baaa161ac0a48d26bc191a5:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA1LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiMmZhMmRkNmNkZDhjNGVhMzk0MWQ5NDg3MGUzNzRhNzUwMDJiNjVjNjczZGZlMjJmMjNiOWU4NDdhZDg4NWJmIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI4YWQzMDI5ZmEzMGVjNmJlYTVkNzc1YmUyOWUyZmJhMzE0MWQ2NTkyNDFlNWExOWUxY2UzYmZlNTA4N2E4OGE4IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI1YmEwYWRmMzRjMDA2MGJkMmFlZjVjYzk4NmNlMmU2OTc4N2ZkZWExNzQ3N2RjZDVlMTFlMDdiY2YxNGJlN2IxIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI1YzFlNzgwZDEwNTU5OTZjMTM4ZTZkMzExZTFjZTZlNjZkMWY1ZTljMDQzY2VjODhhYTdhODIxNGRkOTlhNjRhIn0"
-        }
-      ]
-    },
-    {
-      "id": "claim_8473821a1e3c4546ac2e37317e1a0a2a",
-      "statement": "Posting a comment requires a site task-page GET to extract timestamp, security_hash, and csrfmiddlewaretoken before a URL-encoded POST to the comment endpoint; a missing required token prevents the post.",
-      "evidence": [
-        {
-          "resource": "repo://src/client/mod.rs#L1144-L1238",
-          "version": "repo-lines-v1:sha256:346ab5dd78ac135b4f0ad075dd0512440c4428ffd1b4d49a38203c72e1cc1f94:eyJzZWxlY3RlZExpbmVDb3VudCI6OTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA0NGQ4NjUyZTFkNTE1NzA3ZTAwZTEzOTE3Y2VkMTM1YjYyODNiZDU2MTNmNmEyNjY2ZWU3MjAyNTIzNThlYTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE2MmVlNTdlNDFhOGMyMGFlMDE2NGRmMjYxNDM5ZGNjNDk5ZDM1MjA4MzQxNTE1MTZkMDQ3ZThkZWFlOGE0NjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlhZGM2Y2NmNGNjNjJkNTc2NWZmMTA5YmVlM2I4YWZmNjBkZWVkNGYyMmYyMDcxNjIwN2EzNDRkNmZlNTEzNGUifQ"
-        }
-      ]
-    },
-    {
-      "id": "claim_42de6ab1d8974fb3b8d6f8868d236ea8",
-      "statement": "Client methods return anyhow::Result, add contextual errors around transport, reject failed HTTP responses with status and usually body text, and otherwise propagate parsing errors; they do not implement retries or token refresh.",
-      "evidence": [
-        {
-          "resource": "repo://src/client/mod.rs#L1029-L1075",
-          "version": "repo-lines-v1:sha256:364c08bd3cd99fce07ce30c85127d6d997ea3669557d5869934daf8db676595e:eyJzZWxlY3RlZExpbmVDb3VudCI6NDcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA4YzQyZjBjMmU0NjM3YmU2YjAwYmJiYjcyODMzNTEwMjRiNzExOTdlNmNkZGYwYjlhN2VlNmFkMzVlNjU0OTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIwZDgyMWRjMGI5ODZlN2JiZWI3ZjNiOTM5ODg2NTIzNjAyZmY3MjIxZGU3Yjg4N2ZkYTVlNWVhN2U0MjQ4ZDYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ5YTlkN2VhNDgyNDVhMWRmYjMxMjI5NDVjYzU3ZWM1MWE1MmY2MGExNjc3NDE0ZTg0YzA4Y2U4YjU5Mjg4YzAifQ"
-        },
-        {
-          "resource": "repo://src/client/mod.rs#L334-L370",
-          "version": "repo-lines-v1:sha256:f86e04a187bffd0a7d1f753c882a3622823912517e9b675702e2237dab9a4569:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM2ZGRiYTUwYWI2ZmJjOWNkNWI0NGY4ODM1YzJiMjUxZmEzODY2MGNjOWNiMTU5YTZjMzM1NTM3YmM2OWI2YzUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ1NDNiMTM5ZWNkOTJlOTgzYmU0ZjgwY2ZmMTA0ZmM1N2YwNTM1NmRkMTdkMGRmMGJhNTcwMmViM2Y2Y2EwNzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJmOTMyNTJiMDY1ZDAxZmY5NTdlODFiOTNjMGYyYjk2ZjRiZjcxM2IxMmU4ZTMyY2E1NWFkMGJlODNkZGZkYzUifQ"
-        },
-        {
-          "resource": "repo://src/client/mod.rs#L462-L487",
-          "version": "repo-lines-v1:sha256:2e3910c8722fff48664dd57f69f85c3b13782adee87ea457d81bfc6ea57a1878:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4Yjg4NWRmZjE1M2Q5MjFlYzk2ZTI4Y2FmZjIwM2MzYWQ0YTUyNmZjYTc4NTdkZTc4ODQxMmEwZDE0YzZkMDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4ODliMmFhYTM1ZmZiMjJlMTZkMjZiOGU1YjQ0YWY3NDcxYWQ2ZWQ3MWQ0MmE3N2Y0MmM2Y2ZiY2VmNmFiYjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQyOTdkMjZkNTJjNDBlZDEyNTA0ZDI4NTNiNDYxMTliNzllM2IwMjdmNzg1MGUwYWY0NjAwZjM2N2QwODU5ZWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc1NWQxZmM3MWJlNDZjOTY2YTg1MmJkNmQ0OTdjMGZjNDViOTI0ZGY1ZmYzZmIxN2VlMGI5YjM3ZTJmODc1ZjkifQ"
+          "resource": "repo://src/client/mod.rs#L2075-L2800",
+          "version": "repo-lines-v1:sha256:347ffbe949c34595352bb3ae7d586ed716a3e65aa846f7dff02eb695d53e2a45:eyJzZWxlY3RlZExpbmVDb3VudCI6NzI2LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIwNjc4YTkxY2U3ZjI1ZDE0ZDg4NDIzZWM0ZDc1MDUyNDYwYWFiNTFlODMwZGUyYjM2NTczY2M4MDA3MTMxZjU3IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI4YWQzMDI5ZmEzMGVjNmJlYTVkNzc1YmUyOWUyZmJhMzE0MWQ2NTkyNDFlNWExOWUxY2UzYmZlNTA4N2E4OGE4IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI1YmEwYWRmMzRjMDA2MGJkMmFlZjVjYzk4NmNlMmU2OTc4N2ZkZWExNzQ3N2RjZDVlMTFlMDdiY2YxNGJlN2IxIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI1YzFlNzgwZDEwNTU5OTZjMTM4ZTZkMzExZTFjZTZlNjZkMWY1ZTljMDQzY2VjODhhYTdhODIxNGRkOTlhNjRhIn0"
         }
       ]
     },
@@ -105,12 +67,12 @@
       "statement": "The client maintains a split trust model for merged card data: task detail JSON is not authoritative for editable dependence, priority, or estimate values; board-card JSON contributes time and label fields; and the HTML edit form supplies the preserved form baseline.",
       "evidence": [
         {
-          "resource": "repo://src/client/mod.rs#L79-L94",
-          "version": "repo-lines-v1:sha256:c9768f635f8e7da2b1c9e6b66dff24acf76480f3023b6fdf7578307d4236a68b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmOTllYzQ4YzM4ZTQzMzE3ZWZlODliNGZiMGEyMzcwYjE0ZDU0N2I3NjVlZjk3MzA1ZjFiZTcxYjdiZmIxYjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJlYzNjNTQ0NDIwZGIwNjU4MmFhYWM0YzAyMTBmZDFkM2U0YmVjYWMzMjI3NzI4ODg2MDVjYWUyZDQ0NmQ4ZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE5NDA3YmE2MzMyYTg5NWM5NGRiOTY2YmU4ZTY1NWFjNTU3MTQ5YzUxZmJhMGNmZjdkOTkyNjhkYzhjNWUwM2YifQ"
+          "resource": "repo://src/client/mod.rs#L138-L157",
+          "version": "repo-lines-v1:sha256:776c35bea5d8e9b17a2400b73e0f4a00c2ee3b52b1d5bab30257dad95296a1d2:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmOTllYzQ4YzM4ZTQzMzE3ZWZlODliNGZiMGEyMzcwYjE0ZDU0N2I3NjVlZjk3MzA1ZjFiZTcxYjdiZmIxYjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJlYzNjNTQ0NDIwZGIwNjU4MmFhYWM0YzAyMTBmZDFkM2U0YmVjYWMzMjI3NzI4ODg2MDVjYWUyZDQ0NmQ4ZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE5NDA3YmE2MzMyYTg5NWM5NGRiOTY2YmU4ZTY1NWFjNTU3MTQ5YzUxZmJhMGNmZjdkOTkyNjhkYzhjNWUwM2YifQ"
         },
         {
-          "resource": "repo://src/operations/cards.rs#L77-L117",
-          "version": "repo-lines-v1:sha256:a86fc619c98e7680c200089f62ffd2610a516ea8a0a75647d087238803b37402:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIzYmMwZGMxNTUwZTJmMTZhN2Y4OGU3OTE3NzM0MmQzZTUyMDc3YWRlY2Q2ZmM1MDg4MTRjZTdhYzYzMWFlZjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk1YmIzN2Q2MzQ4NjUyYjU1MjgzMTNiYTFlYTViNmU5M2E4MTcyODU4ZjQ0NzFiZGE4MWY4MDVlNmU2ZGE1NWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyNGQ2NTE3OTc1MjhjYTVhYzc2OTA1YThjNzgxNjlmM2NlMjFlZGVkNjg2YzNiMmM0NzgzNmY1NGM5M2RkNGQifQ"
+          "resource": "repo://src/operations/cards.rs#L130-L191",
+          "version": "repo-lines-v1:sha256:2e050567254fc0b7ad449e54e597f6ae070989e398d27d4fdae86765a20e1902:eyJzZWxlY3RlZExpbmVDb3VudCI6NjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIzYmMwZGMxNTUwZTJmMTZhN2Y4OGU3OTE3NzM0MmQzZTUyMDc3YWRlY2Q2ZmM1MDg4MTRjZTdhYzYzMWFlZjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk1YmIzN2Q2MzQ4NjUyYjU1MjgzMTNiYTFlYTViNmU5M2E4MTcyODU4ZjQ0NzFiZGE4MWY4MDVlNmU2ZGE1NWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyNGQ2NTE3OTc1MjhjYTVhYzc2OTA1YThjNzgxNjlmM2NlMjFlZGVkNjg2YzNiMmM0NzgzNmY1NGM5M2RkNGQifQ"
         }
       ]
     },
@@ -119,14 +81,522 @@
       "statement": "The client treats an edit-form POST as failed if the response still looks like the edit page, even when the HTTP status is 200, so silent validation failures do not appear successful.",
       "evidence": [
         {
-          "resource": "repo://src/client/mod.rs#L1369-L1440",
+          "resource": "repo://src/client/mod.rs#L2729-L2800",
           "version": "repo-lines-v1:sha256:066c74834cb03f51a3cd50aeae1cc38c576d8c2a82fc784f29c26730fe227800:eyJzZWxlY3RlZExpbmVDb3VudCI6NzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmMmZhYmFmMTc1NjhkODdiYjRlZTExZDc4YzEzYzllNDRmMTA5YjRmNjA1MjYzMzQ2MDRmNTQ1MDA2NzE3YjIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhhZDMwMjlmYTMwZWM2YmVhNWQ3NzViZTI5ZTJmYmEzMTQxZDY1OTI0MWU1YTE5ZTFjZTNiZmU1MDg3YTg4YTgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ1NGNmZWE5NjQ5YzVmMmQ5MzFiZmIyZGI1MTVhZWQ5YzQwOWRmYzlmYTJkZDA3OWRmMjE4N2YzOWI3MTMyMjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVjMWU3ODBkMTA1NTk5NmMxMzhlNmQzMTFlMWNlNmU2NmQxZjVlOWMwNDNjZWM4OGFhN2E4MjE0ZGQ5OWE2NGEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_089df5686a5d4bf0917920972cef3659",
+      "statement": "HteamClient uses fixed API and site base URLs, a 30-second reqwest client without a cookie store, and test-only construction can replace the two bases independently.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L18-L20",
+          "version": "repo-lines-v1:sha256:2c3350be83267354aee7ffc708ea6431eaedd99515d854e30bcff05d251e81a7:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjUzMDgxNWU5YzFkNDYzZjBjZDEwNzgxYWVhYjM4MjhlZjA4ZDBlMzk4ZjIzNTlkMGFlOTgzN2Y1NTkyNzI1ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNWI5YjhlOTIzNWQ2YmQ0MzNkYTRmNjg2YWY0YzBiOTBlMGE4Y2JlYTJjYjI0MDQwOWMxZGZhMjMwMjJjODg4ZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjIyMDc5MDg3NTk4ZGE4MTIxNDM0NDVlODhlZDM2NmIzYzhhZWU1MWM3OWJjYjY5ZWJiMzZmOGNkZDkwNzMwNSJ9"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L231-L265",
+          "version": "repo-lines-v1:sha256:171f5784773c987d22c9924acaaeff5a758eb0650e415cfe355a11584144a2da:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJjNWRlYWEwMWJlZDc0M2Q3MTgwNGJkZjM4ODM1MTZjZjRlNTZlYmI0MGIzYWY0ZmMyOGMzOTMwMzNmYTkzYjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFkOWUxMjU0NjQyNTU3NmQzZGVhZThjOWI5ZGJmMTI4ZDVkNmRkYWY1ZDdmZTg1NzkzNDkyN2RlZmZhM2I5ZGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYwOTQ5MTVkN2JkMGIzZWVlYmVkNTJhODk0NjI0YmQ4ZGQyMGYyOTJiM2FhMmFkYTBhMmQxNzRmMmY1MWMzNTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ2Mjk5NjU5ZGUxNGZlZTQyYjg1MmJlODU2NjYwMzgxNzEzY2Q0ZjY5MjM3ZDI5ZjNlZTk0YmZiYmYyOWRhMDkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e92e278f75c74e9688ef0a44e3956bdb",
+      "statement": "Card creation posts JSON containing the name, resolved user, board number, and optional list labels; successful empty or unusable card responses trigger a named-card lookup in the requested list and otherwise return an ID-0 placeholder.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L1244-L1327",
+          "version": "repo-lines-v1:sha256:5c1d5d93a9d7049ff351f828cd89327d67f90e16e02f799578ccec20e20e1645:eyJzZWxlY3RlZExpbmVDb3VudCI6ODQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU0N2NlNjI0MmI2ODllYTIzMzY3OGEzOGRlNTI2MTM3NDA3Y2ZjNDVmN2E1ZTg2ODVmZjk2ZDA4YmYwMDk4ZGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5YjE5ODJlOGRkNzQ4MTE4MTQ2YjM5YTJkMDA2MmY0MDgxZTM0Nzc5Yjg2NzVjMjM0YzRmYjEyNGRjMzkzOTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ0ZjVjOWJjZjMyYjYyNzY2NzQ3NjYzODIxMmQ2NzZlNmY1ZDBhZGY5MzE4MmI4OTgwNTA2MDRiMWNiMTQ2NWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjEwYmY3NTc1MjdhMzA2ZjU4ZTk0MGE0ZDIyOWQyNGJmZmFkOTM2NjE0MWFkYmRjY2ZiYjEwOTQ4YzM2MDhiMTMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b7274b0adf21490fb56104738bf7b0f1",
+      "statement": "The client treats an edit-form POST as failed if the response still looks like the edit page, even when the HTTP status is 200, so silent validation failures do not appear successful.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L1367-L1375",
+          "version": "repo-lines-v1:sha256:8eced30f4456297a07fe7f40ebc9f130ddfa51234ce21b0859166dfdb2c94006:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiY2I4OWY0YzJhNTc2NzY4YmQ5MzRkMWNiY2ZlMmNkODRmMTc0NmQzZjcwN2YwMmY5MTQ2ZjZjZjEzNWQyMzBmYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTA3MWM2ZTkyMmQ2NGUzYzJkMTJkMWI0MDA4NGMzMWNjNGU3ODA3ZmI0MmU3ZjcyMjljYzg4NjA1ZTdmYzhiNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTQzZjRmNTFiMjcwYWRkNTkxMGIxM2UzOTk4ZGU2NDE2N2E2MGU0YWZiOGU4M2VhMWJkMDMwYjU1NzZiODdiZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjJiNDljMzJkODQ1MWI5N2Y2NzE3YTcwZGM3OGU5Mjg1NWE2NmI1NDNkZGFiMjdjMThjZDI4NWI5OGExOWJmMiJ9"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L1589-L1606",
+          "version": "repo-lines-v1:sha256:7096988533b57b60e7af4a02ad91a9728cb903f8f4e79f01bfece94baaca765d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQwYWRmZDcwZGE5MTE5N2FiMWEzNjgxMTYwNDU2MjFiNDg0ZDEwMjgyMGVlZWUzZjQyMzk5YTk3ODIyN2UwMzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwNzFjNmU5MjJkNjRlM2MyZDEyZDFiNDAwODRjMzFjYzRlNzgwN2ZiNDJlN2Y3MjI5Y2M4ODYwNWU3ZmM4YjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBmM2EwM2Y3ZTA4NmJmYjY5MWE4NjgyNGM5Zjk2NjRlYzE0NjQ5NTBkYmI3ZmE4ZGIxNDJjM2JmNzAxMjAxMWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgwNjUyZjEzZDM5NmI2MGYwZTYwZmM1ZWMwMDkyYzFmNTI2NmI5MzA2ZjhmOTYyOGMyZWI3YTk0MTQ0Zjc3OGEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_bee04edfca4a422ebed0a4f445baf119",
+      "statement": "`HteamClient` is the repository’s HTTP boundary for Hteam, and higher-level surfaces route through the shared operations layer instead of constructing request URLs, headers, or parsers themselves.",
+      "evidence": [
+        {
+          "resource": "repo://src/operations/cards.rs#L65-L167",
+          "version": "repo-lines-v1:sha256:591dae169ea73123e7c96145c9f4ca42c4870f253a0d31fa58872e52087365de:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAzLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI3MGE1ZDVjMjNkMGNmMTI2NDlhYzg5YjlkMGY5OTE5ZGU4ZDIwZDBmMDhjYmE2YTM1ODViYjViYzdhZDY1OTRjIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJlODZmYzJhMjBkNGEyZGI2M2ViYzk2Y2JjM2Q1ZWJhMmQyNGM0N2RiNDU4MDljNzIyYTdjNDZkMzQwZDQ1OGVhIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJjMmU0MTdiZTFjMWQxYjY0MWYxODg5M2EyYjBhMTk5NjY1Nzg4NGRkYWU0YzI4ZDJhNzE5YThhN2M3ZTdhMGY4IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI1MDg2YjQwOTczZDU1ZjdmYzQwMmQxODYyNDIxYzI1ODY0YjcyNjc1YzI0MTRkYjIxYzM2NjVhOTRjMWJjNThmIn0"
+        },
+        {
+          "resource": "repo://src/operations/mod.rs#L1-L6",
+          "version": "repo-lines-v1:sha256:5cf09d2649f2d9474e14fdb995de776a1ab2596365da0ab2d280d75894f2119b:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTU5ZGNkYjZiZDgyZGU1MzlmNmEwMjE2MzIzZjViMWI0NDc0MTM4NDZlOWFlZDdjNGRkNDllNjVkZDgzZDY5MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDY1YWYzOTFjOWUzNDM2ZTlmYmQxZjIzOTA2MTc0M2Y4MjJlMTU2NTI4ODgzOGE4MjIxZDg4OTAyZTBmYjkxNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWY3MjEyNjIyZWEwZjQ4MjE0ODAzNTY1ZmRlYzU0ZmFlYTk3ZDI5NWI4ZDQxMDg5MWZiNmJiNDk5MGIxN2IzNyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_dbbf367dca914ab0b9436ef65c7c1a83",
+      "statement": "The client uses `https://hteam.mx/api` for API routes and `https://hteam.mx` for site/browser routes, and it builds a single `reqwest::Client` with a 30-second timeout and `curl/7.81.0` user agent without a cookie store.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L18-L19",
+          "version": "repo-lines-v1:sha256:4bda12efba7bec127715c10ce80f00707f78f8213aaabcb0bc026343a737ee2f:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjUzMDgxNWU5YzFkNDYzZjBjZDEwNzgxYWVhYjM4MjhlZjA4ZDBlMzk4ZjIzNTlkMGFlOTgzN2Y1NTkyNzI1ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGU3NzI0ZTIwMTU0YTU2NjIwMWIxZDJlYzc4NzU3YTE3YjkxMzVhNGM4MDdiNTVlNjFlZDY1M2ZkODAwMjYyMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNWI5YjhlOTIzNWQ2YmQ0MzNkYTRmNjg2YWY0YzBiOTBlMGE4Y2JlYTJjYjI0MDQwOWMxZGZhMjMwMjJjODg4ZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWI4NzA5N2NlZGU4YWZkYWU1YTc2Mzc3YjlmNWFhZDI4MjZlMDBjNDdjMWRmZjAyY2VlZmE0ZGI2MTJiYTM4NiJ9"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L545-L559",
+          "version": "repo-lines-v1:sha256:06ba5fdbb94f89c3bf0593e6c30345bf0238b32d7dcbad8540f0e1f865e3f316:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkyYjU5MWJjNDkyNTcyNTMxYTM2NjllYTI3YTVkZjVjN2Y3MTUyMmUxNTAwMzhjNjUzOTc1MGJlNzE0YjgzODMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ4OGNjOTIyNTIwNDZkMGMwZDY4NjU4ZjZkYTZkYTk3MDBiZDA3ZGY1ZmU5OGQ1ZTQyN2Q3OGNhNWExZTZhNWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYwNmRiNjcxZTlhN2M4N2NjZmE2YTk2NGFmOGZhZTM0OTRlMmZkNmI1ODk3MzhjZGQzZGE2NmM1OTg4MzU2YWUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_cd7b3e3a8c4747259b223653ae4f90e8",
+      "statement": "`build_headers` adds `Referer`, `X-Requested-With`, and `Accept` on every request, and injects `Cookie`, `X-CSRFToken`, and Bearer `Authorization` only when the corresponding config values exist.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L561-L590",
+          "version": "repo-lines-v1:sha256:f2a835246fe87512bfce6fdba71cf7942f7373f71a9c7dc68674293bc8752dd9:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4MTM1M2EwM2VmNzVkMmNmYzQ1OTgyZTk4YWNiNDMwODk4YWI2YjBhYzljY2I3N2RiZWNjM2U4ODhkZWQ5NjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhhMWNjNDE3OTZiZmZmN2FkNDFiNTQ1ZDA4M2JhNTUwZWFmMjIyZjFiZTJlMDMyODk0YTRmMWY0ZjVhMTVhM2MiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRlNTk1MGE1M2U3YWY0MTA0NjEzMDc2NWFlOGNmZTMwMTg2MGMxNTkwNWU0ZDcyNTYyNzRhOGM4M2I0OGUzNTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVkNGQyYTQwMDVlZjYxZjQ5YjdlZGI3NjQ2NzhhZWEyNDE2MDg1OTNhNGM0N2E4ZDRmMzgxMDE4NDc4YmNjZDcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_56283693a2044090947ca69dbdfbba5e",
+      "statement": "Login probing validates candidate credentials by calling the boards-list auth probe before saving session cookies, rather than persisting credentials first and discovering failure later.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L601-L625",
+          "version": "repo-lines-v1:sha256:f9975315206762667e7996cca05ce79d9bd951e0bda54e6225c2d90b5d0ca6ec:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM1ZWE4YjIxODQwYzU5NzgzZmUxM2QyZTUyMDI4YmM2Y2NjYzdlMmM4ZWM4OWMxOGNiMDc2MTkwMmJlNDQ3ZjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVlN2I1ZDFmZGRiOWI0OTcwMThlMTE2MjQ1MDM4MzBmM2E2MmVmYjYxZjQ4ZTIzNjY4YWQ4NDE5MjYyMDAzYTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ5NWM0YTY1OGY2MDg1MDllNWEyOWUxMzUwNjMyYjFmM2E2NjUxODI0MzAxMTRjOGUwNGI0MzUyNGM2MzFlNDQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_789affc9153f46e1acc4d5f1810fd6cb",
+      "statement": "`set_board_number` clears the cached internal `board_id`, so a board-specific ID discovered for one board is not reused after switching boards.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L1-L5",
+          "version": "repo-lines-v1:sha256:edacd7388dc403b26bbb0ffd8f129ef5e2c333a2a96d67e92c1f85f3c618ea82:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDI0NTk3MWZhZDIyMDQyOTRlZjZkMzlmMzE4MzkxNjVhZTk4NjU4YzU5MDc2ODFkZTdmMGRkNGE0YTJhZGUwZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTc2OTVjZTExOTNlNDgwYjEzMTRkZDI1MTMwM2QzNzg5ZmUzNTRkNmI2ZjAzMjZiN2UyMWJiOGZhYTkzYmQ3OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODkzM2YwYmI1MGEwNTg3MWNlODczZTc4YTE3ODUyOTM4NjcxNWQyNTRiYTQyYzIwZjc2NDI2NTEyZDVkOTkzOSJ9"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L475-L488",
+          "version": "repo-lines-v1:sha256:37686fe52b261d03c685f6923ce33853bcd4262dd88f06956441ac3ae99eb79c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwMzNmYjhhZDRjMzk3M2YyMzI5NGM5MDM0ZjA3ZmE5NGU1M2Y5OTc2NmNmMjMxZDkyZjNhNDAwYmFmYmZmYTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2ZDI3NjBjNTNjMjA2Y2MzNGI5NGQxNjk3ZTQwNDY3NmFiZTc0MmM2YmE1MGFhODc3ZWExYjBlODhmNGU5ZTkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFhN2JiYmYxN2U2YzM2OTkzMzdjOWJmNzYyYjBmNTEzMDY2MmQ4YTI0MDUyM2RhN2U5M2VmOWNlZTUyOTUxNzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgxMGFkZDg4NDljNTJkY2U0OTc4OTJhNzExZjVhZDFlNDY3YmM0YjQyYWIzNjBjOWM4YmNlMjk0MjA5MTczMTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0626ff14e02a4c0694ce778514b58dee",
+      "statement": "`TaskFamily` distinguishes operation and project task trees, derives the family from `title_url`, and maps each family to its own board, task-detail, and site task paths.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L28-L124",
+          "version": "repo-lines-v1:sha256:482239a8e40d80490bddcf91174f9aaf669516fe1ade1a275962d2e3ebe978c7:eyJzZWxlY3RlZExpbmVDb3VudCI6OTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0MDkzMzJhZmMyZDEzMDBkYWY2OTVkNDQxMDEwNmI2YmVkMDU0M2U5ZTNmOTA1OGQxYzJiZDQzNjg2YzA3ZjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQxODAxN2ViMTY2YzQxNGFhMTU1YTM2N2MwNGNlMjdjMTRlYzRkNTcwODAwNzJjMTBmMzFlNTNmYmM1NzZmOTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEyNDA1NGU4MDcxMzUyYWYxZDVlZmNjMWQyYzdhYzBhNGQ3YzQ2OTFiMTRmODBhYjQwMGYxMjg0ZWUyZDBlZDgifQ"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L845-L856",
+          "version": "repo-lines-v1:sha256:6f7c9ac1018ee511c251cb011f2dc62bf5b4efc0262c960922217cb8de94de6f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY4ODM0MGVkNTNkZTlkMGIyOGI1ZmFhOWNmOGNkZjc2MjAyZTE4YjY0NWRmODI5ODkxMDQyZDc0ZmVkMTUwZTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ3ODYyNmQwMzFkZWM5OTRlOGZmNmNjN2I2MWVjNmExYzdhOTIwOTdiMmFjYTRkNTUxNzI2Y2QzYmM5YjE0NjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUzMDQwZWM5NGNjMTkxZTRkMTEzMTk3YTcwMDdjMjBkMDVmMDA4ZGE3ZDAzZmFiNzdmOTA4MGU3MmVmZmFjYWEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_44543578fea5462c9c9804731cbc529c",
+      "statement": "`get_lists_for` and `get_cards_for` select the API tree from `TaskFamily`, append `?format=json`, and translate 404s into family-specific missing-board errors instead of surfacing the raw server body.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L632-L670",
+          "version": "repo-lines-v1:sha256:198a64e3243efa74857229a3c4659c026d6ad69fe5cca2a69ac2ad3b5c46df2a:eyJzZWxlY3RlZExpbmVDb3VudCI6MzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI0NDc5ZGM1Nzk2MjBmZDdkOTNkNzU4Y2MxMDE3MjEzMWVlN2RlYTM3ZGYxOGYxM2IzOGU0ZmMzZjU1ZmYwZmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ1ODBmMGE3NWZhYTA4OWVlMzVhZmZiOGZhOWU1MjlmNTUwOWRkNTAxOWExZDU3OWE4NTlmMzk1MzA5YzVlZDYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZiMjBlNzhiOGRlMmI1ZDBlYzRlNDgwN2I0ZTNhODFmYzIyYjczMTQ4Mzg2ZWVmNzM1ZjZjYzFlMTIyYjRkZWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ4MWI3ZTY1Njc4ZWQ4YThiYmYyMjU3YTM3NDM2YzE0MmMyODZiYWI1ZTAxZDFiYzVlMGJjZGUwZDRlYjI2NmMifQ"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L682-L760",
+          "version": "repo-lines-v1:sha256:0b44289d957083db421ed52d8ba964005809fcd881ad049e0d4c10b743657d21:eyJzZWxlY3RlZExpbmVDb3VudCI6NzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRjMjIyMWY4OTVjYmJiYmU4NzNjY2E0ZmNkNjllMTk2YzFkZjEwYTE5MGMyZjNhYTEyOWFiZTM0YzYxZWFkNmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZiMjBlNzhiOGRlMmI1ZDBlYzRlNDgwN2I0ZTNhODFmYzIyYjczMTQ4Mzg2ZWVmNzM1ZjZjYzFlMTIyYjRkZWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI5YTA1MTQ0NTEwMWQxYTMyMjAyZTQ3ZTNjM2JiOGNiZjRjOTAxNGQyZDEzMzFiNTNjM2U4YzY4NDZiMTdmODUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d267f9488c5a46efb58c6956a7c08711",
+      "statement": "`get_cards_for` treats `total_board_cards` as a pagination hint and refetches with `items_per_page` when the first page is truncated, then copies `get_time_status` into `Card.time_status` only for cards marked with the `Follow-up` label.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L693-L719",
+          "version": "repo-lines-v1:sha256:3685929473022e5546a595060901ffcd2cd32ba80572de01e5171889f9b58c1a:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg3NjkyOWI2M2I2OGYyMzA2ZTlkODUzZjk4NjBlMTE4ZDY2ZTVhNjMxZjY1NjQ1MjNjMWUwYmJiMGY0MDhmODUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZmYjA4Y2ZlNTkzYzQxYTY5ZTQ5MjEzOGZiMWIxNzc3OWFiNGQ4MTMzNjljOTBkYjFmY2YyMTdhMzViZWNkYzkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE4ZGY0ZTUxMjkzOGJkNWQxYzQwZDdkYjA4ZGI3ZWEzMjdlMDdmZTljZDVhZmQ4MjdmNjZiNWUzN2JiNzY0ZjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY2NWZhNGRmY2M1MWM1ZTBkNTdkMDkyNzRkMDRhOGJlM2M0N2I1MGI2ZDJlZTZmN2E4ZTgzNDM5NjNlM2E0NzUifQ"
+        },
+        {
+          "resource": "repo://src/models/mod.rs#L114-L140",
+          "version": "repo-lines-v1:sha256:d9830a3add452140462a45b6a200dc431bdd2308f86a0db5447b4344d2944e04:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhmY2ViMjg1M2NiN2VjOGY4OWFhYjBiMjEzYzY1OTVkZGUxZjRjYjQxMTdhODU5NDU0ODk4NTEyOWEwYjJlYTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjcxOGRhN2Q0MTc1NTEwNWFjNDE1NGQzYWM5M2FmYzc3MzM3ZmM5ZGI1MWEyMDM4ZTUyOGNkYmQ3MDhhZjc3M2UiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQxOTIwODkyNDNmMWI4MDUxZDE5NTdiOTUyMjBjNzRjZDk0MzlmMzZmN2ExZTlkOTJjNGFiMWI0MTliYzRiMWUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b3bfff9d8656473e90121d618223694f",
+      "statement": "`get_card_detail` first fetches the operation-task detail and retries the project-task endpoint when the returned `title_url` points at a project, so the caller receives the richer project payload when available.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L798-L817",
+          "version": "repo-lines-v1:sha256:7b55d97a36aa6dc674e49d29ea695f3f48830e7d0f3c1f44a5b7e8d0a7d10ed0:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4Yjg4NWRmZjE1M2Q5MjFlYzk2ZTI4Y2FmZjIwM2MzYWQ0YTUyNmZjYTc4NTdkZTc4ODQxMmEwZDE0YzZkMDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2YzgwMmM0NWM0MzM2MDdmYWU5ZTFmNTM1NTU5ZWEwOTM0MTA2MzhlZjEzNjc3NTNkOTk5NWEzN2U0ZjRlZjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQyOTdkMjZkNTJjNDBlZDEyNTA0ZDI4NTNiNDYxMTliNzllM2IwMjdmNzg1MGUwYWY0NjAwZjM2N2QwODU5ZWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFmY2VkYTBlN2Y1ZTNjNWNjYTc4NGMzZTc3NTBjMjJmOWQyMDk0MGNhNGYzYmNlM2Y3ZjM4MjgyZTY1MjM5NTIifQ"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L845-L856",
+          "version": "repo-lines-v1:sha256:6f7c9ac1018ee511c251cb011f2dc62bf5b4efc0262c960922217cb8de94de6f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY4ODM0MGVkNTNkZTlkMGIyOGI1ZmFhOWNmOGNkZjc2MjAyZTE4YjY0NWRmODI5ODkxMDQyZDc0ZmVkMTUwZTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ3ODYyNmQwMzFkZWM5OTRlOGZmNmNjN2I2MWVjNmExYzdhOTIwOTdiMmFjYTRkNTUxNzI2Y2QzYmM5YjE0NjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUzMDQwZWM5NGNjMTkxZTRkMTEzMTk3YTcwMDdjMjBkMDVmMDA4ZGE3ZDAzZmFiNzdmOTA4MGU3MmVmZmFjYWEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_776af13d06454152b05c5d3fc4f0ce56",
+      "statement": "`card_detail_enriched` merges three sources of truth: task detail JSON, board-card JSON, and the HTML edit form. The board-card payload supplies time, labels, responsible, and board-specific fields; the edit form supplies priority and preserves form-only values such as the bare dependence id.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L138-L157",
+          "version": "repo-lines-v1:sha256:776c35bea5d8e9b17a2400b73e0f4a00c2ee3b52b1d5bab30257dad95296a1d2:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmOTllYzQ4YzM4ZTQzMzE3ZWZlODliNGZiMGEyMzcwYjE0ZDU0N2I3NjVlZjk3MzA1ZjFiZTcxYjdiZmIxYjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJlYzNjNTQ0NDIwZGIwNjU4MmFhYWM0YzAyMTBmZDFkM2U0YmVjYWMzMjI3NzI4ODg2MDVjYWUyZDQ0NmQ4ZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE5NDA3YmE2MzMyYTg5NWM5NGRiOTY2YmU4ZTY1NWFjNTU3MTQ5YzUxZmJhMGNmZjdkOTkyNjhkYzhjNWUwM2YifQ"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L925-L953",
+          "version": "repo-lines-v1:sha256:21e75d45e459fb832b9d8917d6f63dc272ce58a45eb2931c1d16e58a51d39c8e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE3ZWE5NjQ3Mzc4ODhjMzhlZWU4ZTY1YWM4YzliZmUzNWUxYWRiNzIzMmU4YjdmZTJiNDMzNjgzNGQ0NjJmNDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjcxMTdlNjE3MzAzM2I2YzQ5OTQ1YzQxYmE0MmUyZDc0MDEwOWFmYmE4MDk1YWQwZmNiMGNiOWExODNiOTc3MjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRmNjkyMDQ0ZTk4ZjE1MjUyZTE1NDU5YmVmMTBjOGQyY2U5NjEwZjFhOTNiYzgyZWI5OTY4Mzk1ZDk0ODljNDQifQ"
+        },
+        {
+          "resource": "repo://src/operations/cards.rs#L130-L191",
+          "version": "repo-lines-v1:sha256:2e050567254fc0b7ad449e54e597f6ae070989e398d27d4fdae86765a20e1902:eyJzZWxlY3RlZExpbmVDb3VudCI6NjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIzYmMwZGMxNTUwZTJmMTZhN2Y4OGU3OTE3NzM0MmQzZTUyMDc3YWRlY2Q2ZmM1MDg4MTRjZTdhYzYzMWFlZjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk1YmIzN2Q2MzQ4NjUyYjU1MjgzMTNiYTFlYTViNmU5M2E4MTcyODU4ZjQ0NzFiZGE4MWY4MDVlNmU2ZGE1NWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyNGQ2NTE3OTc1MjhjYTVhYzc2OTA1YThjNzgxNjlmM2NlMjFlZGVkNjg2YzNiMmM0NzgzNmY1NGM5M2RkNGQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7906b9f725c6456184cb0fad88a41f40",
+      "statement": "Card creation is ambiguous when the API returns an empty body or a card id of 0, so the client searches the target list for the named card and otherwise returns a placeholder result rather than inventing an id.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L109-L111",
+          "version": "repo-lines-v1:sha256:27098e2ef0a6225b616d8398d1a915030d1e18e7574053b25e21f4b3e3e35a63:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjY0MTZjMzczZWI5MWE5YzVmZDJiZTcyOTYzYmZjMDg5NzM5NDAzNmEyOGUxZDA1YzJhNzYxYjg0Njk1MTJhMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTZiMDQ0OTE0Njk3MjJlODM2M2E5NGU0MDQ0NTM4ZTAxM2EyYTIxN2UzNmIxZTU2OGJhNjBhY2I3YjRjOGYyZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjdmNGE3MDMwOTNlYjlmM2Y4YjM2NDQ1Y2I3ZjU5ZTA4MWNhMGM5MDg1MjcyNzM4YjJlOGI2Y2UwZjY1MzU1MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWE3MjE4OTlhMzVjMDJmNDk2MTdlN2IyMzJjZjIxMmEwNGMwZjVjYzA1MjQ0Y2FiNDI3MjY4OTg5YzJhYTY4NSJ9"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L391-L413",
+          "version": "repo-lines-v1:sha256:7de68200f3462498b9b5865d3602ec94a3115219f83c04f37e9d8ab36e78d502:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1Zjk2YjFhZTkzYmMzZTdiYjg4ZmUzYTRiYWUyMmZlY2Y2MTI0MjgyYjJkZmRjYWM3MTlkYzJhMTg3NDAzNDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQyMTFhODkzNjE4YmMzNzlkM2NmNTFjNWYyY2RhMzUzMzRmNjljZGRjYmM2MzRlYTMyZWJmZTJlYzk4N2E0MjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY5ZGMxM2QyOTkzNzk2MGE3ZmQxNTEyMDZjNDI5MTcwZDRlYzU0ODc1YmI0ZmQwNzYxYjZjYWVmNzY5YmFkNmIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6bdb47461daf45a984113b94c80c0ab0",
+      "statement": "Card movement posts `board_id`, `card_id`, `from_list`, `to_list`, and `card_type: 0`; the operation layer supplies the board number, but the client sends the internal board id only on routes that expect it.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L111-L111",
+          "version": "repo-lines-v1:sha256:e6b04491469722e8363a94e4044538e013a2a217e36b1e568ba60acb7b4c8f2e:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTZiMDQ0OTE0Njk3MjJlODM2M2E5NGU0MDQ0NTM4ZTAxM2EyYTIxN2UzNmIxZTU2OGJhNjBhY2I3YjRjOGYyZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTZiMDQ0OTE0Njk3MjJlODM2M2E5NGU0MDQ0NTM4ZTAxM2EyYTIxN2UzNmIxZTU2OGJhNjBhY2I3YjRjOGYyZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTFiZjdmZTIxNWFiZWEzMGI4NzUzZTNkY2ZjMTJlMzNkYjFhNDgyNjJiMDY4M2FmMTcxZDc1YTZmMTc3NzQxNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWE3MjE4OTlhMzVjMDJmNDk2MTdlN2IyMzJjZjIxMmEwNGMwZjVjYzA1MjQ0Y2FiNDI3MjY4OTg5YzJhYTY4NSJ9"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L925-L953",
+          "version": "repo-lines-v1:sha256:21e75d45e459fb832b9d8917d6f63dc272ce58a45eb2931c1d16e58a51d39c8e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE3ZWE5NjQ3Mzc4ODhjMzhlZWU4ZTY1YWM4YzliZmUzNWUxYWRiNzIzMmU4YjdmZTJiNDMzNjgzNGQ0NjJmNDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjcxMTdlNjE3MzAzM2I2YzQ5OTQ1YzQxYmE0MmUyZDc0MDEwOWFmYmE4MDk1YWQwZmNiMGNiOWExODNiOTc3MjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRmNjkyMDQ0ZTk4ZjE1MjUyZTE1NDU5YmVmMTBjOGQyY2U5NjEwZjFhOTNiYzgyZWI5OTY4Mzk1ZDk0ODljNDQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d302c4bb602d463a880bee8083ea1c93",
+      "statement": "`update_card_full` GETs the task edit page, parses the HTML form baseline, overlays the patch, and POSTs a complete URL-encoded form back to the same edit URL; after the POST it treats a response that still looks like the edit page as failure even if the HTTP status is 200.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L124-L137",
+          "version": "repo-lines-v1:sha256:d48ff1420b6ee84ea0686be3d378e2d86bc1a151e47e8592fbebfc5a8f38f2b8:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBhNTcxMDIxYTUyMDU2MDU2MjA0OWJmZDE0MjQyY2ZkZTM0ZjZhMTU0MzVhOGM5N2Q3M2M3ZTYyYzZhYWI4Y2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNiMjk0ZjdmM2MyMTQzMmQxNzI4NGQ3NjdhYmUwZjlhMjkyZTRjNGE3OTQwZWZlNDY0ZmNlZDJjZGEyM2M4YWIifQ"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L159-L228",
+          "version": "repo-lines-v1:sha256:f13cd5a2b3da0b420044e607c1ac1461c4efba59225ddb02d186333ccab2e0ac:eyJzZWxlY3RlZExpbmVDb3VudCI6NzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk0ODg1YTQxZmU5Y2I3ZTdkOGJiOTgzY2JhOGUxZTkxMTExOTdhZTY0MDE0Yjc5ZjVjMTM1MjdlNGZmMGQzYzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVhNDY3OWQzZjU1ODNjNmE5ZjVjNjAwYWI4NmVlZTFkYTc0ZjM3YjBlYzcwMjE1YjU0OTUwYzE2OTBmMzcxOWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFhNDEyMGQ4OGEyMGMwY2UwZWVjMmM3OTg4MDUxYTUxMmZkZTk4YjcyMThmYThjMGE5OWU3YTdlNmI1OWM3N2UifQ"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L166-L166",
+          "version": "repo-lines-v1:sha256:1fa52a3ec3d09aa807e428a0002096346823e93170fee449f69f4692321eff1a:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMWZhNTJhM2VjM2QwOWFhODA3ZTQyOGEwMDAyMDk2MzQ2ODIzZTkzMTcwZmVlNDQ5ZjY5ZjQ2OTIzMjFlZmYxYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMWZhNTJhM2VjM2QwOWFhODA3ZTQyOGEwMDAyMDk2MzQ2ODIzZTkzMTcwZmVlNDQ5ZjY5ZjQ2OTIzMjFlZmYxYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDJjMzNhOTA1MmNiMDgwYzYxMjk4MzBmYjM4NzY1NDQ0NjZhZDBlYjRhODUxYzg2MWNmOTM2YWQyM2Y1MzY2NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjlkNzc0MTE3NTgxZmQxZmQwNWM5NGUxZjE1NjcwZTllMWE3ZWZlYjFhYzcwMDQwYzI4YmQ4ZTU1YTQ2ZjgwYiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_ad0e7865186646d8bd55bc81b5c1409e",
+      "statement": "Comment posting is a browser-form flow: the client GETs the task page, scrapes `timestamp`, `security_hash`, and `csrfmiddlewaretoken`, then POSTs the form to `/comments/post/` with the site base, `Origin`, and `Referer`; if any token is missing, it stops before posting.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L170-L172",
+          "version": "repo-lines-v1:sha256:33eabbcb9d0bf0f092eb5d577d2e2509dc47d6e0fb24605c417c7603483403ca:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWJiYjNhZjgwYTcxZTU2MzAyMDcwNzZmYWUxYzQyZWJkN2Y1NTZiNWUwYTRjZjVkMDJjMGU3OGYyOGUyNTM3YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDQ0ZGYwZDA1MDNlMjAwZTZmYmZlZjhhMjc3ZjA2OTIzMjJlZDBhMmViNWE0ZTY0Zjg5NGY4ZmU1YTQ3N2UzNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjlkNzc0MTE3NTgxZmQxZmQwNWM5NGUxZjE1NjcwZTllMWE3ZWZlYjFhYzcwMDQwYzI4YmQ4ZTU1YTQ2ZjgwYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNmJkMGJhYTlhN2FhYjIxN2MyOWNhYTk3YmJmYWRkMzllMGE1YThmNDU1N2M3NGJiNjQ2MTcyMWU1NGQxYjQ3ZSJ9"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L955-L981",
+          "version": "repo-lines-v1:sha256:91a0b369a009057fb9eb709a1cdea82932df96ac34ed9b845778633ea2e60b1d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkOTY3NjM1NmQ3NmUyOWU0NzdjMGQ2YjJlZWI2NmE0M2NjYWVkMTJhOWJiNDk2ZTUzNTEwY2E2NDA3ZGYyMDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE1OGI4MzI5NWU5MjM5NGFmYTc3MjllMGNiMTdiZDdmYjM4ZTQ3YjBkMDJiMTU4MDA1ZGUwODkwZTZlYTkwZjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI5YTA1MTQ0NTEwMWQxYTMyMjAyZTQ3ZTNjM2JiOGNiZjRjOTAxNGQyZDEzMzFiNTNjM2U4YzY4NDZiMTdmODUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3c7d441f1d8449a38fccf624e7cee546",
+      "statement": "The working-state endpoints and daily-work history parser deliberately accept a small set of observed response shapes, but malformed JSON still fails after status validation; the client does not implement retries, token refresh, or automatic recovery.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L176-L183",
+          "version": "repo-lines-v1:sha256:0ec470c7dcd4cb654239cc8096670b707e0a127e070a4aca316af35bc2833681:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMGM5OGEzYzU4MTM5NWUzZWE4OGFmMzQ3NzIxYWEyZGRiZDNlZGMzZGIwOTAyYTFlNTNjM2ZhMTY4NTFkMGQ4NSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmJkMGJhYTlhN2FhYjIxN2MyOWNhYTk3YmJmYWRkMzllMGE1YThmNDU1N2M3NGJiNjQ2MTcyMWU1NGQxYjQ3ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTJkZTY1YjQ5N2NmMjUyYTA1ZWIwYzk2NDY1Njg3YjA0ZTUyN2ViM2IxMGMxNzYwNDkzOWNlNWU0ZGQzNWIzYyJ9"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L185-L187",
+          "version": "repo-lines-v1:sha256:4d08129134c62d59955da74a710501928844a981e6cc0c82dafb90fe2b7182bd:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTA2OTI2NTBiMWExNTAzOThlOTNhYTM0N2ZjMzA4N2E1NWU3MDkxNDI1ZWQwYzY2MmY4OTc4YmViNmRiM2ZlYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTMzYTQwYTc2NTgyMGE2Yjg2N2ExNTQwMWVlMTVhN2VmYzdiNzQ1ZGIwNjVmODE4MTc2MGYzYTI0YjU0YmRiOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTdiNzBiYmIwYTU0ZTVhMDg1MWFmN2YwNTRlNTYyZWVmNGMwYzdmNjYzZWZkNDI3M2JlMDE1ZmQxNjA3OWNlMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjUzNDMyZjBmMzg2ODYwZTM0MjU0OTFhZGVmMGM0Njk3NGEzZTVkODBmYWRiNmIzMzkwYTlkOTA3ZDg1MWM4NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_9bee2b0c7d834aa0914e33faaddaf067",
+      "statement": "Representative tests cover auth probing, project-task refetching, project list routing, 404 translation, follow-up HTML parsing, and family-specific close/reopen routing.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L3658-L3733",
+          "version": "repo-lines-v1:sha256:c9e7ad7429493fe1fbe5edcc876b34fb2115202500c206c8ea7486c8a8ba8c2e:eyJzZWxlY3RlZExpbmVDb3VudCI6NzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBmMmYxMTRiODAzY2MxMGQ4NmVkZDAxMGUzMTdjNTcyYzlkODIzMTBlYjgwMmNmMGY5ZDdkMjM2ZjA4YTRmMzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE3YTU4MDA3MGY1NTVjNGE5NWI4M2E2ZTA0NTk1NzVkODg1NGQ1YzEzODQ1MGJkNDMwZjE5NmM2NzcwNTcyYTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEzNDk5Njk2MGI2MzRhYWE1MzZkODMyNDg5ZWE3ZDk5NzNhMmY0ZWQxZmRmZWM2ZTcxZGZhYTI1MWIzMWMzNzQifQ"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L3863-L4056",
+          "version": "repo-lines-v1:sha256:50bd839533861581c6d83ce4500311a18a42ea8ce3c4d04a56ac180e9ce94d07:eyJzZWxlY3RlZExpbmVDb3VudCI6MTk0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI5MWNjNDA2ODdkMjQ0ZTlkYWY5MWNlZDQ2NTIzMjY1NjlhNGZiNmRmYzgxZDAzZmJlNzIzYTVlYTNjY2JlOWRmIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwNzZjNzYzZTJmM2ZlYzA5MzE3NTZhOWVhNGYzYjRmODAzMGVjNDY2OTIzNzhjZGZiYmJlNTA2NzUwZmM4MDQ3IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlMDM4NjZjNjUwNjk3ZjgzNzk1YjcwZWIwMGU5ZTUyMDIwZGY1NjBmY2ZiNWEzYTQzMmUyZGFiNDQ5MmQ4NzIzIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI4ZDg3MzIxOTk0MTJkNGY5OWE2NTAwMWMwNDlkNTE5MDI4MGI2ZjcwNWNlMDc3YzI2OTBhMjU5YTQ3YmMwZGJjIn0"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L4066-L4110",
+          "version": "repo-lines-v1:sha256:114d3b716609c3534009563075b37f85aeebc3c0da27504abe89751e811035ea:eyJzZWxlY3RlZExpbmVDb3VudCI6NDUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkxY2M0MDY4N2QyNDRlOWRhZjkxY2VkNDY1MjMyNjU2OWE0ZmI2ZGZjODFkMDNmYmU3MjNhNWVhM2NjYmU5ZGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2YjA0NDkxNDY5NzIyZTgzNjNhOTRlNDA0NDUzOGUwMTNhMmEyMTdlMzZiMWU1NjhiYTYwYWNiN2I0YzhmMmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkyZjM2MTIwZTYxZTMwYTYyN2QwZGJiMGI5NjUwMDQyNmY5ODMxZDYwNjJhOGUwNmViMTc4ODVjZjI3MGRkZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE3YTU4MDA3MGY1NTVjNGE5NWI4M2E2ZTA0NTk1NzVkODg1NGQ1YzEzODQ1MGJkNDMwZjE5NmM2NzcwNTcyYTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_04fb308db8d9449990d9b49c88f9d4a6",
+      "statement": "HteamClient is the repository's HTTP boundary for Hteam, so CLI/TUI/MCP surfaces use the operations layer rather than building URLs, headers, or parsers directly.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L21-L31",
+          "version": "repo-lines-v1:sha256:85c309654252de2c420d3a5edc0ac55fdc5e620ae841ddd814c0643f34639da9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYwMzIxNTM3NTA0OTVlNDM3ZTczMDBkNzZhOTgxZjk4NThmM2Y1NDcxODFmNjhiMWU3MDVhMTA4ODAwZTMzMjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU3MTZhZjcwOWZlZDM0OWNiNzdjYjRkYTYyZjk2ZjI3NTEyMmE4MzEzMTRlNGM1NmNkZjdlOGI4ZmZhNDFjZTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJjMzM1MGJlODMyNjczNTRhZWU3ZmZjNzA4ZWE2NDMxZWFlZGQ5OTUxNWQ4NTRlMzBiY2ZmMDVkMjUxZTgxYTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBkNzc1YzBlZTc1MTJjY2VmMzA0NDE5ZjlkZjk2MGFmZTY4NTQzOTM1ZDg5NmZmMGE1MWNkNjU5ZTBiZDM5NjMifQ"
+        },
+        {
+          "resource": "repo://src/operations/cards.rs#L65-L128",
+          "version": "repo-lines-v1:sha256:3b6c16f401fbedf432ccd7390b9a60fbb6454079137c20af5046490138a5902f:eyJzZWxlY3RlZExpbmVDb3VudCI6NjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcwYTVkNWMyM2QwY2YxMjY0OWFjODliOWQwZjk5MTlkZThkMjBkMGYwOGNiYTZhMzU4NWJiNWJjN2FkNjU5NGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMyZTQxN2JlMWMxZDFiNjQxZjE4ODkzYTJiMGExOTk2NjU3ODg0ZGRhZTRjMjhkMmE3MTlhOGE3YzdlN2EwZjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEzNjA0NGIwYWYxNzM4ODQ2ZTgzYzRmMzU3MzI2ZGUzYWMxMTE1NzA4NTJhMDk0MmU5NDAyZDZiNDlhYWRiMDIifQ"
+        },
+        {
+          "resource": "repo://src/operations/comments.rs#L7-L17",
+          "version": "repo-lines-v1:sha256:3ca5c9d4966ec5b2a8dec0e59aca8c266146fb3c3307f4233f6435bd5687b847:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwMDU0NmNjNmFmYzY0MzI0NmU3ZjBkZWNjNWY1NDlkNGFiZTE5NzJlNjg0YzAzMzBkODY4MDQ5NDA1YjJlYWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQyY2E4ZGQzZjI2MWVlMjc1NTUwMmVhOWNlZTNkNGRlNWQwM2NjYTdlMjNhNTMwM2FkOTU0NDQwNDdhODYxOTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ0ZGYxNDUyMWU1NTFjZmQ1YWI4YWQyMWY4MTgzY2QwMWZmNGQxNTljOGQ0NmUyY2YzNjU0ODc1OTc2NjkyYmUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d298cbc31d1e43feae50851c1fda9d0f",
+      "statement": "The client uses fixed production bases for the API and site hosts, builds a single reqwest client with a 30-second timeout and curl/7.81.0 user agent, stores config behind Arc<Mutex<_>>, and does not use a cookie store.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L18-L19",
+          "version": "repo-lines-v1:sha256:4bda12efba7bec127715c10ce80f00707f78f8213aaabcb0bc026343a737ee2f:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjUzMDgxNWU5YzFkNDYzZjBjZDEwNzgxYWVhYjM4MjhlZjA4ZDBlMzk4ZjIzNTlkMGFlOTgzN2Y1NTkyNzI1ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGU3NzI0ZTIwMTU0YTU2NjIwMWIxZDJlYzc4NzU3YTE3YjkxMzVhNGM4MDdiNTVlNjFlZDY1M2ZkODAwMjYyMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNWI5YjhlOTIzNWQ2YmQ0MzNkYTRmNjg2YWY0YzBiOTBlMGE4Y2JlYTJjYjI0MDQwOWMxZGZhMjMwMjJjODg4ZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWI4NzA5N2NlZGU4YWZkYWU1YTc2Mzc3YjlmNWFhZDI4MjZlMDBjNDdjMWRmZjAyY2VlZmE0ZGI2MTJiYTM4NiJ9"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L31-L31",
+          "version": "repo-lines-v1:sha256:e716af709fed349cb77cb4da62f96f275122a831314e4c56cdf7e8b8ffa41ce7:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTcxNmFmNzA5ZmVkMzQ5Y2I3N2NiNGRhNjJmOTZmMjc1MTIyYTgzMTMxNGU0YzU2Y2RmN2U4YjhmZmE0MWNlNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTcxNmFmNzA5ZmVkMzQ5Y2I3N2NiNGRhNjJmOTZmMjc1MTIyYTgzMTMxNGU0YzU2Y2RmN2U4YjhmZmE0MWNlNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjc3OGM4OWRhZDY2OTY1NWQwN2YwOWQ5ZDYxOGU2OWE5ODUwY2I3ZTg4OTBlZThiNGJjNjg1NzZiOGU2MzY3NyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMGQ3NzVjMGVlNzUxMmNjZWYzMDQ0MTlmOWRmOTYwYWZlNjg1NDM5MzVkODk2ZmYwYTUxY2Q2NTllMGJkMzk2MyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_028e750786b9455babc03fd33e986f7f",
+      "statement": "HteamClient::with_auth requires both session_id and csrf_token, and every request starts from shared headers that include Referer, X-Requested-With, Accept, explicit Cookie and X-CSRFToken values when available, and Authorization: Bearer when configured.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L31-L39",
+          "version": "repo-lines-v1:sha256:57727b3db6364da97cbecb7fd9fc42782081bfdc25834e9f7935ea37b6d6cd47:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTcxNmFmNzA5ZmVkMzQ5Y2I3N2NiNGRhNjJmOTZmMjc1MTIyYTgzMTMxNGU0YzU2Y2RmN2U4YjhmZmE0MWNlNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTQ4ZjE2YjA0ODRiYjIzNzllOTNhNGE3MzA0YjNmNmNkMmNkYTA2Y2Y0ZmVmZDk4ZDQzZmFmMmNmY2VmNGM1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjc3OGM4OWRhZDY2OTY1NWQwN2YwOWQ5ZDYxOGU2OWE5ODUwY2I3ZTg4OTBlZThiNGJjNjg1NzZiOGU2MzY3NyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTJiY2MzMDk3MDU5OTg0Zjk1OWYyMTZjYzQ1ZjY0MzJlOTYzZmMzNmMxYzgxZWZhMDdmYmFhOWM2NTI0YTU1NyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_9439656dfabd4606ae6eee7e087ec4c4",
+      "statement": "Changing the active board clears the cached internal board_id, because the board ID discovered for one board must not be reused after switching.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L41-L41",
+          "version": "repo-lines-v1:sha256:91196ead45694abdb1a66f349de3651dc4e9a7b5eee2bcfba5ff5076fde17e32:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTExOTZlYWQ0NTY5NGFiZGIxYTY2ZjM0OWRlMzY1MWRjNGU5YTdiNWVlZTJiY2ZiYTVmZjUwNzZmZGUxN2UzMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTExOTZlYWQ0NTY5NGFiZGIxYTY2ZjM0OWRlMzY1MWRjNGU5YTdiNWVlZTJiY2ZiYTVmZjUwNzZmZGUxN2UzMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMGM0MWE3MWEyZDUyZGRhYTU2NDIwNzJhMmZhMTMxMWYzNzFjNzgzMmFiM2RlNzJhNGU1M2UwYTk1NDZlYmY3MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTk5YmRlZmVlYWNhNjM0MGUwMjkwZGM4NmU4ODljODlkNWUxODlhYTViYTQ0YjU4NWIzYjcwNzM0ZjRhNjJkOCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_7e91603d84b24f48a20bb5bf87c0f366",
+      "statement": "The client treats boards/listing, cards, comments, projects, working-state/reminders, and daily-work as distinct endpoint families, and the operation layer adds board defaults, edit-form loading, and comment-date validation on top of those calls.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L61-L75",
+          "version": "repo-lines-v1:sha256:c78766911fa1ffebc9cb36833cb476cbecf5f88bd8347183443c762cb636aba7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3Njk0OTMyOWUyOGRlMDNmNTQ4YzA5NWQzMzEzOTJkMGE2NzRjZmMyZjZhYTkwM2Q5Mjc3YTc4MjZiMDdlNzYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM2YmZjNDcwNTc3YWVkN2FjMzVlZTczZDYzY2ZhOGNjZmY2ZDFiNTNmYzdkNGQ3NDMyMWY1YzE4ZGRkZTg1MTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNhNzIzMzJlYzRjMTkwMzAyNTgzZDI3YTYzNjY0ZDFlMzU5YjU5MTdiZmJlZjQ5ODQ2MzQzMWM4M2JlYmM3MjkifQ"
+        },
+        {
+          "resource": "repo://src/operations/cards.rs#L65-L168",
+          "version": "repo-lines-v1:sha256:5e9f561db7f1a9d4863eee9358793e4e5b782f301e726ba2de10bffaa86e9997:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI3MGE1ZDVjMjNkMGNmMTI2NDlhYzg5YjlkMGY5OTE5ZGU4ZDIwZDBmMDhjYmE2YTM1ODViYjViYzdhZDY1OTRjIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJjMmU0MTdiZTFjMWQxYjY0MWYxODg5M2EyYjBhMTk5NjY1Nzg4NGRkYWU0YzI4ZDJhNzE5YThhN2M3ZTdhMGY4IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIyMjQ3MzYzYTVkNmI4YjU4M2ViYjIyNDM3ZTY0ODc5OTZjNjUyNDRkMDdkMjE5MmQ4MTczNWViYWQzMWY3OGIzIn0"
+        },
+        {
+          "resource": "repo://src/operations/comments.rs#L27-L57",
+          "version": "repo-lines-v1:sha256:55454fc87878dcc9dd08819c82e1207ef878975e87b02d8bf2de74658fd0f657:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQzOWQzOWEzNGJhYWE3Y2U1ZjcwZjhkM2QzNGIxYThjOWU2MWI1NTZiYTNkNjZlNjE1MThjNTM2OTJmMDM4MmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY1ZDk2Yjc1YzJjZWExNTIxZGQ0NTY1N2RhMTI5ZTY4ZWNkYWU2MjQ0NTYyMjY1MGY4MDc0ZmFlMjdkOGU5MDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiZjQyODkyMGU0MTVkNjU2OWY1Y2I1ZGNmYzMzMDM3ODI3M2MyMzFjOTJkZjI3ZmNjMjk2YTI4NTQzZjUxNjQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f9bd013957ca45b5840ba2adef56a5eb",
+      "statement": "Hteam distinguishes the user-facing board number from the internal board_id; board_id is resolved from live list data and card creation fails instead of guessing when no list yields an ID.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L76-L83",
+          "version": "repo-lines-v1:sha256:3c99ebe0f72c610ad56f9ed68b71d42bb709744392d8ed86a9bc8a6b8908a326:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjFhYWU0M2Y4MDlhNTRiM2ZmZmE1OTdkNzE4MTA3ZmFlNjRlZThlZTI4ZjAwOWU4NmEwOWU1ZGNlNjU2ZWI5NiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTEzY2RjMGNiNDYzY2FlOGE0ZjI4MWIxNjExOTUyZmViOTAwOGFhZmU3ZjM1MTlmYTVmMWY0Nzc4NjI4NmM3MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWJkNmY4YWM1YWU1OWE0NGU5Yzc0NWRmMmZiMzJhMmRkYTc2MDM2ODkyZjhlNTE3MjBmZTBlNWIxMDYyZWRiYiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_51538a7171784bf49cacbe50f2f6730b",
+      "statement": "Card detail reads are intentionally merged from multiple payload shapes: task-detail JSON, board-card JSON, and the HTML edit form each contribute different fields, because no single response is authoritative for all editable data.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L138-L157",
+          "version": "repo-lines-v1:sha256:776c35bea5d8e9b17a2400b73e0f4a00c2ee3b52b1d5bab30257dad95296a1d2:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmOTllYzQ4YzM4ZTQzMzE3ZWZlODliNGZiMGEyMzcwYjE0ZDU0N2I3NjVlZjk3MzA1ZjFiZTcxYjdiZmIxYjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJlYzNjNTQ0NDIwZGIwNjU4MmFhYWM0YzAyMTBmZDFkM2U0YmVjYWMzMjI3NzI4ODg2MDVjYWUyZDQ0NmQ4ZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE5NDA3YmE2MzMyYTg5NWM5NGRiOTY2YmU4ZTY1NWFjNTU3MTQ5YzUxZmJhMGNmZjdkOTkyNjhkYzhjNWUwM2YifQ"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L159-L227",
+          "version": "repo-lines-v1:sha256:dc9ce01687b37e02e9c8ba9962a4fb53ac4c9a9a41e5c7fe9ff5f113c5dc3d4f:eyJzZWxlY3RlZExpbmVDb3VudCI6NjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk0ODg1YTQxZmU5Y2I3ZTdkOGJiOTgzY2JhOGUxZTkxMTExOTdhZTY0MDE0Yjc5ZjVjMTM1MjdlNGZmMGQzYzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJiMTkwM2U2OTI0NTMwNjk1NGRiZmZkYzk1NjEwNGExMzk5YjQ3MzVjMTUxMmNlMDZlM2M3NjA5ZjE0NzA3ODgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVhNDY3OWQzZjU1ODNjNmE5ZjVjNjAwYWI4NmVlZTFkYTc0ZjM3YjBlYzcwMjE1YjU0OTUwYzE2OTBmMzcxOWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYwOTQ5MTVkN2JkMGIzZWVlYmVkNTJhODk0NjI0YmQ4ZGQyMGYyOTJiM2FhMmFkYTBhMmQxNzRmMmY1MWMzNTcifQ"
+        },
+        {
+          "resource": "repo://src/operations/cards.rs#L130-L167",
+          "version": "repo-lines-v1:sha256:0a6054eebcb6d16fe48e70ae5f3ac9731de4d7c2c2c85671850454c45d7b6560:eyJzZWxlY3RlZExpbmVDb3VudCI6MzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIzYmMwZGMxNTUwZTJmMTZhN2Y4OGU3OTE3NzM0MmQzZTUyMDc3YWRlY2Q2ZmM1MDg4MTRjZTdhYzYzMWFlZjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4NmZjMmEyMGQ0YTJkYjYzZWJjOTZjYmMzZDVlYmEyZDI0YzQ3ZGI0NTgwOWM3MjJhN2M0NmQzNDBkNDU4ZWEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk1YmIzN2Q2MzQ4NjUyYjU1MjgzMTNiYTFlYTViNmU5M2E4MTcyODU4ZjQ0NzFiZGE4MWY4MDVlNmU2ZGE1NWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUwODZiNDA5NzNkNTVmN2ZjNDAyZDE4NjI0MjFjMjU4NjRiNzI2NzVjMjQxNGRiMjFjMzY2NWE5NGMxYmM1OGYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9a2cdc798f2c439982f1a1cc434374a4",
+      "statement": "The board-card JSON contributes estimated_time, time_spent, labels_list, responsible, date fields, and other board-specific values to enriched card detail, while the edit form supplies priority and preserve-on-patch baseline values such as csrfmiddlewaretoken, name, description, time_estimated, start_date, dependence, responsible, priority, and milestone.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L138-L157",
+          "version": "repo-lines-v1:sha256:776c35bea5d8e9b17a2400b73e0f4a00c2ee3b52b1d5bab30257dad95296a1d2:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmOTllYzQ4YzM4ZTQzMzE3ZWZlODliNGZiMGEyMzcwYjE0ZDU0N2I3NjVlZjk3MzA1ZjFiZTcxYjdiZmIxYjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJlYzNjNTQ0NDIwZGIwNjU4MmFhYWM0YzAyMTBmZDFkM2U0YmVjYWMzMjI3NzI4ODg2MDVjYWUyZDQ0NmQ4ZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE5NDA3YmE2MzMyYTg5NWM5NGRiOTY2YmU4ZTY1NWFjNTU3MTQ5YzUxZmJhMGNmZjdkOTkyNjhkYzhjNWUwM2YifQ"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L159-L227",
+          "version": "repo-lines-v1:sha256:dc9ce01687b37e02e9c8ba9962a4fb53ac4c9a9a41e5c7fe9ff5f113c5dc3d4f:eyJzZWxlY3RlZExpbmVDb3VudCI6NjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk0ODg1YTQxZmU5Y2I3ZTdkOGJiOTgzY2JhOGUxZTkxMTExOTdhZTY0MDE0Yjc5ZjVjMTM1MjdlNGZmMGQzYzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJiMTkwM2U2OTI0NTMwNjk1NGRiZmZkYzk1NjEwNGExMzk5YjQ3MzVjMTUxMmNlMDZlM2M3NjA5ZjE0NzA3ODgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVhNDY3OWQzZjU1ODNjNmE5ZjVjNjAwYWI4NmVlZTFkYTc0ZjM3YjBlYzcwMjE1YjU0OTUwYzE2OTBmMzcxOWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYwOTQ5MTVkN2JkMGIzZWVlYmVkNTJhODk0NjI0YmQ4ZGQyMGYyOTJiM2FhMmFkYTBhMmQxNzRmMmY1MWMzNTcifQ"
+        },
+        {
+          "resource": "repo://src/operations/cards.rs#L170-L276",
+          "version": "repo-lines-v1:sha256:4a87f283beb409e6181f3340d8ea1ba3c09915e851ec9bfa724032047a20ccf8:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA3LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlMmQ5ZDI5ZTNiNGQ5ZjE2ZTlhZWU1Mzk4MTJlZjdmNTE3NzFlZjQ0ZDA2ZjI5MWQ2OGViOGVmZGZjYTkyZjkxIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIyNTU1NWYxNDQxNWJkODQ4MDRlZDM0MTMzYmFkZjQzZDg3M2UxMGZjOTMzZjk0NjkzOWZiNmNhMTU2ZTYzODkxIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI3NjlmZjNkNDMwNGIwZWNmOTI3MjA0ZGUwODc5ZjJhMjAwNDU3ZTliMTA4ZmU1OWJmNjQ5ODZlNjY0NDA4OTNiIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_3ad94710378641aea43edcc40ab0ca3e",
+      "statement": "Card creation can succeed ambiguously: if the API body is empty or decodes to card ID 0, the client tries to locate the new card in the target list and otherwise returns a placeholder card with ID 0 rather than inventing an identifier.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L1100-L1145",
+          "version": "repo-lines-v1:sha256:79e0aebf7f1234ed264fb03094ded8972047d0ad1fcbc88388f04e3240882dd7:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4YTYzZGU1OThlZjIxYjc4NTViZTI4MTY0NmUzYjUyY2E2NTIxYmEzYTc0ODYzNTliNTgzYjFiYTZkMmMxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZhNzdiZmU3OTk0YjI2NTRhZWUwNDRiZjdiMWE0MjVlZjk4ZGE2MTA1NDFmM2EzZTU0MDIwZWI5ZmE4NmUwYWEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjgyZDNlMDJhYTI4ZGI5ZWRkMDg5YzllMDgyMjI2ZmJlOTAxZWNhZjRmMGJiMjI1ZmZmMjExZDFkMGVjNjk1ZGMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQxNTNhMDBhYjJkNzIyMjBkNWE0Y2RmN2EzOWUzOTJmOWUzMGJlNDU3MDkxNGVkYWRhYTI1ZjA2OGQ0MTcyMTEifQ"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L1188-L1238",
+          "version": "repo-lines-v1:sha256:0e8c6391e394c3f34aed9d4881505710820dbb9d62361f753defb1293683953b:eyJzZWxlY3RlZExpbmVDb3VudCI6NTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2YjA0NDkxNDY5NzIyZTgzNjNhOTRlNDA0NDUzOGUwMTNhMmEyMTdlMzZiMWU1NjhiYTYwYWNiN2I0YzhmMmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBjM2I3Y2U2YWY4ZTVmZGNlOWJmNzgxMDM2ZTk2OWUzMmIwZjEzNGVhZDVhZDc4MTkwYTBhYTNlNWUzNDQwNzkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdkZWQ1N2NkZjYyOGU3YmNmYjdkNzY2MzJhOGQ3MTQ4NzM0YzA0MWJjNjUwMjBkZDg5NmJlZjE4OGE3YTIyMTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ0NzU4MGY3YWM3NmY0YzE1MTNmZGRiOGY5NDgzNjdjNjVjZjJlNmU0NTc4OTgxOWQ2NTEzZDUyYTYzNTEwYjgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_539e16990f7847dc9649443526756dcb",
+      "statement": "Card movement posts board_id, card_id, from_list, to_list, and card_type: 0 as a separate JSON mutation, using the internal board ID only on routes that expect it.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L1880-L1919",
+          "version": "repo-lines-v1:sha256:3b8362542e8e9351ab38d7a9b90e05c96398558f2a9081a0f5bad302ca9a2905:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwZDkzMzI0NDA0MDNkNzBlOGM0ZGU5YTUxYmRkMDU2MmZmYzQ2YWM0YWZjODQ0MzIzODcyNTFkMGNhNmRkY2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcxMjAyMmQwYWIwMTNmMDU2MDA4NjVkY2I1OTQ2OGM3ODVhZTQzODYwZDA2YjA0MzNlZWM5NGUxZjIyMjM1MmQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhlZGUzYzFiZDNlYTVjNjVjNWIyMjg1NDFlYmQ2YjQ2YWMwMjkyOTNmNTBjMGNjYzQwMDk4YzJjMGEwODhkZTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYwOGNlYWYxYzE5MDZjN2VhNGM4MWMwZTkwYWE4NjU1ZWE5MGQyOGM5N2NmMDRlYWQzMDkzZWY1Yzc3ZWQ1NjIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_19e00c1e6c474f4ab8fccb5567eb5075",
+      "statement": "Project task close/reopen routes are separate from operation task close/reopen routes, and task-family resolution uses title_url when available so the client does not assume one route tree works for both kinds of tasks.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L28-L75",
+          "version": "repo-lines-v1:sha256:a735e6e8249490348ef18a86bd18598ec7c4c25cd446981e36bdd55039d7698f:eyJzZWxlY3RlZExpbmVDb3VudCI6NDgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0MDkzMzJhZmMyZDEzMDBkYWY2OTVkNDQxMDEwNmI2YmVkMDU0M2U5ZTNmOTA1OGQxYzJiZDQzNjg2YzA3ZjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQxODAxN2ViMTY2YzQxNGFhMTU1YTM2N2MwNGNlMjdjMTRlYzRkNTcwODAwNzJjMTBmMzFlNTNmYmM1NzZmOTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNhNzIzMzJlYzRjMTkwMzAyNTgzZDI3YTYzNjY0ZDFlMzU5YjU5MTdiZmJlZjQ5ODQ2MzQzMWM4M2JlYmM3MjkifQ"
+        },
+        {
+          "resource": "repo://src/operations/cards.rs#L130-L168",
+          "version": "repo-lines-v1:sha256:91d548e8a805dc865aeafae8dd5f8aa94c860390aa8aed2c1905988365a77799:eyJzZWxlY3RlZExpbmVDb3VudCI6MzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIzYmMwZGMxNTUwZTJmMTZhN2Y4OGU3OTE3NzM0MmQzZTUyMDc3YWRlY2Q2ZmM1MDg4MTRjZTdhYzYzMWFlZjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk1YmIzN2Q2MzQ4NjUyYjU1MjgzMTNiYTFlYTViNmU5M2E4MTcyODU4ZjQ0NzFiZGE4MWY4MDVlNmU2ZGE1NWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyNDczNjNhNWQ2YjhiNTgzZWJiMjI0MzdlNjQ4Nzk5NmM2NTI0NGQwN2QyMTkyZDgxNzM1ZWJhZDMxZjc4YjMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e1fc9685a0624481a896cc404ad28d4d",
+      "statement": "Task editing is a browser-form flow: the client GETs the edit page, scrapes the form baseline, overlays the requested patch, POSTs a full URL-encoded form, and treats a response that still looks like the edit page as failure even if the HTTP status is 200.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L138-L227",
+          "version": "repo-lines-v1:sha256:20b6aadd8e19dbf0bc1282b79b00dd7229a17035c322e2d4f86f9b8941c1a50c:eyJzZWxlY3RlZExpbmVDb3VudCI6OTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmOTllYzQ4YzM4ZTQzMzE3ZWZlODliNGZiMGEyMzcwYjE0ZDU0N2I3NjVlZjk3MzA1ZjFiZTcxYjdiZmIxYjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJiMTkwM2U2OTI0NTMwNjk1NGRiZmZkYzk1NjEwNGExMzk5YjQ3MzVjMTUxMmNlMDZlM2M3NjA5ZjE0NzA3ODgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJlYzNjNTQ0NDIwZGIwNjU4MmFhYWM0YzAyMTBmZDFkM2U0YmVjYWMzMjI3NzI4ODg2MDVjYWUyZDQ0NmQ4ZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYwOTQ5MTVkN2JkMGIzZWVlYmVkNTJhODk0NjI0YmQ4ZGQyMGYyOTJiM2FhMmFkYTBhMmQxNzRmMmY1MWMzNTcifQ"
+        },
+        {
+          "resource": "repo://src/operations/cards.rs#L170-L276",
+          "version": "repo-lines-v1:sha256:4a87f283beb409e6181f3340d8ea1ba3c09915e851ec9bfa724032047a20ccf8:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA3LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlMmQ5ZDI5ZTNiNGQ5ZjE2ZTlhZWU1Mzk4MTJlZjdmNTE3NzFlZjQ0ZDA2ZjI5MWQ2OGViOGVmZGZjYTkyZjkxIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIyNTU1NWYxNDQxNWJkODQ4MDRlZDM0MTMzYmFkZjQzZDg3M2UxMGZjOTMzZjk0NjkzOWZiNmNhMTU2ZTYzODkxIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI3NjlmZjNkNDMwNGIwZWNmOTI3MjA0ZGUwODc5ZjJhMjAwNDU3ZTliMTA4ZmU1OWJmNjQ5ODZlNjY0NDA4OTNiIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_bcf0c23f340b4eaea920264f4128d463",
+      "statement": "Comment posting is also browser-form driven: the client first GETs the task page to scrape hidden timestamp, security_hash, and csrfmiddlewaretoken values, then POSTs the completed form to /comments/post/ using the site base and browser-style Origin and Referer headers.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L1730-L1810",
+          "version": "repo-lines-v1:sha256:5fce6ee12864cad891d3a4ae78c11d268c27e3dc0c24c547471f4e949236d456:eyJzZWxlY3RlZExpbmVDb3VudCI6ODEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUzZDRkYjIxNzY5NDRiMTFkYTYwZDgwODk2OWYwNDNmOWQ0NGE4NWUwYjE5NDA5NGEwNTIxYzlhYTdlMDRkNDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE5MzRmZDlhNWQyNzM1YTI3MWE3YTE1NTgyMTgwMzdjNDc3ZDkxOThkNjM4ZTAxZDMwNjg0NDUzNzc1YzRmOGYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY2YjcwOTIyMDE4NTkxNWY4Mzg1ODcyNjkxNmI5NmE1M2QyZTdmNGRiNTIyMDcyZDM5Y2VjYmUwYzE2NWMxZjEifQ"
+        },
+        {
+          "resource": "repo://src/operations/comments.rs#L27-L57",
+          "version": "repo-lines-v1:sha256:55454fc87878dcc9dd08819c82e1207ef878975e87b02d8bf2de74658fd0f657:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQzOWQzOWEzNGJhYWE3Y2U1ZjcwZjhkM2QzNGIxYThjOWU2MWI1NTZiYTNkNjZlNjE1MThjNTM2OTJmMDM4MmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY1ZDk2Yjc1YzJjZWExNTIxZGQ0NTY1N2RhMTI5ZTY4ZWNkYWU2MjQ0NTYyMjY1MGY4MDc0ZmFlMjdkOGU5MDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiZjQyODkyMGU0MTVkNjU2OWY1Y2I1ZGNmYzMzMDM3ODI3M2MyMzFjOTJkZjI3ZmNjMjk2YTI4NTQzZjUxNjQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ba354fa0ef574d63b68ed22b2aa8d3a7",
+      "statement": "The client tolerates only a few observed payload-shape variants for working state, reminders, and user autocomplete, while ordinary malformed JSON still fails after status validation.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L1490-L1585",
+          "version": "repo-lines-v1:sha256:cfd7e7216f44cf8d1c1419410b28feb7aed1af0dc41087ce93f80a9d599a4f7e:eyJzZWxlY3RlZExpbmVDb3VudCI6OTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4MGVlYzM5ZTVhYTc1OTNiMGYzZmIyNWUwODg3M2Q1M2I5ZDAzYTk4NGFhZDQ4YWZlNmQ2ZWM4NWUyNzgyYmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxZDk3NGEwOWRiZmVkNDE3Y2Q0YTE1Y2QzMzg5OThhNTIxYzJhYjMwMDdjZWU5NTFmODhmYzM5NDIwOWNhNDAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMyYmZlMmQ2ZDg1ZDUzYTQwMzllY2EzMjU1YzZiYTEwNDJiMTQzNDBlOTI3NmFiZTcyYWQwMDhiYmUzZjdkNzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBmM2EwM2Y3ZTA4NmJmYjY5MWE4NjgyNGM5Zjk2NjRlYzE0NjQ5NTBkYmI3ZmE4ZGIxNDJjM2JmNzAxMjAxMWIifQ"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L1600-L1695",
+          "version": "repo-lines-v1:sha256:73ec5754b1c11946b8113365eb457a45585bb773ab58528c82bfca00acf224ff:eyJzZWxlY3RlZExpbmVDb3VudCI6OTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNjMWVhNjgxZjEzZjgwYmMxM2RiOWQ2MmMyZjQxZWIyNTY5MzU3YjBjYmM2NTU4M2ZhNDg1ZWM5MDhmOWQ2MGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ3MzE2YjQ3ODhlOGY0ZjU0YWY4MjU2MmQwOWNjNWI5ODlmNGE2YTdkMWViZWU4MGJkNjk4ZDFjOTAzODcyMWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ2YmU1MmIzYWIyNjkwY2VmZTdkMDUyZDQzYzUyM2JjMDY3MzFlNTk5YjViZmY2OTUzNTZlN2M5YzY2YTJlMWIifQ"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L1710-L1778",
+          "version": "repo-lines-v1:sha256:32baf2f977e83e99185f0d3fa065f717e96cfb3c4f53497ca9f97bcdf5a3ac75:eyJzZWxlY3RlZExpbmVDb3VudCI6NjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU0OGU5NWZjNTBjOGQyY2M0YTUwNDc4ZGEyZTRiOGJmNjliYTEyMmEzZTY1YWRhYjE0YmY3MWQ0NWI0YTRhYWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4MGVlYzM5ZTVhYTc1OTNiMGYzZmIyNWUwODg3M2Q1M2I5ZDAzYTk4NGFhZDQ4YWZlNmQ2ZWM4NWUyNzgyYmEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQwZmEyYzM2YzhjNmVkYWFiMGIwMzJmMjBkMWRlODU5Yjg5ZjllYTk2MjJiODY4ZDk1MDYyZDlhNzZiNjQ4N2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjllMDZjOTZkODg0NDViNjJlY2M5NTE5OGZiMmQ1MjEwYTJkYWJmMzhlNjFkMzVlYTc2ZWY1MDI4NmM1YzUxM2MifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9c663c97900a4bd09ca91dd72f5eb254",
+      "statement": "The objectives helper deliberately scrapes HTML and Next.js RSC payloads: it extracts weekly-objective markdown from self.__next_f.push payloads scoped to the pages array, and falls back to rendered .markdown-body HTML when the payload shape changes.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/objectives.rs#L10-L28",
+          "version": "repo-lines-v1:sha256:93dd3149ebf57811b65cf19bce0f15bb7a3d1496933415a625f3eab6aa61e434:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMyYWU1OGM3OTEwNjhjY2ZiZTRhYjFhOGRhZGY3YmE3YjgzMmE3NjRmODVjNjMxZDU1Y2E1YjM3NDAyZmQ2NzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjliZDU5ODFjNGIzOGU0OTg2M2M5MWY4ZDY2MDNhMTJmNjU4ZjBkNWU2YWEzMDA5OGFjZmE3YjA3NjhmNjJkNTkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI4ODU0YWE0MmJiZjYyZmE1Mzg5ZmNhNWQzNTIwYzYyMDE3NTAwNWE4NWFjZTEzNTQ5ZDJhYzEzOTAyZGU2MTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRlYjI0ZWIzZGQyMjRmNzJmYzJjZDI4M2I4MzBiNDNkNWIyNDRmZjJkNDBlOTQzNGY5YmE5NTMwMjQxMjZiNzcifQ"
+        },
+        {
+          "resource": "repo://src/client/objectives.rs#L57-L180",
+          "version": "repo-lines-v1:sha256:06070d283ba03760fe99b7ec4a68c8d6007ef6af6c18a4286473f4aa471d743d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTI0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJhZWZlM2MyNjY5MmU0MjI2NzA4OTc2OWM1Yjk2NjQxNDM5ZmZlYTUwNGEzYTdmYjNjOGJkNDdmODhkNTcwMTdhIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI3MTUyNzU2OTVmNTA4ZTg3MWI3NjJkOTA2ZGM0MzZhYTVkMTdjMzUzNGYyNTQ0NmE1Y2ZmNTIyNzNmMjE0OTE3IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJiNzJhNzk4YTljZDBmYTUzOWU4N2FmZmJmYTdjMDc3YzllNjgzYzJmODYyMTA0NzIzODMzNTdhM2VlZjdlMWJlIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_7100ae7a29b34ea4b99ac6bed90a67b1",
+      "statement": "The update helper talks to the GitHub Releases API for Ditr4drian/hteam-cli, authenticates with gh auth token when available, reads /releases/latest, and downloads the hteam-linux-x86_64 asset through the asset API URL with Accept: application/octet-stream rather than browser_download_url.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/update.rs#L110-L173",
+          "version": "repo-lines-v1:sha256:0aaa59c24f20a97f635aaccc34e928dfdc4d532dd86e3bbb051d71db4fc07c7b:eyJzZWxlY3RlZExpbmVDb3VudCI6NjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcyNDdjOTk4ZWQ1NzdhYzI4ZThkZDgwMzljZWMyOTc5MTIwOWE1ZGFiYzkzNjk2YjU3NTQxNWEyMjU3MDEzOTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiYzk4ZDZiMGRjNDkyYzUwMTZkZjEwODA1YTNhNTRlYjljMTg0YTVhNjEzN2U3ZjRiZWNmYTBjMjIwNTUwZDAifQ"
+        },
+        {
+          "resource": "repo://src/client/update.rs#L18-L28",
+          "version": "repo-lines-v1:sha256:fe8b9d9b929c13e097e5b30700d0907d85bb0f982ce39f0749c3c5edf9e52649:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkYjUzYzBmYzVkOTlmMThlZGUyY2FlZWMwMDQxYzVmMzljZjQzNTFlZjQ0YmEyMDdmYTJhMWQ0NDgxYjQ4ZjIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQyYmU0N2RmOTdiNGYyODM5OWRmZDJiMWRmMmQ4NDEwYTY5YTk0N2UwZDc3MDMwZmJkMzc5MmQ3NjM5MzAyZGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVmMzQ2MjEyZGUzMjI1OWUzMjM3NTRlYTNmZTdkMWY4YzNhOGEwY2EwZjA3MzYyZThjNmE2ZjdjY2MxNGJlODYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU5YmViODFkMTQwYTkwYzIxNWJmMGRiZDhkN2FiNzRmMTM4OGQxMDQxNGMxZjJkM2M0ODdmNGI2MWU1OGE1ZTcifQ"
+        },
+        {
+          "resource": "repo://src/client/update.rs#L7-L10",
+          "version": "repo-lines-v1:sha256:d3002b51320a6ef21d02962a2efac9370679fd7937d8cc5a290d41fc06a372d4:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzBjMjJmY2Q5YWY3MTc3NTQ4ZjQxM2I3MDMwM2I5Y2VkOTExNTlkZjI4NjA2YjcwMzI4MzY3OGU1YmIzNDdmMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTg4MzljOWY5ZmIwNjcxYzNkMDhkMTNjOGZlMTZjMmZhOWFiZTVmNDAxZWI0MzQ4NDI0OGM1YTI0YjJhYTBkOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzA4NGYyNGRiMDcyNjY5YzExZjUwMmQzY2RkMDU5ZDc1NTU3ZTUwYjMzMWQxMTE4OTJlODNlOTZhNzBiMjdhMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNmZiNWZmZDEzMzAwMzZlMjAzZTEwNjQyMjdjNjhiMGU5ZTQ0Mjk2NDU0MjMyYjY3YmYzNTMyZTQ4NTA3NmI5ZSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_54e070ed08e1433c87193e9e636f4b93",
+      "statement": "The client's safe-extension pattern is to add remote calls, request encoding, status policy, and model parsing in HteamClient, keep browser-form Origin and Referer requirements intact, preserve board-specific cache scope, and cover changes with mockito tests that can swap API and site bases independently.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L188-L200",
+          "version": "repo-lines-v1:sha256:44268188ea7b7da67ce5f6e49dae202333018afc1e20043a7fc923e2b98307c9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFkOWUxMjU0NjQyNTU3NmQzZGVhZThjOWI5ZGJmMTI4ZDVkNmRkYWY1ZDdmZTg1NzkzNDkyN2RlZmZhM2I5ZGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAwODMxZWRjOGZhY2I0YTdhN2RjMmNmYTA5NDIzZDI2ZGYxODBmMWQ3N2U3MjllZDNlMTRiNGU2ZTQwZDliOWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRkMDgxMjkxMzRjNjJkNTk5NTVkYTc0YTcxMDUwMTkyODg0NGE5ODFlNmNjMGM4MmRhZmI5MGZlMmI3MTgyYmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjEwZjI0ZDJjYTcxNGEzYTU1NTQwMDRkZjI0ZGIxZDkwNWMzYzMwY2I1MjkzMTEzN2U5ZTFmMTNiYjA3YTA2NGEifQ"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-08-29T04:34:19.305Z"
+    "at": "2026-10-27T23:40:03.433Z"
   }
 }

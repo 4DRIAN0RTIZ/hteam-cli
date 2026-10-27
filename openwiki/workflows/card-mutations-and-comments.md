@@ -1,32 +1,71 @@
 ---
 type: workflow
 title: Card mutation and comment workflows
-description: Safe end-to-end workflows for changing HTeam cards, moving them, updating dates and time, and posting comments across CLI, TUI, and MCP interfaces.
+description: End-to-end mutation paths for cards and comments across CLI, TUI, and MCP, including validation, request building, lifecycle routing, and refresh/rollback behavior.
 tags: [cards, workflows, hteam-api, tui, comments]
+verified:
+  - by: openwiki/0.7.2
+    at: 2026-10-27T23:40:03.433Z
+sources:
+  - id: openwiki-source-187e60c473677e8845811fbd
+    resource: repo://src/cli/cards.rs
+  - id: openwiki-source-3454eda491fb094684a56d2a
+    resource: repo://src/client/mod.rs
+  - id: openwiki-source-55d9f60b5eb1630419488cb7
+    resource: repo://src/mcp/mod.rs
+  - id: openwiki-source-a32e822ad3272b6a9b870734
+    resource: repo://src/operations/cards.rs
+  - id: openwiki-source-4c2e6dae3b729ebb5118d1d6
+    resource: repo://src/operations/comments.rs
+  - id: openwiki-source-d95bb0d4539bbe79de1e9186
+    resource: repo://src/operations/mod.rs
+  - id: openwiki-source-abd7eae9388f07b43eb7706b
+    resource: repo://src/operations/reminders.rs
+  - id: openwiki-source-0fc29dd590a674bf167ededd
+    resource: repo://src/operations/session.rs
+  - id: openwiki-source-bca472904c30f6adc5315e1f
+    resource: repo://src/operations/working.rs
+  - id: openwiki-source-7bcde87b884a289ae2ca3e61
+    resource: repo://src/tui/events.rs
+generated: { by: "openwiki/0.7.2", at: "2026-10-27T23:40:03.433Z" }
 ---
 
 # Card mutation and comment workflows
 
-Card-changing features are delivered through thin CLI, TUI, and MCP adapters over `operations`, which owns presentation-independent orchestration, and `HteamClient`, which owns authenticated HTTP details. This separation means a change to mutation semantics should normally be implemented and tested in the operation/client layer, then surfaced consistently by each interface.
+Card-changing features are delivered through thin CLI, TUI, and MCP adapters over `operations`, which owns presentation-independent orchestration, and `HteamClient`, which owns authenticated HTTP details. This separation means mutation semantics should be implemented and tested in the operation/client layer, then surfaced consistently by each interface.
 
-## Preconditions and discovery
+## Entry points and shared responsibilities
 
-Every CLI card command opens a `Session`; that loads configuration and refuses to construct a client unless authentication is present. The client adds the session and CSRF cookies, CSRF header when available, bearer authorization when available, `Referer`, and AJAX-style headers to requests. Board selection follows one consistent precedence: an explicit board, the configured board, then the last board saved by the TUI or board-switch command. A missing board is an error for flows that require one.
+CLI card commands open a `Session` before they call into `operations`; the session loads configuration and refuses to construct a client unless authentication is present. MCP handlers also delegate into the same `operations` layer. The TUI event handlers likewise call the shared operations helpers, then reconcile local state after the request completes. The client layer adds session and CSRF cookies, a CSRF header when available, bearer authorization when available, `Referer`, and AJAX-style headers to requests.
+
+Board selection follows one consistent precedence: an explicit board, the configured board, then the last board saved by the TUI or board-switch command. A missing board is an error for flows that require one.
 
 Discovery is not optional plumbing in several mutations:
 
 - List and card reads use the board-number API. The cards response is unwrapped from `cardlist_list` and may yield the internal `board_id` from its first entry.
 - `create_card` needs both the board number and internal board ID. `get_board_id` first uses its in-memory cache; otherwise it probes list `1` (Open), and if Open is empty, scans lists with cards until it finds an entry carrying a board ID. It caches the result. Changing the active board invalidates that cache before subsequent mutations.
-- Creating also needs a user ID. It uses a cached value first, otherwise checks the active working-on response (array or object) and falls back to the most recent work-shift record. A resolved user ID is persisted in configuration.
+- Creating also needs a user ID. It uses a cached value first, otherwise checks the active working-on response and falls back to the most recent work-shift record. A resolved user ID is persisted in configuration.
 - Full updates first fetch card detail, then GET the HTML edit form, then POST the full form body. The edit endpoint is form-oriented rather than a partial JSON API, so the current detail is only one input to a preserve-on-patch workflow.
 
-> **Safe caller rule:** pass the current source list when it is known. The shared `move_card` operation defaults an omitted source to list `1`, Open; this is convenient for CLI/MCP callers but is wrong when the card is known to be in another list. The TUI therefore always supplies its visible source-list ID.
+> **Safe caller rule:** pass the current source list when it is known. The shared `move_card` operation defaults an omitted source to list `1`, Open; this is convenient for CLI and MCP callers but is wrong when the card is known to be in another list. The TUI therefore always supplies its visible source-list ID.
+
+## Mutation flow map
+
+```mermaid
+flowchart TD
+    Start["CLI TUI or MCP action"] --> Route["operations layer"]
+    Route --> Client["HteamClient"]
+    Client --> Site["HTeam site"]
+    Site --> Persist["Persist or refresh state"]
+```
+
+*All mutation surfaces converge on the same operation and client helpers before state is refreshed or persisted.*
 
 ## Card creation, movement, and patching
 
 ### Create a card despite an inconsistent response
 
-Creation posts JSON with `name`, the resolved user as `complement`, the board number as `process`, and an optional destination list encoded as `labels`. The API may return an empty successful body, invalid/non-card JSON, or a decoded card with ID `0`. In all of those cases, the client attempts a name lookup in the requested target list. If that lookup cannot find the card—or no list was supplied—it deliberately returns a minimal success-shaped `Card` with ID `0` and the supplied name rather than treating the successful create response as a parsing failure.
+Creation posts JSON with `name`, the resolved user as `complement`, the board number as `process`, and an optional destination list encoded as `labels`. The API may return an empty successful body, invalid or non-card JSON, or a decoded card with ID `0`. In all of those cases, the client attempts a name lookup in the requested target list. If that lookup cannot find the card—or no list was supplied—it deliberately returns a minimal success-shaped `Card` with ID `0` and the supplied name rather than treating the successful create response as a parsing failure.
 
 This fallback is useful for a user-facing confirmation, but it is not a durable identifier: callers needing to mutate the newly created card should refresh the destination list and select the real card rather than use `id: 0`. The TUI already does this refresh after a successful creation.
 
@@ -39,6 +78,30 @@ The TUI performs the same move optimistically: it removes the source card locall
 ### Close and reopen a task
 
 Close and reopen are not list moves. They are dedicated task-lifecycle calls that hit `close/` or `reopen/` on the task family resolved from the task's `title_url`, unless the caller overrides the family explicitly. That family selection matters because the API distinguishes `operation` and `project` tasks.
+
+```mermaid
+sequenceDiagram
+    participant Surface as CLI TUI or MCP
+    participant Ops as card operations
+    participant Client as HteamClient
+    participant Site as Hteam site
+
+    Surface->>Ops: close or reopen card
+    alt family override supplied
+        Ops->>Ops: parse family override
+    else no override
+        Ops->>Client: resolve family from title_url
+        Client->>Site: GET task detail
+        Site-->>Client: task detail with title_url
+    end
+    Ops->>Client: POST close or reopen
+    Client->>Site: POST /care/tasks/{id}/close or reopen/
+    Site-->>Client: status text
+    Client-->>Ops: lifecycle result
+    Ops-->>Surface: confirmation
+```
+
+*Dedicated lifecycle endpoints use task family resolution, not list movement, so they do not depend on source or destination list IDs.*
 
 ### Update description or full fields
 
@@ -93,7 +156,7 @@ Board-card AJAX times/dates (`set_card_time` / `set_card_date` under `/api/board
 
 ### Known anti-patterns
 
-These are the failure modes already confirmed by tests and bug fixes (PRs #85–#87):
+These are the failure modes already confirmed by tests and bug fixes:
 
 1. Posting an ISO `start_date` can return HTTP 200 while leaving the page on “Edit task”. Nothing is saved, including dependence and priority. Always truncate with `form_date_yyyy_mm_dd`.
 2. Posting a priority-only update without scraping the form can submit an empty `dependence` and clear the existing dependency.
@@ -153,6 +216,18 @@ sequenceDiagram
 
 *Comment submission validates local-time input before discovery, then replays the server form's per-page tokens and checkbox semantics.*
 
+### Reply targets and mention suggestions
+
+Replies are carried by `reply_to`, which is optional in the form and defaults to `0` when omitted. Mention completion only inspects the final whitespace-delimited token, so only a trailing unfinished `@` token can trigger suggestions. A bare `@` is treated as an empty query and still requests usernames immediately instead of waiting for the first character. Selecting a suggestion replaces the trailing partial token with `@selected_text `.
+
+The mention helper is intentionally simple: it does not scan the whole comment body, only the trailing token. TUI requests suggestions on each qualifying keystroke without debounce, which keeps autocomplete responsive but means every added character can produce a network request.
+
+### Follow-up IDs
+
+Scheduled follow-ups are separate from comments, even though they are rendered alongside a comment on the task page. The follow-up workflow identifies the follow-up by the follow-up record ID embedded in the page's `form[action]`, not by the comment ID alone. The page may also display the associated comment ID and a locale-formatted date string; the parser keeps those as surfaced metadata rather than trying to normalize the date text.
+
+Completing or canceling a follow-up posts only the CSRF token to `/followup/{id}/complete` or `/followup/{id}/cancel`. Because the API is keyed by follow-up record ID, callers must preserve that ID when reading a follow-up and later acting on it.
+
 ### TUI comment behavior
 
 Opening comments captures the currently selected card, clears composing state, and loads existing comments. Submitting rejects whitespace-only text. After a successful post, it clears the compose inputs and tries to refresh the displayed comments; a refresh failure does not turn the successful post into a failure. On post failure, it leaves the composer state intact and shows an error.
@@ -198,12 +273,12 @@ The TUI uses refreshes to reconcile accepted mutations with server state:
 
 ## Verification focus
 
-The focused operation tests use a mock client base URL to verify the wire-level behavior that must not drift: list/card decoding including extracted board IDs; move payload defaulting source to Open; full update's detail GET followed by a form POST; comment list decoding, strict date validation, and mention-token rules; reminder payload; and start/stop working payloads plus record-ID lookup. Client tests additionally verify that comment token extraction requires all hidden fields. Add tests alongside these when changing form fields, fallback rules, response-shape normalization, or rollback behavior; UI behavior should be exercised at the event-function boundary where local state is observable.
+The focused operation tests use a mock client base URL to verify the wire-level behavior that must not drift: list/card decoding including extracted board IDs; move payload defaulting source to Open; close and reopen family override and task-family resolution from `title_url`; full update's detail GET followed by a form POST; comment list decoding, strict date validation, and mention-token rules; reminder payload; and start/stop working payloads plus record-ID lookup. Client tests additionally verify that comment token extraction requires all hidden fields. Add tests alongside these when changing form fields, fallback rules, response-shape normalization, or rollback behavior; UI behavior should be exercised at the event-function boundary where local state is observable.
 
 ## Related pages
 
 - [Cards and board state](../concepts/cards-and-board-state.md)
-- [Session configuration](../concepts/session-configuration.md)
+- [Session configuration](../integrations/hteam-api.md)
 - [Hteam HTTP integration](../integrations/hteam-api.md)
 - [MCP server integration](../integrations/mcp-server.md)
 - [Terminal experiences](../operations/terminal-experiences.md)
