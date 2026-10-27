@@ -368,27 +368,7 @@ async fn project_status(args: ProjectArgs, json: bool) -> Result<()> {
     println!("Milestones: {}", summary.milestones.len());
     println!("Vencidas: {}", summary.overdue_tasks.len());
     println!("Próximas 7 días: {}", summary.upcoming_tasks.len());
-    let (estimated, spent) = summary
-        .times
-        .as_array()
-        .into_iter()
-        .flatten()
-        .skip(1)
-        .filter_map(|row| row.as_array())
-        .fold((0.0, 0.0), |(estimated, spent), row| {
-            (
-                estimated
-                    + row
-                        .get(1)
-                        .and_then(serde_json::Value::as_f64)
-                        .unwrap_or(0.0),
-                spent
-                    + row
-                        .get(2)
-                        .and_then(serde_json::Value::as_f64)
-                        .unwrap_or(0.0),
-            )
-        });
+    let (estimated, spent) = operations::projects::status_hours(&summary.times);
     println!(
         "Tiempo: {:.1}h estimadas / {:.1}h reales\n",
         estimated, spent

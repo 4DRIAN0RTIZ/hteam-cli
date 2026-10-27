@@ -259,10 +259,14 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
                 "  Esc, q          cerrar",
                 "",
                 "Detalle (foco con Tab)",
-                "  h/l, ←/→        sección Milestones → Tasks → Árbol",
-                "  j/k, ↓/↑        resaltar ítem de la sección",
-                "  n               crear (milestone o task; no en Árbol)",
-                "  e               editar el resaltado (no en Árbol)",
+                "  h/l, ←/→        sección Milestones → Tasks → Árbol → Resumen",
+                "  j/k, ↓/↑        resaltar ítem / scroll del resumen",
+                "  n               crear (milestone o task; no en Árbol/Resumen)",
+                "  e               editar el resaltado (no en Árbol/Resumen)",
+                "",
+                "Resumen de proyecto",
+                "  (lazy)          se carga al entrar a la sección",
+                "  j/k             scroll (vencidas / próximas)",
                 "",
                 "Árbol de dependencias",
                 "  (colapsado)     solo raíces al abrir",
@@ -1499,7 +1503,7 @@ fn draw_live_projects_list(frame: &mut Frame, app: &App, area: Rect) {
 
 fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
     let block = Block::default()
-        .title(" Milestones / Tasks / Árbol ")
+        .title(" Milestones / Tasks / Árbol / Resumen ")
         .borders(Borders::ALL)
         .border_style(if app.projects_detail_focused {
             Style::default().fg(app.theme.border_active)
@@ -1526,6 +1530,7 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
             ProjectDetailSection::Milestones => "milestones",
             ProjectDetailSection::Tasks => "tasks",
             ProjectDetailSection::Tree => "árbol",
+            ProjectDetailSection::Status => "resumen",
         };
         let footer = if app.projects_detail_section == ProjectDetailSection::Tree {
             Line::from(vec![
@@ -1535,6 +1540,16 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
                 Span::styled("sel  ", Style::default().fg(app.theme.muted)),
                 Span::styled("Enter ", Style::default().add_modifier(Modifier::BOLD)),
                 Span::styled("expande  ", Style::default().fg(app.theme.muted)),
+                Span::styled("? ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("ayuda", Style::default().fg(app.theme.muted)),
+            ])
+        } else if app.projects_detail_section == ProjectDetailSection::Status {
+            Line::from(vec![
+                Span::styled(" h/l ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled(format!("{section}  "), Style::default().fg(app.theme.muted)),
+                Span::styled("j/k ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("scroll  ", Style::default().fg(app.theme.muted)),
+                Span::styled("(solo lectura)  ", Style::default().fg(app.theme.muted)),
                 Span::styled("? ", Style::default().add_modifier(Modifier::BOLD)),
                 Span::styled("ayuda", Style::default().fg(app.theme.muted)),
             ])
@@ -1576,9 +1591,13 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
         app.projects_detail_focused && app.projects_detail_section == ProjectDetailSection::Tasks;
     let tree_active =
         app.projects_detail_focused && app.projects_detail_section == ProjectDetailSection::Tree;
+    let status_active =
+        app.projects_detail_focused && app.projects_detail_section == ProjectDetailSection::Status;
     let tree_nodes = super::events::project_task_tree_len(&app.project_task_tree);
 
-    if tree_active {
+    if status_active {
+        lines.extend(project_status_lines(app));
+    } else if tree_active {
         // Full-panel collapsible tree: roots only until Enter expands a node.
         if app.project_task_tree.is_empty() {
             lines.push("Árbol: ● (vacío)".to_string());
@@ -1675,6 +1694,12 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
         } else {
             lines.push(format!("Árbol: {tree_nodes} nodos · h/l para ver"));
         }
+        lines.push(String::new());
+        if app.project_status.is_some() {
+            lines.push("Resumen: cargado · h/l para ver".to_string());
+        } else {
+            lines.push("Resumen: h/l para cargar".to_string());
+        }
     }
 
     // trim:false keeps leading spaces and box-drawing columns of the tree.
@@ -1682,6 +1707,64 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
         .wrap(Wrap { trim: false })
         .scroll((app.projects_scroll.offset(), 0));
     frame.render_widget(p, body_area);
+}
+
+fn project_status_lines(app: &App) -> Vec<String> {
+    let mut lines = Vec::new();
+    let Some(summary) = app.project_status.as_ref() else {
+        lines.push("Resumen: ●".to_string());
+        lines.push("Cargando…".to_string());
+        return lines;
+    };
+    let (estimated, spent) = crate::operations::projects::status_hours(&summary.times);
+    let progress = summary.project.progress;
+    lines.push(format!("Resumen: ●  {}", summary.project.name));
+    lines.push(format!("Progreso: {}", progress_bar(progress)));
+    lines.push(format!(
+        "Tasks: {}/{} cerradas",
+        summary.closed_tasks, summary.total_tasks
+    ));
+    lines.push(format!("Milestones: {}", summary.milestones.len()));
+    lines.push(format!(
+        "Tiempo: {:.1}h estimadas / {:.1}h reales",
+        estimated, spent
+    ));
+    lines.push(String::new());
+    lines.push(format!("Vencidas ({})", summary.overdue_tasks.len()));
+    if summary.overdue_tasks.is_empty() {
+        lines.push("  (ninguna)".to_string());
+    } else {
+        for t in &summary.overdue_tasks {
+            lines.push(format!(
+                "  #{} {} · {}",
+                t.number,
+                t.name,
+                truncate_date(&t.due_date)
+            ));
+        }
+    }
+    lines.push(String::new());
+    lines.push(format!(
+        "Próximas 7 días ({})",
+        summary.upcoming_tasks.len()
+    ));
+    if summary.upcoming_tasks.is_empty() {
+        lines.push("  (ninguna)".to_string());
+    } else {
+        for t in &summary.upcoming_tasks {
+            lines.push(format!(
+                "  #{} {} · {}",
+                t.number,
+                t.name,
+                truncate_date(&t.due_date)
+            ));
+        }
+    }
+    lines
+}
+
+fn truncate_date(raw: &str) -> &str {
+    raw.get(..10.min(raw.len())).unwrap_or(raw)
 }
 
 fn tree_expand_glyph(has_children: bool, expanded: bool) -> &'static str {

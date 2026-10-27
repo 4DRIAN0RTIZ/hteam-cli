@@ -5,9 +5,9 @@ use std::time::{Duration, Instant};
 
 use crate::config::WorkingHoursConfig;
 use crate::models::{
-    BoardEntry, Card, CardDetail, Comment, FollowUp, Label, List, ProjectMilestone, ProjectSummary,
-    ProjectTask, ProjectTaskTreeNode, Reminder, UserSuggestion, WeeklyObjectivesSet,
-    WorkShiftRecord, WorkingOnStatus,
+    BoardEntry, Card, CardDetail, Comment, FollowUp, Label, List, ProjectMilestone,
+    ProjectStatusSummary, ProjectSummary, ProjectTask, ProjectTaskTreeNode, Reminder,
+    UserSuggestion, WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
 };
 use crate::operations::cards::CardSearchFilters;
 
@@ -46,6 +46,8 @@ pub enum ProjectDetailSection {
     Tasks,
     /// Read-only dependency hierarchy (`operations::projects::task_tree`).
     Tree,
+    /// Read-only progress / due / times summary (`operations::projects::status`).
+    Status,
 }
 
 /// Editable rows in the task-detail popup (`d` / `e`).
@@ -206,7 +208,9 @@ pub struct App {
     pub project_tree_expanded: HashSet<u64>,
     /// Highlighted row among *visible* tree rows (collapsed nodes hide descendants).
     pub selected_tree_idx: usize,
-    /// Milestones / tasks / tree when the detail panel has focus.
+    /// Cached `operations::projects::status` for the active project (lazy).
+    pub project_status: Option<ProjectStatusSummary>,
+    /// Milestones / tasks / tree / status when the detail panel has focus.
     pub projects_detail_section: ProjectDetailSection,
     pub show_projects: bool,
     /// Proyectos en vivo (`hteam project list`, status "Execution"),
@@ -311,6 +315,7 @@ pub struct RequestIds {
     pub project_milestone_form: u64,
     pub project_task_write: u64,
     pub project_task_form: u64,
+    pub project_status: u64,
     pub live_projects: u64,
     pub boards_popup: u64,
     pub move_card: u64,
@@ -359,6 +364,9 @@ impl RequestIds {
     }
     pub fn bump_project_task_form(&mut self) -> u64 {
         Self::bump(&mut self.project_task_form)
+    }
+    pub fn bump_project_status(&mut self) -> u64 {
+        Self::bump(&mut self.project_status)
     }
     pub fn bump_live_projects(&mut self) -> u64 {
         Self::bump(&mut self.live_projects)
@@ -471,6 +479,7 @@ impl App {
             project_task_tree: Vec::new(),
             project_tree_expanded: HashSet::new(),
             selected_tree_idx: 0,
+            project_status: None,
             projects_detail_section: ProjectDetailSection::default(),
             show_projects: false,
             live_projects: Vec::new(),
