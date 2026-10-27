@@ -7,7 +7,9 @@ use crate::client::HteamClient;
 use crate::models::Card;
 use crate::operations;
 
-use super::app::{App, DetailField, HelpContext, ProjectDetailSection, UpdateAvailableInfo};
+use super::app::{
+    App, DetailField, HelpContext, ProjectDetailSection, ProjectMemberEntry, UpdateAvailableInfo,
+};
 use super::net::{self, JobOutcome, Jobs, WeeklyObjectivesLoaded};
 
 /// Abre el popup de ayuda mostrando solo la sección de `ctx` — ver
@@ -1517,8 +1519,8 @@ pub fn open_projects(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     app.projects_scroll.reset();
 
     if app.active_project.is_none() {
-        if let Some(&id) = app.known_projects.first() {
-            load_project(client, app, jobs, id);
+        if let Some(p) = app.known_projects.first() {
+            load_project(client, app, jobs, p.id);
         }
     }
 }
@@ -1537,7 +1539,10 @@ pub fn close_projects(app: &mut App) {
     app.requests.bump_project_task_write();
     app.requests.bump_project_task_form();
     app.requests.bump_project_status();
+    app.requests.bump_project_members();
+    app.requests.bump_project_members_write();
     app.requests.bump_live_projects();
+    cancel_composing_member(app);
 }
 
 pub fn start_composing_project(app: &mut App) {
@@ -1582,9 +1587,10 @@ pub fn submit_project_input(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs
 
 /// Loads whichever saved project id is currently highlighted in the list.
 pub fn select_known_project(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
-    let Some(&id) = app.known_projects.get(app.selected_project_idx) else {
+    let Some(p) = app.known_projects.get(app.selected_project_idx) else {
         return;
     };
+    let id = p.id;
     load_project(client, app, jobs, id);
 }
 
@@ -1600,10 +1606,10 @@ pub fn copy_project_link(client: &HteamClient, app: &mut App) {
         };
         project.id
     } else {
-        let Some(&id) = app.known_projects.get(app.selected_project_idx) else {
+        let Some(p) = app.known_projects.get(app.selected_project_idx) else {
             return;
         };
-        id
+        p.id
     };
 
     let url = operations::projects::project_url(client, id);
@@ -1687,41 +1693,50 @@ pub fn select_live_project(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs)
 
 fn load_project(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs, project_id: u64) {
     app.active_project = Some(project_id);
-    remember_project(app, project_id);
-    app.project_milestones.clear();
-    app.selected_milestone_idx = 0;
-    app.project_tasks.clear();
-    app.selected_task_idx = 0;
-    app.project_task_tree.clear();
-    app.project_tree_expanded.clear();
-    app.selected_tree_idx = 0;
-    app.project_status = None;
-    app.requests.bump_project_status();
+    // Prefer cached config name, then live-list name from this session.
+    app.active_project_name = app
+        .known_projects
+        .iter()
+        .find(|p| p.id == project_id)
+        .and_then(|p| p.name.clone())
+        .or_else(|| {
+            app.live_projects
+                .iter()
+                .find(|p| p.id == project_id)
+                .map(|p| p.name.clone())
+        });
+    remember_project(app, project_id, app.active_project_name.clone());
+    clear_project_section_data(app);
     app.projects_detail_section = ProjectDetailSection::Milestones;
     cancel_milestone_form(app);
     cancel_project_task_form(app);
+    cancel_composing_member(app);
+    // Single-section UX: only fetch the active section (milestones first).
+    maybe_load_lazy_project_section(client, app, jobs);
+}
 
-    let id = app.requests.bump_projects();
-    app.begin_busy("Cargando proyecto...");
-    jobs.spawn(async move {
-        let milestones = operations::projects::milestones(&client, project_id)
-            .await
-            .map_err(|e| e.to_string());
-        let tasks = operations::projects::tasks(&client, project_id)
-            .await
-            .map(|resp| resp.results)
-            .map_err(|e| e.to_string());
-        let tree = operations::projects::task_tree(&client, project_id)
-            .await
-            .map_err(|e| e.to_string());
-        JobOutcome::ProjectLoaded {
-            id,
-            project_id,
-            milestones,
-            tasks,
-            tree,
-        }
-    });
+fn clear_project_section_data(app: &mut App) {
+    app.project_milestones.clear();
+    app.project_milestones_loaded = false;
+    app.selected_milestone_idx = 0;
+    app.project_tasks.clear();
+    app.project_tasks_loaded = false;
+    app.selected_task_idx = 0;
+    app.project_task_tree.clear();
+    app.project_task_tree_loaded = false;
+    app.project_tree_expanded.clear();
+    app.selected_tree_idx = 0;
+    app.project_status = None;
+    app.project_members = None;
+    app.project_members_baseline.clear();
+    app.selected_member_idx = 0;
+    app.requests.bump_projects();
+    app.requests.bump_project_milestones();
+    app.requests.bump_project_tasks();
+    app.requests.bump_project_task_tree();
+    app.requests.bump_project_status();
+    app.requests.bump_project_members();
+    app.requests.bump_project_members_write();
 }
 
 /// Moves the milestone highlight inside the projects detail panel.
@@ -1911,16 +1926,17 @@ pub fn submit_milestone_form(client: Arc<HteamClient>, app: &mut App, jobs: &Job
     });
 }
 
-/// h/l when detail is focused: milestones → tasks → tree → status (and back).
+/// h/l when detail is focused: milestones → tasks → tree → status → members.
 pub fn cycle_projects_detail_section(app: &mut App, delta: i32) {
-    if app.composing_milestone || app.composing_project_task {
+    if app.composing_milestone || app.composing_project_task || app.composing_member {
         return;
     }
-    const ORDER: [ProjectDetailSection; 4] = [
+    const ORDER: [ProjectDetailSection; 5] = [
         ProjectDetailSection::Milestones,
         ProjectDetailSection::Tasks,
         ProjectDetailSection::Tree,
         ProjectDetailSection::Status,
+        ProjectDetailSection::Members,
     ];
     let idx = ORDER
         .iter()
@@ -1936,29 +1952,129 @@ pub fn cycle_projects_detail_section(app: &mut App, delta: i32) {
     app.projects_scroll.reset();
 }
 
-/// Lazy-load status when the Status section is focused (expensive N+1 due dates).
-pub fn maybe_load_project_status(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
-    if app.projects_detail_section != ProjectDetailSection::Status {
-        return;
-    }
+/// After h/l (or selecting a project), fetch only the focused section.
+pub fn maybe_load_lazy_project_section(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     let Some(project_id) = app.active_project else {
         return;
     };
-    if app.project_status.is_some() {
-        return;
-    }
-    let id = app.requests.bump_project_status();
-    app.begin_busy("Cargando resumen...");
-    jobs.spawn(async move {
-        let result = operations::projects::status(&client, project_id)
-            .await
-            .map_err(|e| e.to_string());
-        JobOutcome::ProjectStatusLoaded {
-            id,
-            project_id,
-            result,
+    match app.projects_detail_section {
+        ProjectDetailSection::Milestones => {
+            if app.project_milestones_loaded {
+                return;
+            }
+            let id = app.requests.bump_project_milestones();
+            app.begin_busy("Cargando milestones...");
+            jobs.spawn(async move {
+                let result = operations::projects::milestones(&client, project_id)
+                    .await
+                    .map_err(|e| e.to_string());
+                JobOutcome::ProjectMilestonesLoaded {
+                    id,
+                    project_id,
+                    result,
+                }
+            });
         }
-    });
+        ProjectDetailSection::Tasks => {
+            // Tasks create uses the milestone list; pull it if missing.
+            if !app.project_milestones_loaded {
+                let id = app.requests.bump_project_milestones();
+                app.begin_busy("Cargando milestones...");
+                let c = client.clone();
+                jobs.spawn(async move {
+                    let result = operations::projects::milestones(&c, project_id)
+                        .await
+                        .map_err(|e| e.to_string());
+                    JobOutcome::ProjectMilestonesLoaded {
+                        id,
+                        project_id,
+                        result,
+                    }
+                });
+            }
+            if app.project_tasks_loaded {
+                return;
+            }
+            let id = app.requests.bump_project_tasks();
+            app.begin_busy("Cargando tasks...");
+            jobs.spawn(async move {
+                let result = operations::projects::tasks(&client, project_id)
+                    .await
+                    .map(|resp| resp.results)
+                    .map_err(|e| e.to_string());
+                JobOutcome::ProjectTasksLoaded {
+                    id,
+                    project_id,
+                    result,
+                }
+            });
+        }
+        ProjectDetailSection::Tree => {
+            if app.project_task_tree_loaded {
+                return;
+            }
+            let id = app.requests.bump_project_task_tree();
+            app.begin_busy("Cargando árbol...");
+            jobs.spawn(async move {
+                let result = operations::projects::task_tree(&client, project_id)
+                    .await
+                    .map_err(|e| e.to_string());
+                JobOutcome::ProjectTreeLoaded {
+                    id,
+                    project_id,
+                    result,
+                }
+            });
+        }
+        ProjectDetailSection::Status => {
+            if app.project_status.is_some() {
+                return;
+            }
+            let id = app.requests.bump_project_status();
+            app.begin_busy("Cargando resumen...");
+            jobs.spawn(async move {
+                let result = operations::projects::status(&client, project_id)
+                    .await
+                    .map_err(|e| e.to_string());
+                JobOutcome::ProjectStatusLoaded {
+                    id,
+                    project_id,
+                    result,
+                }
+            });
+        }
+        ProjectDetailSection::Members => {
+            if app.project_members.is_some() {
+                return;
+            }
+            let id = app.requests.bump_project_members();
+            app.begin_busy("Cargando miembros...");
+            jobs.spawn(async move {
+                let result = operations::projects::members(&client, project_id)
+                    .await
+                    .map(|(name, members)| {
+                        let entries = members
+                            .into_iter()
+                            .map(|(member_id, username)| ProjectMemberEntry {
+                                id: member_id,
+                                label: if username.is_empty() {
+                                    format!("#{member_id}")
+                                } else {
+                                    format!("{username} (#{member_id})")
+                                },
+                            })
+                            .collect::<Vec<_>>();
+                        (name, entries)
+                    })
+                    .map_err(|e| e.to_string());
+                JobOutcome::ProjectMembersLoaded {
+                    id,
+                    project_id,
+                    result,
+                }
+            });
+        }
+    }
 }
 
 pub fn move_detail_selection(app: &mut App, delta: i32) {
@@ -1969,7 +2085,143 @@ pub fn move_detail_selection(app: &mut App, delta: i32) {
         ProjectDetailSection::Status => {
             // Status is a scrollable sheet; j/k only moves the panel scroll in mod.rs.
         }
+        ProjectDetailSection::Members => move_member_selection(app, delta),
     }
+}
+
+pub fn move_member_selection(app: &mut App, delta: i32) {
+    let Some(members) = app.project_members.as_ref() else {
+        return;
+    };
+    if members.is_empty() {
+        return;
+    }
+    let len = members.len() as i32;
+    let next = (app.selected_member_idx as i32 + delta).clamp(0, len - 1);
+    app.selected_member_idx = next as usize;
+}
+
+pub fn project_members_dirty(app: &App) -> bool {
+    let Some(current) = app.project_members.as_ref() else {
+        return false;
+    };
+    let mut a: Vec<u64> = current.iter().map(|m| m.id).collect();
+    let mut b = app.project_members_baseline.clone();
+    a.sort_unstable();
+    b.sort_unstable();
+    a != b
+}
+
+pub fn start_composing_member(app: &mut App) {
+    if app.active_project.is_none() {
+        app.set_status("Elegí un proyecto antes de gestionar miembros.");
+        return;
+    }
+    if app.project_members.is_none() {
+        app.set_status("Esperá a que carguen los miembros.");
+        return;
+    }
+    app.composing_member = true;
+    app.member_input.clear();
+    app.projects_detail_focused = true;
+    app.projects_detail_section = ProjectDetailSection::Members;
+}
+
+pub fn cancel_composing_member(app: &mut App) {
+    app.composing_member = false;
+    app.member_input.clear();
+}
+
+pub fn member_input_push(app: &mut App, ch: char) {
+    app.member_input.push(ch);
+}
+
+pub fn member_input_backspace(app: &mut App) {
+    app.member_input.backspace();
+}
+
+/// Resolve username/id and append to the working member list (not saved yet).
+pub fn submit_member_input(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    let raw = app.member_input.trim().to_string();
+    if raw.is_empty() {
+        app.set_status("Indicá un username o id de usuario.");
+        return;
+    }
+    cancel_composing_member(app);
+    let Some(project_id) = app.active_project else {
+        return;
+    };
+    let id = app.requests.bump_project_members();
+    app.begin_busy("Buscando usuario...");
+    jobs.spawn(async move {
+        let result = operations::projects::resolve_user_id(&client, &raw)
+            .await
+            .map(|user_id| ProjectMemberEntry {
+                id: user_id,
+                label: if raw.chars().all(|c| c.is_ascii_digit()) {
+                    format!("#{user_id}")
+                } else {
+                    format!("{raw} (#{user_id})")
+                },
+            })
+            .map_err(|e| e.to_string());
+        JobOutcome::ProjectMemberResolved {
+            id,
+            project_id,
+            result,
+        }
+    });
+}
+
+pub fn remove_selected_member(app: &mut App) {
+    let Some(members) = app.project_members.as_mut() else {
+        app.set_status("Todavía no hay miembros cargados.");
+        return;
+    };
+    if members.is_empty() {
+        app.set_status("No hay miembros para quitar.");
+        return;
+    }
+    if app.selected_member_idx >= members.len() {
+        app.selected_member_idx = members.len().saturating_sub(1);
+    }
+    let removed = members.remove(app.selected_member_idx);
+    if app.selected_member_idx >= members.len() && !members.is_empty() {
+        app.selected_member_idx = members.len() - 1;
+    }
+    if members.is_empty() {
+        app.selected_member_idx = 0;
+    }
+    app.set_status(format!("Quitado {} (sin guardar)", removed.label));
+}
+
+pub fn save_project_members(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    let Some(project_id) = app.active_project else {
+        app.set_status("Elegí un proyecto antes de guardar miembros.");
+        return;
+    };
+    let Some(members) = app.project_members.as_ref() else {
+        app.set_status("Todavía no hay miembros cargados.");
+        return;
+    };
+    if !project_members_dirty(app) {
+        app.set_status("Sin cambios de miembros.");
+        return;
+    }
+    let member_ids: Vec<u64> = members.iter().map(|m| m.id).collect();
+    let id = app.requests.bump_project_members_write();
+    app.begin_busy("Guardando miembros...");
+    jobs.spawn(async move {
+        let result = operations::projects::set_members(&client, project_id, &member_ids)
+            .await
+            .map(|_| member_ids)
+            .map_err(|e| e.to_string());
+        JobOutcome::ProjectMembersSaved {
+            id,
+            project_id,
+            result,
+        }
+    });
 }
 
 pub fn move_task_selection(app: &mut App, delta: i32) {
@@ -2168,6 +2420,7 @@ pub fn open_project_task_edit_form(
     task_id: u64,
     milestone: String,
     dependence: String,
+    dependence_label: String,
     start_date: String,
 ) {
     app.composing_project_task = true;
@@ -2176,6 +2429,13 @@ pub fn open_project_task_edit_form(
     app.project_task_desc_input.clear();
     app.project_task_milestone_input.set(milestone);
     app.project_task_dependence_input.set(dependence);
+    let label = dependence_label.trim();
+    app.project_task_dependence_label = if label.is_empty() || label == "---------" || label == "-"
+    {
+        None
+    } else {
+        Some(label.to_string())
+    };
     app.project_task_start_date_input.set(start_date);
     app.project_task_form_field = 0;
     app.projects_detail_focused = true;
@@ -2189,6 +2449,7 @@ pub fn cancel_project_task_form(app: &mut App) {
     app.project_task_desc_input.clear();
     app.project_task_milestone_input.clear();
     app.project_task_dependence_input.clear();
+    app.project_task_dependence_label = None;
     app.project_task_start_date_input.clear();
     app.project_task_form_field = 0;
 }
@@ -2410,13 +2671,26 @@ async fn project_detail_refresh(
 }
 
 /// Moves `id` to the front of the known-projects MRU list (deduping) and
-/// persists it to `config.toml`.
-fn remember_project(app: &mut App, id: u64) {
-    app.known_projects.retain(|&p| p != id);
-    app.known_projects.insert(0, id);
+/// persists it to `config.toml`. Optional `name` updates the cached label.
+fn remember_project(app: &mut App, id: u64, name: Option<String>) {
+    let kept = app
+        .known_projects
+        .iter()
+        .find(|p| p.id == id)
+        .and_then(|p| p.name.clone());
+    let name = name
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .or(kept);
+    app.known_projects.retain(|p| p.id != id);
+    app.known_projects
+        .insert(0, crate::config::KnownProject::new(id, name.clone()));
     app.selected_project_idx = 0;
+    if name.is_some() {
+        app.active_project_name = name.clone();
+    }
 
-    if let Err(e) = persist_known_project(id) {
+    if let Err(e) = persist_known_project(id, name.as_deref()) {
         app.set_status(format!(
             "Proyecto cargado (no se pudo guardar en config.toml: {})",
             e
@@ -2424,9 +2698,21 @@ fn remember_project(app: &mut App, id: u64) {
     }
 }
 
-fn persist_known_project(id: u64) -> Result<()> {
+/// Learn/update the display name for a project (also persists to config.toml).
+pub(crate) fn cache_project_name_for_net(app: &mut App, id: u64, name: String) {
+    let name = name.trim();
+    if name.is_empty() {
+        return;
+    }
+    if app.active_project == Some(id) {
+        app.active_project_name = Some(name.to_string());
+    }
+    remember_project(app, id, Some(name.to_string()));
+}
+
+fn persist_known_project(id: u64, name: Option<&str>) -> Result<()> {
     let mut config = crate::config::Config::load()?;
-    operations::projects::remember_project(&mut config, id)
+    operations::projects::remember_project(&mut config, id, name)
 }
 
 /// Starts composing a new card for the currently selected list. No-op if
@@ -2670,7 +2956,7 @@ fn persist_board_switch(id: u64) -> Result<()> {
 
 /// Alterna el foco entre la lista de proyectos guardados (izquierda) y el panel de detalle (derecha).
 pub fn toggle_projects_focus(app: &mut App) {
-    if app.composing_milestone || app.composing_project_task {
+    if app.composing_milestone || app.composing_project_task || app.composing_member {
         return;
     }
     app.projects_detail_focused = !app.projects_detail_focused;
@@ -2819,10 +3105,21 @@ mod tests {
         project_task_form_input_push(&mut app, 'd');
         assert_eq!(app.project_task_desc_input.as_str(), "d");
 
-        open_project_task_edit_form(&mut app, 99, "10".into(), "12".into(), "2026-10-01".into());
+        open_project_task_edit_form(
+            &mut app,
+            99,
+            "10".into(),
+            "12".into(),
+            "#1 - Parent".into(),
+            "2026-10-01".into(),
+        );
         assert_eq!(app.project_task_form_edit_id, Some(99));
         assert_eq!(app.project_task_milestone_input.as_str(), "10");
         assert_eq!(app.project_task_dependence_input.as_str(), "12");
+        assert_eq!(
+            app.project_task_dependence_label.as_deref(),
+            Some("#1 - Parent")
+        );
         assert_eq!(app.project_task_start_date_input.as_str(), "2026-10-01");
 
         app.project_tasks = vec![ProjectTask {
@@ -2842,10 +3139,51 @@ mod tests {
         cycle_projects_detail_section(&mut app, 1);
         assert_eq!(app.projects_detail_section, ProjectDetailSection::Status);
         cycle_projects_detail_section(&mut app, 1);
+        assert_eq!(app.projects_detail_section, ProjectDetailSection::Members);
+        cycle_projects_detail_section(&mut app, 1);
         assert_eq!(
             app.projects_detail_section,
             ProjectDetailSection::Milestones
         );
+    }
+
+    #[test]
+    fn project_members_add_remove_and_dirty_flag() {
+        let mut app = test_app();
+        app.active_project = Some(500);
+        app.project_members = Some(vec![ProjectMemberEntry {
+            id: 140,
+            label: "#140".into(),
+        }]);
+        app.project_members_baseline = vec![140];
+        app.selected_member_idx = 0;
+        assert!(!project_members_dirty(&app));
+
+        // Simulate resolved add applied by net layer.
+        app.project_members
+            .as_mut()
+            .unwrap()
+            .push(ProjectMemberEntry {
+                id: 114,
+                label: "ana (#114)".into(),
+            });
+        assert!(project_members_dirty(&app));
+
+        app.selected_member_idx = 1;
+        remove_selected_member(&mut app);
+        assert!(!project_members_dirty(&app));
+        assert_eq!(app.project_members.as_ref().unwrap().len(), 1);
+
+        remove_selected_member(&mut app);
+        assert!(project_members_dirty(&app));
+        assert!(app.project_members.as_ref().unwrap().is_empty());
+
+        start_composing_member(&mut app);
+        assert!(app.composing_member);
+        member_input_push(&mut app, 'a');
+        assert_eq!(app.member_input.as_str(), "a");
+        cancel_composing_member(&mut app);
+        assert!(!app.composing_member);
     }
 
     #[test]

@@ -30,16 +30,67 @@ pub struct BoardInfo {
     pub last_used: Option<String>,
 }
 
+/// One entry in the TUI projects MRU. TOML accepts a bare id (`500`) or a
+/// table (`{ id = 500, name = "…" }`) so existing configs keep loading.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KnownProject {
+    pub id: u64,
+    pub name: Option<String>,
+}
+
+impl KnownProject {
+    pub fn new(id: u64, name: Option<String>) -> Self {
+        Self {
+            id,
+            name: name.filter(|s| !s.trim().is_empty()),
+        }
+    }
+}
+
+impl Serialize for KnownProject {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.name.as_deref() {
+            Some(name) => {
+                use serde::ser::SerializeMap;
+                let mut map = serializer.serialize_map(Some(2))?;
+                map.serialize_entry("id", &self.id)?;
+                map.serialize_entry("name", name)?;
+                map.end()
+            }
+            None => serializer.serialize_u64(self.id),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for KnownProject {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Raw {
+            Id(u64),
+            Named {
+                id: u64,
+                #[serde(default)]
+                name: Option<String>,
+            },
+        }
+        match Raw::deserialize(deserializer)? {
+            Raw::Id(id) => Ok(KnownProject::new(id, None)),
+            Raw::Named { id, name } => Ok(KnownProject::new(id, name)),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TuiConfig {
     /// List names (case-insensitive) hidden from the `hteam tui` board. Toggled
     /// with 'v'/'V' inside the TUI; empty means every list is shown.
     #[serde(default)]
     pub hidden_lists: Vec<String>,
-    /// Project ids looked up from the 'P' popup, most-recently-used first, so
-    /// you can pick one again without retyping it.
+    /// Projects looked up from the 'P' popup, most-recently-used first. Names
+    /// are cached when learned so the detail header does not stay as bare ids.
     #[serde(default)]
-    pub known_projects: Vec<u64>,
+    pub known_projects: Vec<KnownProject>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -637,6 +688,35 @@ mod tests {
         assert!(config.variables.is_empty());
         assert!(config.tui.hidden_lists.is_empty());
         assert_eq!(config.working_hours.start, None);
+    }
+
+    #[test]
+    fn known_projects_accept_bare_ids_and_named_tables() {
+        let toml_str = r#"
+            [auth]
+            [tui]
+            known_projects = [500, { id = 469, name = "OKR" }]
+        "#;
+        let config: Config = toml::from_str(toml_str).expect("parses known projects");
+        assert_eq!(config.tui.known_projects.len(), 2);
+        assert_eq!(config.tui.known_projects[0].id, 500);
+        assert_eq!(config.tui.known_projects[0].name, None);
+        assert_eq!(config.tui.known_projects[1].id, 469);
+        assert_eq!(config.tui.known_projects[1].name.as_deref(), Some("OKR"));
+
+        let mut round = Config::default();
+        round.tui.known_projects = vec![
+            KnownProject::new(500, Some("TechFlow".into())),
+            KnownProject::new(469, None),
+        ];
+        let serialized = toml::to_string_pretty(&round).expect("serialize");
+        let parsed: Config = toml::from_str(&serialized).expect("reparse");
+        assert_eq!(
+            parsed.tui.known_projects[0].name.as_deref(),
+            Some("TechFlow")
+        );
+        assert_eq!(parsed.tui.known_projects[1].id, 469);
+        assert_eq!(parsed.tui.known_projects[1].name, None);
     }
 
     #[test]

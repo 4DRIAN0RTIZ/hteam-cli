@@ -48,6 +48,15 @@ pub enum ProjectDetailSection {
     Tree,
     /// Read-only progress / due / times summary (`operations::projects::status`).
     Status,
+    /// View/edit project members (`operations::projects::{members,set_members}`).
+    Members,
+}
+
+/// One row in the projects Members section.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProjectMemberEntry {
+    pub id: u64,
+    pub label: String,
 }
 
 /// Editable rows in the task-detail popup (`d` / `e`).
@@ -191,26 +200,40 @@ pub struct App {
     pub mention_selected: usize,
     /// When set, a mention search will fire after this instant (debounce).
     pub mention_debounce_at: Option<Instant>,
-    /// Project ids looked up before, most-recently-used first — mirrors
-    /// `config.toml`'s `[tui] known_projects`.
-    pub known_projects: Vec<u64>,
+    /// Projects looked up before, most-recently-used first — mirrors
+    /// `config.toml`'s `[tui] known_projects` (id + optional cached name).
+    pub known_projects: Vec<crate::config::KnownProject>,
     pub selected_project_idx: usize,
     pub active_project: Option<u64>,
+    /// Display name when known (live list / status / etc.); no extra fetch.
+    pub active_project_name: Option<String>,
     pub project_milestones: Vec<ProjectMilestone>,
+    /// False until the Milestones section has been fetched for this project.
+    pub project_milestones_loaded: bool,
     /// Highlighted milestone inside the projects detail panel (create/edit).
     pub selected_milestone_idx: usize,
     pub project_tasks: Vec<ProjectTask>,
+    pub project_tasks_loaded: bool,
     /// Highlighted task inside the projects detail panel.
     pub selected_task_idx: usize,
     /// Dependency tree roots for the active project (read-only section).
     pub project_task_tree: Vec<ProjectTaskTreeNode>,
+    pub project_task_tree_loaded: bool,
     /// Node ids currently expanded in the collapsible tree view.
     pub project_tree_expanded: HashSet<u64>,
     /// Highlighted row among *visible* tree rows (collapsed nodes hide descendants).
     pub selected_tree_idx: usize,
     /// Cached `operations::projects::status` for the active project (lazy).
     pub project_status: Option<ProjectStatusSummary>,
-    /// Milestones / tasks / tree / status when the detail panel has focus.
+    /// Working member list for the Members section (`None` = not loaded yet).
+    pub project_members: Option<Vec<ProjectMemberEntry>>,
+    /// Last saved member ids (dirty detection).
+    pub project_members_baseline: Vec<u64>,
+    pub selected_member_idx: usize,
+    /// Typing a username or id to add as member.
+    pub composing_member: bool,
+    pub member_input: TextInput,
+    /// Milestones / tasks / tree / status / members when the detail panel has focus.
     pub projects_detail_section: ProjectDetailSection,
     pub show_projects: bool,
     /// Proyectos en vivo (`hteam project list`, status "Execution"),
@@ -256,6 +279,8 @@ pub struct App {
     pub project_task_desc_input: TextInput,
     pub project_task_milestone_input: TextInput,
     pub project_task_dependence_input: TextInput,
+    /// Human label for current dependence (`#N - name`) when editing a task.
+    pub project_task_dependence_label: Option<String>,
     pub project_task_start_date_input: TextInput,
     /// Field index in the active project-task form (create or edit).
     pub project_task_form_field: usize,
@@ -311,11 +336,16 @@ pub struct RequestIds {
     pub reminders: u64,
     pub objectives: u64,
     pub projects: u64,
+    pub project_milestones: u64,
+    pub project_tasks: u64,
+    pub project_task_tree: u64,
     pub project_milestone_write: u64,
     pub project_milestone_form: u64,
     pub project_task_write: u64,
     pub project_task_form: u64,
     pub project_status: u64,
+    pub project_members: u64,
+    pub project_members_write: u64,
     pub live_projects: u64,
     pub boards_popup: u64,
     pub move_card: u64,
@@ -353,6 +383,15 @@ impl RequestIds {
     pub fn bump_projects(&mut self) -> u64 {
         Self::bump(&mut self.projects)
     }
+    pub fn bump_project_milestones(&mut self) -> u64 {
+        Self::bump(&mut self.project_milestones)
+    }
+    pub fn bump_project_tasks(&mut self) -> u64 {
+        Self::bump(&mut self.project_tasks)
+    }
+    pub fn bump_project_task_tree(&mut self) -> u64 {
+        Self::bump(&mut self.project_task_tree)
+    }
     pub fn bump_project_milestone_write(&mut self) -> u64 {
         Self::bump(&mut self.project_milestone_write)
     }
@@ -367,6 +406,12 @@ impl RequestIds {
     }
     pub fn bump_project_status(&mut self) -> u64 {
         Self::bump(&mut self.project_status)
+    }
+    pub fn bump_project_members(&mut self) -> u64 {
+        Self::bump(&mut self.project_members)
+    }
+    pub fn bump_project_members_write(&mut self) -> u64 {
+        Self::bump(&mut self.project_members_write)
     }
     pub fn bump_live_projects(&mut self) -> u64 {
         Self::bump(&mut self.live_projects)
@@ -411,7 +456,7 @@ impl App {
     pub fn new(
         board_number: u64,
         hidden_lists: HashSet<String>,
-        known_projects: Vec<u64>,
+        known_projects: Vec<crate::config::KnownProject>,
         working_hours: WorkingHoursConfig,
         theme: Theme,
     ) -> Self {
@@ -472,14 +517,23 @@ impl App {
             known_projects,
             selected_project_idx: 0,
             active_project: None,
+            active_project_name: None,
             project_milestones: Vec::new(),
+            project_milestones_loaded: false,
             selected_milestone_idx: 0,
             project_tasks: Vec::new(),
+            project_tasks_loaded: false,
             selected_task_idx: 0,
             project_task_tree: Vec::new(),
+            project_task_tree_loaded: false,
             project_tree_expanded: HashSet::new(),
             selected_tree_idx: 0,
             project_status: None,
+            project_members: None,
+            project_members_baseline: Vec::new(),
+            selected_member_idx: 0,
+            composing_member: false,
+            member_input: TextInput::default(),
             projects_detail_section: ProjectDetailSection::default(),
             show_projects: false,
             live_projects: Vec::new(),
@@ -511,6 +565,7 @@ impl App {
             project_task_desc_input: TextInput::default(),
             project_task_milestone_input: TextInput::default(),
             project_task_dependence_input: TextInput::default(),
+            project_task_dependence_label: None,
             project_task_start_date_input: TextInput::default(),
             project_task_form_field: 0,
             composing_card: false,

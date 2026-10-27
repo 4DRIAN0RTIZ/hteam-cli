@@ -147,6 +147,8 @@ pub struct TaskEditFormBaseline {
     pub start_date: String,
     /// Bare depends-on task id, or empty if none.
     pub dependence: String,
+    /// Selected dependence option label (e.g. `#6 - Title`), when present.
+    pub dependence_label: String,
     pub responsible: String,
     /// Priority select value `1`..=`5` (web: 1 very low … 5 very high).
     pub priority: String,
@@ -185,25 +187,29 @@ fn parse_task_edit_form(html: &str) -> TaskEditFormBaseline {
             .to_string()
     };
 
-    let select_selected = |name: &str| -> String {
+    let select_selected = |name: &str| -> (String, String) {
         let sel = match Selector::parse(&format!(r#"select[name="{name}"] option[selected]"#)) {
             Ok(s) => s,
-            Err(_) => return String::new(),
+            Err(_) => return (String::new(), String::new()),
         };
         if let Some(el) = doc.select(&sel).next() {
-            return el.value().attr("value").unwrap_or("").to_string();
+            let value = el.value().attr("value").unwrap_or("").to_string();
+            let label = el.text().collect::<String>().trim().to_string();
+            return (value, label);
         }
-        // Fallback: first option with a value attribute if nothing marked selected.
+        // Fallback: option marked selected without matching CSS (odd HTML).
         let all = match Selector::parse(&format!(r#"select[name="{name}"] option"#)) {
             Ok(s) => s,
-            Err(_) => return String::new(),
+            Err(_) => return (String::new(), String::new()),
         };
         for el in doc.select(&all) {
             if el.value().attr("selected").is_some() {
-                return el.value().attr("value").unwrap_or("").to_string();
+                let value = el.value().attr("value").unwrap_or("").to_string();
+                let label = el.text().collect::<String>().trim().to_string();
+                return (value, label);
             }
         }
-        String::new()
+        (String::new(), String::new())
     };
 
     let csrf = input_value("csrfmiddlewaretoken");
@@ -212,10 +218,12 @@ fn parse_task_edit_form(html: &str) -> TaskEditFormBaseline {
     out.description = textarea_value("description");
     out.time_estimated = input_value("time_estimated");
     out.start_date = input_value("start_date");
-    out.dependence = select_selected("dependence");
-    out.responsible = select_selected("responsible");
-    out.priority = select_selected("priority");
-    out.milestone = select_selected("milestone");
+    let (dep_id, dep_label) = select_selected("dependence");
+    out.dependence = dep_id;
+    out.dependence_label = dep_label;
+    out.responsible = select_selected("responsible").0;
+    out.priority = select_selected("priority").0;
+    out.milestone = select_selected("milestone").0;
     out
 }
 
@@ -1786,6 +1794,78 @@ impl HteamClient {
 
     pub async fn get_project_tasks(&self, project_id: u64) -> Result<ProjectTasksResponse> {
         self.get_project_tasks_page(project_id, None).await
+    }
+
+    /// Project name + selected members (id, username) from `/projects/{id}/edit/`.
+    pub async fn get_project_members(
+        &self,
+        project_id: u64,
+    ) -> Result<(String, Vec<(u64, String)>)> {
+        let config = self.config.lock().await;
+        let url = format!("{}/projects/{project_id}/edit/", self.site_base_url);
+        let headers = self.build_headers(&config)?;
+        drop(config);
+
+        let response = self
+            .client
+            .get(&url)
+            .headers(headers)
+            .send()
+            .await
+            .context("Error al cargar el formulario de miembros del proyecto")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Error HTTP {}: {}",
+                response.status(),
+                response.text().await?
+            );
+        }
+
+        let html = response
+            .text()
+            .await
+            .context("Error leyendo el formulario de miembros del proyecto")?;
+        Self::parse_project_members_edit_form(&html, project_id)
+    }
+
+    fn parse_project_members_edit_form(
+        html: &str,
+        project_id: u64,
+    ) -> Result<(String, Vec<(u64, String)>)> {
+        use scraper::{Html, Selector};
+
+        let doc = Html::parse_document(html);
+        let name_sel = Selector::parse(r#"input[name="name"]"#)
+            .map_err(|e| anyhow::anyhow!("selector name: {e}"))?;
+        let name = doc
+            .select(&name_sel)
+            .next()
+            .and_then(|el| el.value().attr("value"))
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string)
+            .unwrap_or_else(|| format!("#{project_id}"));
+
+        let opt_sel = Selector::parse(r#"select[name="members"] option[selected]"#)
+            .map_err(|e| anyhow::anyhow!("selector members: {e}"))?;
+        let mut members = Vec::new();
+        for opt in doc.select(&opt_sel) {
+            let Some(raw_id) = opt.value().attr("value") else {
+                continue;
+            };
+            let Ok(id) = raw_id.parse::<u64>() else {
+                continue;
+            };
+            let username = opt.text().collect::<String>().trim().to_string();
+            let label = if username.is_empty() {
+                format!("#{id}")
+            } else {
+                username
+            };
+            members.push((id, label));
+        }
+        Ok((name, members))
     }
 
     pub async fn update_project_members(&self, project_id: u64, member_ids: &[u64]) -> Result<()> {
@@ -4085,6 +4165,7 @@ mod tests {
         assert_eq!(b.csrf.as_deref(), Some("abc"));
         assert_eq!(b.time_estimated, "1h 30m");
         assert_eq!(b.dependence, "8965");
+        assert_eq!(b.dependence_label, "X");
         assert_eq!(b.responsible, "140");
         assert_eq!(b.priority, "4");
         assert_eq!(b.start_date, "2026-10-13");

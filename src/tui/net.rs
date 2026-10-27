@@ -119,17 +119,40 @@ pub enum JobOutcome {
         result: Result<(), String>,
         cards: Option<Result<Vec<Card>, String>>,
     },
-    ProjectLoaded {
+    ProjectMilestonesLoaded {
         id: u64,
         project_id: u64,
-        milestones: Result<Vec<ProjectMilestone>, String>,
-        tasks: Result<Vec<ProjectTask>, String>,
-        tree: Result<Vec<ProjectTaskTreeNode>, String>,
+        result: Result<Vec<ProjectMilestone>, String>,
+    },
+    ProjectTasksLoaded {
+        id: u64,
+        project_id: u64,
+        result: Result<Vec<ProjectTask>, String>,
+    },
+    ProjectTreeLoaded {
+        id: u64,
+        project_id: u64,
+        result: Result<Vec<ProjectTaskTreeNode>, String>,
     },
     ProjectStatusLoaded {
         id: u64,
         project_id: u64,
         result: Result<ProjectStatusSummary, String>,
+    },
+    ProjectMembersLoaded {
+        id: u64,
+        project_id: u64,
+        result: Result<(String, Vec<super::app::ProjectMemberEntry>), String>,
+    },
+    ProjectMemberResolved {
+        id: u64,
+        project_id: u64,
+        result: Result<super::app::ProjectMemberEntry, String>,
+    },
+    ProjectMembersSaved {
+        id: u64,
+        project_id: u64,
+        result: Result<Vec<u64>, String>,
     },
     ProjectMilestoneSaved {
         id: u64,
@@ -337,6 +360,7 @@ fn apply_project_task_tree(
     match tree {
         Ok(list) => {
             app.project_task_tree = list;
+            app.project_task_tree_loaded = true;
             // Drop expand flags for nodes that disappeared after a refresh.
             app.project_tree_expanded
                 .retain(|id| tree_contains_id(&app.project_task_tree, *id));
@@ -371,13 +395,17 @@ fn apply_project_write_result(
     match result {
         Ok(msg) => {
             app.set_status(msg);
-            // Status is lazy and expensive; drop cache so the next visit refetches.
             app.project_status = None;
             app.requests.bump_project_status();
+            if !super::events::project_members_dirty(app) {
+                app.project_members = None;
+                app.requests.bump_project_members();
+            }
             if let Some((milestones, tasks, tree)) = refresh {
                 match milestones {
                     Ok(list) => {
                         app.project_milestones = list;
+                        app.project_milestones_loaded = true;
                         if app.selected_milestone_idx >= app.project_milestones.len()
                             && !app.project_milestones.is_empty()
                         {
@@ -396,6 +424,7 @@ fn apply_project_write_result(
                 match tasks {
                     Ok(list) => {
                         app.project_tasks = list;
+                        app.project_tasks_loaded = true;
                         if app.selected_task_idx >= app.project_tasks.len()
                             && !app.project_tasks.is_empty()
                         {
@@ -409,6 +438,8 @@ fn apply_project_write_result(
                         app.set_status(format!("Guardado, pero falló el refresh de tasks: {e}"));
                     }
                 }
+                // Tree may be stale after task/milestone writes.
+                app.project_task_tree_loaded = false;
                 apply_project_task_tree(app, tree, true);
             }
         }
@@ -711,21 +742,20 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
                 Err(e) => app.set_status(format!("Error guardando descripción: {}", e)),
             }
         }
-        JobOutcome::ProjectLoaded {
+        JobOutcome::ProjectMilestonesLoaded {
             id,
             project_id,
-            milestones,
-            tasks,
-            tree,
+            result,
         } => {
-            if app.requests.projects != id || app.active_project != Some(project_id) {
+            if app.requests.project_milestones != id || app.active_project != Some(project_id) {
                 app.end_busy();
                 return;
             }
             app.end_busy();
-            match milestones {
+            match result {
                 Ok(list) => {
                     app.project_milestones = list;
+                    app.project_milestones_loaded = true;
                     if app.selected_milestone_idx >= app.project_milestones.len()
                         && !app.project_milestones.is_empty()
                     {
@@ -735,11 +765,23 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
                         app.selected_milestone_idx = 0;
                     }
                 }
-                Err(e) => app.set_status(format!("Error cargando milestones: {}", e)),
+                Err(e) => app.set_status(format!("Error cargando milestones: {e}")),
             }
-            match tasks {
+        }
+        JobOutcome::ProjectTasksLoaded {
+            id,
+            project_id,
+            result,
+        } => {
+            if app.requests.project_tasks != id || app.active_project != Some(project_id) {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            match result {
                 Ok(list) => {
                     app.project_tasks = list;
+                    app.project_tasks_loaded = true;
                     if app.selected_task_idx >= app.project_tasks.len()
                         && !app.project_tasks.is_empty()
                     {
@@ -749,9 +791,20 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
                         app.selected_task_idx = 0;
                     }
                 }
-                Err(e) => app.set_status(format!("Error cargando tasks: {}", e)),
+                Err(e) => app.set_status(format!("Error cargando tasks: {e}")),
             }
-            apply_project_task_tree(app, tree, false);
+        }
+        JobOutcome::ProjectTreeLoaded {
+            id,
+            project_id,
+            result,
+        } => {
+            if app.requests.project_task_tree != id || app.active_project != Some(project_id) {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            apply_project_task_tree(app, result, false);
         }
         JobOutcome::ProjectStatusLoaded {
             id,
@@ -765,9 +818,79 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
             app.end_busy();
             match result {
                 Ok(summary) => {
+                    super::events::cache_project_name_for_net(
+                        app,
+                        project_id,
+                        summary.project.name.clone(),
+                    );
                     app.project_status = Some(summary);
                 }
                 Err(e) => app.set_status(format!("Error cargando resumen: {e}")),
+            }
+        }
+        JobOutcome::ProjectMembersLoaded {
+            id,
+            project_id,
+            result,
+        } => {
+            if app.requests.project_members != id || app.active_project != Some(project_id) {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            match result {
+                Ok((name, list)) => {
+                    super::events::cache_project_name_for_net(app, project_id, name);
+                    app.project_members_baseline = list.iter().map(|m| m.id).collect();
+                    app.selected_member_idx = 0;
+                    app.project_members = Some(list);
+                }
+                Err(e) => app.set_status(format!("Error cargando miembros: {e}")),
+            }
+        }
+        JobOutcome::ProjectMemberResolved {
+            id,
+            project_id,
+            result,
+        } => {
+            if app.requests.project_members != id || app.active_project != Some(project_id) {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            match result {
+                Ok(entry) => {
+                    let Some(members) = app.project_members.as_mut() else {
+                        app.set_status("Miembros no cargados; reabrí la sección.");
+                        return;
+                    };
+                    if members.iter().any(|m| m.id == entry.id) {
+                        app.set_status(format!("{} ya está en la lista", entry.label));
+                        return;
+                    }
+                    members.push(entry.clone());
+                    app.selected_member_idx = members.len() - 1;
+                    app.set_status(format!("Agregado {} (sin guardar)", entry.label));
+                }
+                Err(e) => app.set_status(format!("Error resolviendo usuario: {e}")),
+            }
+        }
+        JobOutcome::ProjectMembersSaved {
+            id,
+            project_id,
+            result,
+        } => {
+            if app.requests.project_members_write != id || app.active_project != Some(project_id) {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            match result {
+                Ok(ids) => {
+                    app.project_members_baseline = ids;
+                    app.set_status("Miembros guardados.");
+                }
+                Err(e) => app.set_status(format!("Error guardando miembros: {e}")),
             }
         }
         JobOutcome::MilestoneFormLoaded {
@@ -829,6 +952,7 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
                         task_id,
                         fields.milestone,
                         fields.dependence,
+                        fields.dependence_label,
                         fields.start_date,
                     );
                 }
