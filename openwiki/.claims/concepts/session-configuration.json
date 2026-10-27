@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:0f58e01cec7090a1297fc6a217e221520be150383e2c2c0fd32a55a622c12d88",
+  "pageVersion": "sha256:03d43b885271da82ac3f8cbe49c6e6730f2c7d5d625bfbd06d13aa69b0ea37dd",
   "claims": [
     {
       "id": "claim_52f8db320f324037a386ba48fe6abe02",
       "statement": "Configuration is stored as `config.toml` under the OS configuration directory plus `hteam`; a missing file loads as default, while saving creates the directory and rewrites the serialized configuration.",
       "evidence": [
         {
-          "resource": "repo://src/config/mod.rs#L216-L293",
-          "version": "repo-lines-v1:sha256:b601e0f4275f847bde3fb3401a709bc7a29b7eb14ffd5de545c2c8605f813d4f:eyJzZWxlY3RlZExpbmVDb3VudCI6NzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4MDc5NGE2MDA2MzNhZTY5ZGFlMWYzOThjYTk3ZTc5Yzg3NDc5ZDFjNjE3MDg0ZTRkMTgyODZmMTlkODFjMTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwNzFjNmU5MjJkNjRlM2MyZDEyZDFiNDAwODRjMzFjYzRlNzgwN2ZiNDJlN2Y3MjI5Y2M4ODYwNWU3ZmM4YjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYyZjMzN2ExNGE5NWFmNDIwZWUyYzk4ZGYwODczNmQxMTc5MmJlNzJjNWI0MDc1NjVhZjkwYjhmMDQ3MWJjN2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYyMTE5MWUxNDUxZDk3MDNmMzVlZDZiM2U4OWZjNzNhZDJjNDllMzAwZjdmZDJkNWQ2MTQzNWEwYWQwNjQwZGMifQ"
+          "resource": "repo://src/config/mod.rs#L272-L340",
+          "version": "repo-lines-v1:sha256:3ab069def864fc510f85aa4589bbc62506074253eed1e07dc0ae6b512f58f871:eyJzZWxlY3RlZExpbmVDb3VudCI6NjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4MDc5NGE2MDA2MzNhZTY5ZGFlMWYzOThjYTk3ZTc5Yzg3NDc5ZDFjNjE3MDg0ZTRkMTgyODZmMTlkODFjMTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM4MTEwMGIxZDVjMTFkZDNmOTBjNTNjZDQ2YTA2YzdmNzUwOTQ5MTAxOGE0YTZjNWE1NmQwNTU0OWRhY2UzMmQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYyZjMzN2ExNGE5NWFmNDIwZWUyYzk4ZGYwODczNmQxMTc5MmJlNzJjNWI0MDc1NjVhZjkwYjhmMDQ3MWJjN2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYyMTE5MWUxNDUxZDk3MDNmMzVlZDZiM2U4OWZjNzNhZDJjNDllMzAwZjdmZDJkNWQ2MTQzNWEwYWQwNjQwZGMifQ"
         }
       ]
     },
@@ -17,11 +17,11 @@
       "statement": "`config.toml`'s `AuthConfig` persists cookie credentials, optional access and refresh tokens, default board data, and cached board and user identifiers; `Config` also persists board metadata, variables, TUI preferences, and working hours.",
       "evidence": [
         {
-          "resource": "repo://src/config/mod.rs#L10-L19",
+          "resource": "repo://src/config/mod.rs#L15-L24",
           "version": "repo-lines-v1:sha256:894c41b16e4323dcfe593b536842855d08a9a5649a7fcb8ad60fcd30059ff82c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NTkzNDkwZGJhMTAyMjZkZTA2NWRmZGI3NmY0YzgzNWI3ZDI3ODQ0ZjRkNTY0ZDIxOTVjMDdhN2NlZjAyODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI0ODYyN2E3MzU3M2ZmM2I2ZDY3NjU5MWVkMTRmOTNhYTE1MjU0YWViYWVlNjY4NzU4MjM2MDA5ZTQ0MmVjMDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNmMTdmMzllN2I2M2Q1MmVlMWRkZjFlMTVmYTlkZDE5Y2MwMGY3MWM0YTEwYzUxMGZiMjlhMWZkYzRkOGRlZWEifQ"
         },
         {
-          "resource": "repo://src/config/mod.rs#L197-L213",
+          "resource": "repo://src/config/mod.rs#L253-L269",
           "version": "repo-lines-v1:sha256:920867016210f1a910db8db15fae495fd568197b36836b4323eb486853c30314:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NTkzNDkwZGJhMTAyMjZkZTA2NWRmZGI3NmY0YzgzNWI3ZDI3ODQ0ZjRkNTY0ZDIxOTVjMDdhN2NlZjAyODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEyYmYwYTFiZDQ4OGQyMjc4MzI2Y2RhM2JkZWNmZDY4Zjg5NTliMWMzZmM0M2QxOWYzODc3ZGViZGRmM2Y0OTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI4YmJhYTExODhjYTIwYzdjOWY3ZTlhYmQzYzcyYjMxNDc1ODk5ZjA1NTg2ZmVlYmQ3NmEyMGRmODEzNmU3NzEifQ"
         }
       ]
@@ -31,11 +31,11 @@
       "statement": "A configuration is authenticated only when both `session_id` and `csrf_token` are present, and `HteamClient::with_auth` rejects unauthenticated configuration before creating a client.",
       "evidence": [
         {
-          "resource": "repo://src/client/mod.rs#L231-L253",
+          "resource": "repo://src/client/mod.rs#L524-L546",
           "version": "repo-lines-v1:sha256:4c49788b79f0e3fa2054750012d0ad31da6b8fc1f075e79b47ab56cd2891b626:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMzNDE3YTU4ODMwMWI5ZWIzNzMzMGI4MThmMDNlMWZhMmIyYzM0N2MwMmEwODQ1ODAwYzc4ZDJlZWQ2ODU0MWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBmZWY0MjI0NTU0NGNmYmQ0MTVmODI0OTk2MDkyZTRmODUwZmFmMTc2NWVmZTI0Mjg5MDNmZTJiYzRhMDBhYmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNkZmYyNThjNmMwZTQzNDNmMTAzYTUxODQzMGIzZjhmMTY3NzdmNDViZjJlNDBmZWRlYjBhOGJjNDVkN2U4YTAifQ"
         },
         {
-          "resource": "repo://src/config/mod.rs#L296-L306",
+          "resource": "repo://src/config/mod.rs#L343-L353",
           "version": "repo-lines-v1:sha256:a546cf55dc66fcd420ff9464846ad0be598055da274523dcfdc66233a6c37c90:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBiYmE1MDhhODNhN2M5OWI4ZWRkOWI4ZjY3Njg1MjQ1NDQ1MDg2YjU2OWJlZTQwZGM3MWMxZDA2MjkwNjFiODQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE2MmVlNTdlNDFhOGMyMGFlMDE2NGRmMjYxNDM5ZGNjNDk5ZDM1MjA4MzQxNTE1MTZkMDQ3ZThkZWFlOGE0NjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI5YTA1MTQ0NTEwMWQxYTMyMjAyZTQ3ZTNjM2JiOGNiZjRjOTAxNGQyZDEzMzFiNTNjM2U4YzY4NDZiMTdmODUifQ"
         }
       ]
@@ -45,11 +45,11 @@
       "statement": "Request headers include cookie and CSRF headers when both cookie values are configured, include a bearer authorization header independently when `access_token` exists, and use manually constructed cookies rather than a reqwest cookie store.",
       "evidence": [
         {
-          "resource": "repo://src/client/mod.rs#L231-L245",
+          "resource": "repo://src/client/mod.rs#L524-L538",
           "version": "repo-lines-v1:sha256:6adb0327d5ab0d63d5f352f86d88d3acb97d724acacfca49bd7c99bc8cf8d6a9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMzNDE3YTU4ODMwMWI5ZWIzNzMzMGI4MThmMDNlMWZhMmIyYzM0N2MwMmEwODQ1ODAwYzc4ZDJlZWQ2ODU0MWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5YjE5ODJlOGRkNzQ4MTE4MTQ2YjM5YTJkMDA2MmY0MDgxZTM0Nzc5Yjg2NzVjMjM0YzRmYjEyNGRjMzkzOTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBmZWY0MjI0NTU0NGNmYmQ0MTVmODI0OTk2MDkyZTRmODUwZmFmMTc2NWVmZTI0Mjg5MDNmZTJiYzRhMDBhYmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJlOGQ5ODU1MDRhNzk5YjM0MGVkNmVlNDA3YmQwYWY0OTExY2NkODczMjExM2Y5MjgyOGMxZTMyNjFiOGEyZjYifQ"
         },
         {
-          "resource": "repo://src/client/mod.rs#L267-L297",
+          "resource": "repo://src/client/mod.rs#L560-L590",
           "version": "repo-lines-v1:sha256:acaa70608f4647edc71c4d667efb63fb7127dd663386919bedaadcf8a4017af4:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUzZmRkODc3N2Q5MDljNmE3MDdlODM3M2E1ZWUwNTJhMGFmNzA5ZTlmYzJkZmNkOTg4NjNlNmRjYmQyYzM2OGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhhMWNjNDE3OTZiZmZmN2FkNDFiNTQ1ZDA4M2JhNTUwZWFmMjIyZjFiZTJlMDMyODk0YTRmMWY0ZjVhMTVhM2MiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFjN2JlNGMxZmFiYzQ3YThlZGJlZTNkZTlhZjk2NTJkMDQwMDc1ZjYzOTYyMmVkYzE5OTFkMTZlMzIzNDg1ZGMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVkNGQyYTQwMDVlZjYxZjQ5YjdlZGI3NjQ2NzhhZWEyNDE2MDg1OTNhNGM0N2E4ZDRmMzgxMDE4NDc4YmNjZDcifQ"
         }
       ]
@@ -83,7 +83,7 @@
       "statement": "Board resolution prioritizes an explicit override, then the configured default board, then a readable valid `~/.last_ticket` value.",
       "evidence": [
         {
-          "resource": "repo://src/config/mod.rs#L330-L348",
+          "resource": "repo://src/config/mod.rs#L377-L395",
           "version": "repo-lines-v1:sha256:2ce2a9c21260d4d395d8b2957362949253b1323a19ab30adc9ee18dd510fcad4:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE4OGNmNjhhYjc4ZjM3NTg3MDc3MDEyZmQwNmFiZDJmOTRjZDJmY2FjOTc3MTYwOWUwOTMxODhiMDc4Y2RjNTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwNzFjNmU5MjJkNjRlM2MyZDEyZDFiNDAwODRjMzFjYzRlNzgwN2ZiNDJlN2Y3MjI5Y2M4ODYwNWU3ZmM4YjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU2NTk3NjkxNGU4ODYyODM1ZWM2ZjI2M2M3OGI2MTIyMzIzNWIwNmM1YTcyZWNmYzI2MmIyMzk4MmFjOTc0NjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoyLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM3OTRkMDJhODEyMTk0NGQxNzZkMjY1ZTliYjljYzU5ZjZhYjg5MGJjYWRmOGFlZmRlYmRiYmI0ZjJlYTg0NDQifQ"
         },
         {
@@ -117,11 +117,11 @@
       "statement": "A TUI board switch clears board-specific UI state, updates the client's in-memory board before refresh, and attempts durable persistence without reverting the live switch if persistence fails.",
       "evidence": [
         {
-          "resource": "repo://src/client/mod.rs#L785-L794",
+          "resource": "repo://src/client/mod.rs#L1153-L1162",
           "version": "repo-lines-v1:sha256:33eca2800ae3dfc1af8fa77edf3a9b11c2ded75ea6798bcd131d84124ebf6e62:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU1ZDgzNGUxMjc4NTRiNTk2M2UyMTA0NTExNzFmNTg4NzhjN2UwZWEyZDM5NmNhOTJjMWFhNjM5ZDBjZTJjNzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE2MmVlNTdlNDFhOGMyMGFlMDE2NGRmMjYxNDM5ZGNjNDk5ZDM1MjA4MzQxNTE1MTZkMDQ3ZThkZWFlOGE0NjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdkODllZmI2ZjA1ZTNmMDlmY2Y1MDEzZDBhOGM5MjUwYjlmMmU2MjhlY2U3NWFiYzcyYWJkMDllMGUzMDBjZTAifQ"
         },
         {
-          "resource": "repo://src/tui/events.rs#L690-L735",
+          "resource": "repo://src/tui/events.rs#L784-L829",
           "version": "repo-lines-v1:sha256:1d3d8525c5a1540020e3aa0c6f56747aefda3949588ff1bfc7886d3d64ff9f12:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU3ZDZhN2RkMjNkZTYwZGE4MzI3ZjY3ZmMyNDNhMjgyYjFmMmFkYjBkOTViYjQ3MzRmNTY3Yzk2OTc2YzUxZTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMyYzYzZTkwNjEwNzM0NDZjZjQyZGYwM2NmMDBjODZlNjEzMmQwODdkYTYyODBkODI3YzI4MGNjNzczMzI1ZDIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRmYWI3MTBkZGY3ODU5ZTU3NTc2NGE5MTNhMDAyYzc0NTg1ZmZhNzAwMTUxMGNiODgxMWRhODNkMmNmNzRiMzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFmNGY3NmFmMGI3MDIxYjAzM2UzMzU2NjY1YzU3MDdiNDViZTQwNjZiMjJhNzMzNWJmYzQ2NmFhYTAyZTExZWQifQ"
         }
       ]
@@ -131,7 +131,7 @@
       "statement": "Changing the client's board number only mutates its in-memory configuration and invalidates the cached board ID, preventing a board identifier learned for the old board from being reused.",
       "evidence": [
         {
-          "resource": "repo://src/client/mod.rs#L785-L794",
+          "resource": "repo://src/client/mod.rs#L1153-L1162",
           "version": "repo-lines-v1:sha256:33eca2800ae3dfc1af8fa77edf3a9b11c2ded75ea6798bcd131d84124ebf6e62:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU1ZDgzNGUxMjc4NTRiNTk2M2UyMTA0NTExNzFmNTg4NzhjN2UwZWEyZDM5NmNhOTJjMWFhNjM5ZDBjZTJjNzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVjY2NhMWE0ZDA5NmI4ZDRkOGMxNzRmNjBlNjdhMjZhOWY3NzcyOTRmMTczMTBiOWEyNzg4Y2RkNTdmMzcwNTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE5YjRjNjBiNDcwZDI1YTcxOGMxMzU0Zjc1Njg0YmMxMDAxMThjM2VhYTdmOGFhY2U3ZTg3ZDkwZmFkMDAyN2MifQ"
         }
       ]
@@ -141,7 +141,7 @@
       "statement": "The client resolves a missing board ID from cards, falls back from the Open list to non-empty lists, and caches the result only in its in-memory configuration.",
       "evidence": [
         {
-          "resource": "repo://src/client/mod.rs#L801-L825",
+          "resource": "repo://src/client/mod.rs#L1169-L1193",
           "version": "repo-lines-v1:sha256:02c66794e17be6607ce2d0a2e67be0e5db7280d4aaaad5588d4f170ec8f43c60:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY3NTRhMWJiMTAxMmZhYTI3OTViOGNkMjI1MDRhZGY3YzBmYWM0OGM4YWNiMTRlODA0ZmY5ZGEyMGNmNmQ2MTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdiMTZjMjM5NmZkYzljYzYzOTJkYjBlZmRhM2NkZDQ5OTU0YzAxOWQzZWNkMjQ0NDE4N2I3MDk2NmRiNTQzMTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg2MTc1ZTRiOGJkMWUyZGJhNzQ2ZGI4MjQxMWQwOTM0MjU4Zjk3OTI1YjNmMmQ3NTE5MjFhMTNhNjgyZTViNzUifQ"
         }
       ]
@@ -151,48 +151,8 @@
       "statement": "The client obtains a missing user ID from active work or the last shift record and then writes the user-scoped identifier to both its in-memory configuration and `config.toml`, ignoring a save failure.",
       "evidence": [
         {
-          "resource": "repo://src/client/mod.rs#L827-L874",
+          "resource": "repo://src/client/mod.rs#L1195-L1242",
           "version": "repo-lines-v1:sha256:c185ad732ff48a6c8956e50b55cef6d16d99237d6bf781617e819645c9c090e3:eyJzZWxlY3RlZExpbmVDb3VudCI6NDgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxY2FhNTBiNTIwOWM2ODEwMGRhNzcwOWUzNjAxNGU3OWE1MWQ5NTlhY2JmZWViNWE5Njg2YzIwNDUwNzNhNGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM4MjdjMWM0ZWQzNWU0ZmE2YThhYmIxNjdlYjM0Nzk4MDA0NThmMWUzYmJhNWNhMDBhZTc4MjBlYzA0ZWM2OGYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRjY2MxYjQ4ZGExNDFlYzhhN2UzYzIzZmFjMjNlNTA2ZTIyNDJmODFjZDkxODIwYmU5NDIxYjE3NDMzZWY3ODgifQ"
-        }
-      ]
-    },
-    {
-      "id": "claim_778c980e68344917875a35f7eb0d590e",
-      "statement": "TUI hidden-list preferences are persisted in `[tui].hidden_lists`; the application fetches all lists and their cards even when a list is hidden, allowing it to be shown again without another fetch.",
-      "evidence": [
-        {
-          "resource": "repo://src/config/mod.rs#L28-L38",
-          "version": "repo-lines-v1:sha256:7f3f85b6511ae1a94e682132d7cc5d9604f02240458a97c7c39def3eee41f23d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NTkzNDkwZGJhMTAyMjZkZTA2NWRmZGI3NmY0YzgzNWI3ZDI3ODQ0ZjRkNTY0ZDIxOTVjMDdhN2NlZjAyODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg4NWUzMmQwYWE2ZDNmYmQ3YTQyNDZhYzRkMzc4YjUzYWEyNTE2MTQ5OWM4ZTkyOThjNTY2OGJkY2QzNDk5OTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRmMmRjZmE4OWVhNjQ0ZmNlNzdiZDI5MGEzNDc4ODUyZmI5OWY2YmZlOTRhNWY0OWMwMTI4NjE0YmU5NmQ5ZTUifQ"
-        },
-        {
-          "resource": "repo://src/tui/app.rs#L329-L425",
-          "version": "repo-lines-v1:sha256:8497550914bc8cc62c26dbbb00847c9e6fc8cac4bcaf9a77c6281d82421063b4:eyJzZWxlY3RlZExpbmVDb3VudCI6OTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRjOTk1ZDBmZjIyZDRiZjUyYjZjNDM1YjMxY2Q0ZGFhM2U1OGE4ZjVkMzAxMzgwMjk1MDAyZWY2MDMzOWIwZjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2YjA0NDkxNDY5NzIyZTgzNjNhOTRlNDA0NDUzOGUwMTNhMmEyMTdlMzZiMWU1NjhiYTYwYWNiN2I0YzhmMmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ5OGM3NjVkMGFlNzliNmU4YTQwNWE4ZDc2NTNiZjE1M2ZiYTVmYjgyOWZlNjlmNzIzMTgyNjEwN2Q2NDhhZWEifQ"
-        },
-        {
-          "resource": "repo://src/tui/events.rs#L122-L138",
-          "version": "repo-lines-v1:sha256:15a5953771fc16cc46deabecb1ba72d544610d1659daa4dcbcd523c9d35ce2bc:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZlZjUyY2NkYTUxYzg0YjhlZmNmMGY1Y2MxZmNlMTJkNmEzMDk1YWQ3MWIyM2JiMjZkOGJkOGEzNWFhMDkyZDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlhMTRkZDczOTg4ZjMwMGM5YWZmMGIzNjAzMTc2NGMyZDJlOTZhMTg5YmI3ZWEzNmQ0M2JkYTQ1ZWE2ODY3MjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRiZjhkMDM0ZTBhNWUwZjZhNDgwOTQxODQ0MDYxNGQzY2U2YTNkZjYxYjc0ZjAxMWNmOTQyM2Q4Nzc4MGE0ZGMifQ"
-        },
-        {
-          "resource": "repo://src/tui/events.rs#L30-L59",
-          "version": "repo-lines-v1:sha256:78a85b5b8ce1006f91e5b3847c2e879142207163fef7bd494188abcd0b1249a5:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhODI5NTE4ZDRjZmJlOGQ5Yzg1MGNiYzk0NzMyNWM5NzUyMDc4NzY4MDcyMGQ0ZWM1YTQ3ZGE4OTc2ZmQ0NTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY2NDFiM2E4NWNlNjQwMjRkN2Q4OTJmNGUyNTMwMTgwMDc1NjhhNmY0YWYwNTI3MDMzYjYyYTc0NTUwMzg4NDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJiMGQxNmFmY2EyOGVlNWMwYjE3MDlhMjIyNTc2MzNlNTM3ODY3ODMwOTk2YmZlYzBkM2IwODllOTgwMzAzYjUifQ"
-        }
-      ]
-    },
-    {
-      "id": "claim_1414a7e80ba747679896bdcb5a1eb371",
-      "statement": "Project IDs are persisted as a deduplicated, most-recently-used `[tui].known_projects` list, and the TUI attempts to load the first remembered project when opening the project view without an active project.",
-      "evidence": [
-        {
-          "resource": "repo://src/config/mod.rs#L34-L38",
-          "version": "repo-lines-v1:sha256:3266162891a891caa785f54dd3f846139e98b166cab54565501e82729c0cd9e3:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiM2IxYWYzMjI2MDI5NzA1ZDJmOGI0ZGZiMzRlZDRlNGUzYTMyZjQ2MmY0ZmNlMTkzMzgwY2I0NDViNjM0MDMwOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzUyZTg3YTAwNjIyNGY2MDc3ZjlkNDYyM2E4Mjg3YzFiZjNkYjVkOTEyNmE2MmMyMzRlMzQzY2FmOTkwNmYxZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGYyZGNmYTg5ZWE2NDRmY2U3N2JkMjkwYTM0Nzg4NTJmYjk5ZjZiZmU5NGE1ZjQ5YzAxMjg2MTRiZTk2ZDllNSJ9"
-        },
-        {
-          "resource": "repo://src/tui/events.rs#L448-L462",
-          "version": "repo-lines-v1:sha256:c56b8a4a6d4bff7f00befe1a1e727315ad0aa7d128e1d15032afc13df9ddb498:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgyNTk2MWNjYjZiODMzZThjNTI3OTEzNzY2ZDM2NGY2ZjMyNzFhMWUxNDA1NDhhNzA5ZThiMTkyNzM0YjFjMjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYxN2VkZGVlNGNlZjQ4OTc2ZDkyMDcwOGE5Nzk5YTZjNzEyZjQzYmQ1OGE1M2MzZWY1ZGEzMmQzOGMyNGM0NTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU0NDdmYzNiNTUyN2RlNjg5NTYwZjZlODk3NjkxMzMwYjdlNjA3YjU4YzI2NWE2NTczOTc5NGYyMjI3Nzg0ZGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYyYWJmZmJhYmJmYjVhNmQ1N2VmOGFjNTJkODYyOTYwZDQ0NmJiYzVmMmJjZGZlNGFmMzU3YjM3NGQ5Mjg1NTQifQ"
-        },
-        {
-          "resource": "repo://src/tui/events.rs#L534-L552",
-          "version": "repo-lines-v1:sha256:ce5e3d743f5e91f18a1a193089d0a8a4b3bf8ed539bb22851ee2608a0ca72ee4:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhiNmMyMWUwZDlkNzE1MzBiMmZkOTZhMjg1ZTYwYjhiNTdhNTZmYTlhYTVmYTIxNjIxNTBkZGNjNTY1ZTZjNTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA0NzRlZWI5ZjA1YjY1ODA2MTExZjZhZWUyYmMyZWJhMTJlYjY3OTZmYjBjZDE5ZWI1ODEzZDgxMTIxMzVkNmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRmNDY1Yzc4MmNjZWNkODA2ZmZjMTljMTA1YTNjNmRhNzNjODFkNjM2ZjkxZTFjODc4YjNmYjE0M2E5NDVlYjAifQ"
         }
       ]
     },
@@ -201,19 +161,19 @@
       "statement": "The interactive REPL loads and saves history at `~/.hteam_history`, while TUI status messages are appended best-effort to `tui.log` beneath the Hteam configuration directory.",
       "evidence": [
         {
-          "resource": "repo://src/cli/interactive.rs#L18-L29",
+          "resource": "repo://src/cli/interactive.rs#L19-L30",
           "version": "repo-lines-v1:sha256:b95072b580408c357a45c3a00fd7b998b328c742efd5fd036537f3b4f1f9874d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIzMzNlZmNmNzExY2UyMTk5MGRmNTY3ZmIyOTY3MmExMzZlZWIwMmQ0M2UzZTgwMTA0Y2M0M2UwZTIyYzZhMmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEzZjQ1NjQxMjRhM2NiMmY1ZmY0M2RiYWU1NjZlOTMwZTZiOTJlMmYwMTA2NjlhNzJmMWZkYzZjMDcwY2VhMTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRkNWM0ZWUwMDJhZDdhNmYzYzA3OWE0YjZkNDlhNWM2YTBiYWFhNDE1ZDRiOTMyOWRjNzFkY2EyMmZkYWJkZjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMzYjA5ZjUzOWI3MGZhZjRkMDFiNDM5M2JkMDM0OTBkMWE3ODgyMDI4NzdkNzY3NWQ3OWEzZTQ1ZDY4MjE5ZWQifQ"
         },
         {
-          "resource": "repo://src/cli/interactive.rs#L67-L70",
+          "resource": "repo://src/cli/interactive.rs#L68-L71",
           "version": "repo-lines-v1:sha256:646fea9dfaff37799e0d25856e0cb14dd8b2070675d8886e04fe2b341a434c5f:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmUxNDRiYTRhNTg4OTZkYTI0YjA5Njg4YjhmODBiNGZmNzhkOWE3YTkzMzVhZTdiY2IxNTMwYzc3NmUzZWVjNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDg5NzcxZmUxYjY2Mjg4NzVhYTIzZTdkYmU0YWE3MTQ2MWQwMGNkZmI2NmRkZjExYjlkODIwYWM1ODk3ZmRmNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTk5YmRlZmVlYWNhNjM0MGUwMjkwZGM4NmU4ODljODlkNWUxODlhYTViYTQ0YjU4NWIzYjcwNzM0ZjRhNjJkOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTQxOGE4NTY1OTBjYTFmNzU4NjVhZjBhZWEzY2Q0NWRmNjVhZTViYjdmYWM4ZmExYmU1NDc5ZjZjYzNjMjg0ZSJ9"
         },
         {
-          "resource": "repo://src/tui/app.rs#L464-L473",
+          "resource": "repo://src/tui/app.rs#L637-L646",
           "version": "repo-lines-v1:sha256:6b0b88a24b57ea9861f07bf31fe0cbce0d854f9cbb14ff02103fb7085a8c8aaa:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEzYWQyZjMwMWE1ZWE2N2U4NTJlYzUyMTlmMDYwYWI2OGIwNTBhMWM1MTEzNDZkYmEzZTEzOGJhOTFmZTNjZmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg2ZGI0YjgxODM5OWQxYzQ3ZThmZjhmODgzYzNiMjdlOTAwNDQxZjk3NmQzNmM5MWRkOWRmZmE1MzE1NGZlMmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMyYWY2MTkyODY5ODYxNGRhNGFlYTIwMzVkOTY5MTM0ZDYyZmMxYjg4YzMyMTQxYWJiODNlYTYxN2EwMDg4NDQifQ"
         },
         {
-          "resource": "repo://src/tui/app.rs#L627-L649",
+          "resource": "repo://src/tui/app.rs#L800-L822",
           "version": "repo-lines-v1:sha256:0e42590676b44ea157e16ca7b2751915c6233ed7ecdbae489f03587ea73b12d1:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNlYmZkMmMwOTc4Y2U4MDI0NDg4OWExNDJmMTkyZDM0YTFhMjg4NzlmZmQ1MjRiZDMyZTlkN2Y0N2FkMjlhNDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
@@ -231,10 +191,718 @@
           "version": "repo-lines-v1:sha256:ec2f1e54f5925f35993230dffe7a866f2c2342712db73c75f62b60142a13b41b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTU5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIyNWNmNWZjMjNmMmE2ZDIzYzNlYTUxZTcyZjVlODk2Yzc1NTVmYmFhMDVjZDViMWVhMTgyYmY5NjE4YThlODFiIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIzNWY2ZjQ2NmU1OWNmYzMwNzAzYzQ1ZjcyYWY2NWRlNTRhYzM2M2QzNTRjYzFhMzMzMDM1MGFjZDQ1MjQzNGM0IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
+    },
+    {
+      "id": "claim_820a463321504fa1ac78bf4af62fd13d",
+      "statement": "The TUI persists hidden list names in `[tui].hidden_lists`, normalizes them to lowercase, and still fetches the underlying lists and cards so a hidden list can be shown again without another network fetch.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L84-L94",
+          "version": "repo-lines-v1:sha256:098c069bc5fe42834dd46a0135a3440adb08c56f353fa7d0d2ce6878bd83d5dc:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NTkzNDkwZGJhMTAyMjZkZTA2NWRmZGI3NmY0YzgzNWI3ZDI3ODQ0ZjRkNTY0ZDIxOTVjMDdhN2NlZjAyODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRmMmRjZmE4OWVhNjQ0ZmNlNzdiZDI5MGEzNDc4ODUyZmI5OWY2YmZlOTRhNWY0OWMwMTI4NjE0YmU5NmQ5ZTUifQ"
+        },
+        {
+          "resource": "repo://src/tui/app.rs#L122-L129",
+          "version": "repo-lines-v1:sha256:efbf8a3c4341ca036aabf744583de8f6e19f54c30f550e8a09766232ba41c880:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTBmOWFkYWFiMWRkNmNmZGQ2NTZkMjZmY2Q3MjZiOTczYjE0ODU0N2YzMzJhYmVjOTg3YTI1MWM4NDBhZTFhMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjA0YmFiOWI2MTZmODBlMDM4NTYwODIyZGZhZmE3OWMzNWExMWE3OTg2ZTc5MThkNmYxYTA4NmY0YTdiNDUxYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzBjODM2MjU1NTU0MDBhODdkZTRiYzhhNWIxNTIzYjE2ODAwNjU5ZGRmOTM0NWU2N2E4NmI1YmIyMjJkNDQzMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODQ2ZjJiZjMzYmEwMWZkMTYzN2IxZGEwY2UyZGU2YTA0YjMzN2NhNTkwZDE2Y2ExZTAzZDk0NzZiNmM2NjM0MCJ9"
+        },
+        {
+          "resource": "repo://src/tui/events.rs#L32-L60",
+          "version": "repo-lines-v1:sha256:8faef3c3ee4bd5eb22613822452f08420f1bdca59dff760acea8a3e1a0b6052c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhODI5NTE4ZDRjZmJlOGQ5Yzg1MGNiYzk0NzMyNWM5NzUyMDc4NzY4MDcyMGQ0ZWM1YTQ3ZGE4OTc2ZmQ0NTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY2NDFiM2E4NWNlNjQwMjRkN2Q4OTJmNGUyNTMwMTgwMDc1NjhhNmY0YWYwNTI3MDMzYjYyYTc0NTUwMzg4NDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVlNDkwNDE1OTYzZTJkY2FkMTU4OWQ5NjY3ZjE2ZTBkOWE5ZjliNWZmM2U3MTg4NDE1NTkyZmQwNGVmMzRjZWQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_83c72c009b82441eae380d10f4d5cf22",
+      "statement": "`[tui].known_projects` is a most-recently-used list of project ids with optional cached names; opening the projects popup auto-loads the first remembered project when no project is active, and selecting a remembered project loads that project id.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L33-L48",
+          "version": "repo-lines-v1:sha256:00dd962ba3b01092b3286bf9ab4ccad1e62db08b01d5ad0020aaa613c711206f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFjZDA1ZDAxNjhkZjg1M2Y2OTIxZGYwNGE3ZGVlN2RkMTBkMjkzMWFiODVhYzhjODIxMGJlNDNkMzk5NjYxNmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg4NWUzMmQwYWE2ZDNmYmQ3YTQyNDZhYzRkMzc4YjUzYWEyNTE2MTQ5OWM4ZTkyOThjNTY2OGJkY2QzNDk5OTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNiY2E2NzUyYTZhM2EyNTQ5ZTc0ZDg3MmVlNzgwY2ViMTYxM2UwOTQ3NDE1ZWM2ZjBlYTMzMWU4NTc1N2Y3ZGUifQ"
+        },
+        {
+          "resource": "repo://src/tui/events.rs#L1511-L1525",
+          "version": "repo-lines-v1:sha256:0a3e5f41b8ad3ebae722ce018b6882cdb1a80ded463eb722735e17fd1cc3d9dd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1NzI0MWExMTRlY2RjOGFhZmEwMmUyMjkzZjk1M2JmMzkzZDcwN2YyZDQxNGVlN2E1ODRiNmQzYTRlMjBiY2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRmYWI3MTBkZGY3ODU5ZTU3NTc2NGE5MTNhMDAyYzc0NTg1ZmZhNzAwMTUxMGNiODgxMWRhODNkMmNmNzRiMzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiZjcyZTFmZWM2NjM2OTA5ZTJkYWI0YWQ2YzY5ODE5ZTYyYmUwODhmMjgzN2NmZDM0NzdiN2MxYjAzNGE2NzAifQ"
+        },
+        {
+          "resource": "repo://src/tui/events.rs#L1589-L1596",
+          "version": "repo-lines-v1:sha256:7a1a36601ed8ed0ac92337c908cd24a96c3451aee2acbb9d2dd73d0dc1dedfb2:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzc3YzlhMjU2MGFiYTJlMTNiZmY0NjgxZGYwNjg4ZWQ0ZmU1ZjAxOGZlZjVhZTEzYTNlOWQ2ZTMyNzBkMDdhYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWQ5ZWY2YmMyMzc1NmQ2MTU0Yzg3OGM2NzQwZTFmMzZmNGQ2OTUyODNkN2VjNTIyMTNhMjA0ZGU3ZDkzNzgxZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzlmMmY4ZDFjNmM2NjdlMGYzNDQ2MDYyM2IzZjA2YzIyOWFlMzlkNTIyMTRhNGZlMGIzNDVlMDE2NjFiNGZkYyJ9"
+        },
+        {
+          "resource": "repo://src/tui/events.rs#L2743-L2768",
+          "version": "repo-lines-v1:sha256:8092182b6c712341844e41e68566a2ec4f5dadebfc82407e0e921c16842c7ef1:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJjNWQ0YzY5NDU1ZGI4ZTRjZmE5ODEyNGE5NGNlOTQwZmU5M2ZkYTM5NmUyNzFhMDgyNzQ1ZThkNGNjYjM5MmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY5YzJiZjFhNTdiM2Y4NGFmMzhjZjc0MDc5MjUyZWM5ZGNlYmE3ZGQ4ZmQ1ZWZiZGRiYmI0MDE3Njg4ZDczMTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU0NDkzNDIxMjBkZmMwYjdmNTkyODJmYzY2ZDVjMzM0OTkxM2U5MDIyZTNlM2E5YmJhNjg5MWE4ZGE2MzFjY2QifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_057aa7cad41b4f909a927b6e69eb1eca",
+      "statement": "Board resolution uses a precedence chain of explicit override, configured board number, then `~/.last_ticket`, and login uses the same visible-board probe before persisting cookies and any selected board.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/login.rs#L43-L73",
+          "version": "repo-lines-v1:sha256:4bc02d211c782328deb8afac14a36a24f56cd47d114c5d6fd30a06c1e4cae4f8:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY1OGRmZmJkNTBkNzA2Yjg3NzQwZDBkNDc1ODFjZTBmZmQxODg5YThiYjc0NWMxZDM3MTkxNDY5ZWVkOWRiN2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA1YzMyOTYyZjcwMjMzNDA5ZjI3MGQ3ZDUyNWYyYWU5YTBlYWIzOWQ4NDI1Y2JlMWU0MGM3OTRiOGJlNjNiZTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFlYWQ4MDFmMDQxODYwNDZhZTJiMDVjZTk0ZDllMGU2NTZhMzk1ZTAyYjgyYjAwZjg4N2NkOTI5ODM3MWQ3YTkifQ"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L23-L31",
+          "version": "repo-lines-v1:sha256:a2afb112ca07c83d57deab362d536e5d0beac4ad7f80cd14b4f999391f4ba164:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjRkY2YxODVjNDRjYTEyMmFhZjE4ODM5ZDAzZjczZDM2NGJmMjVhNWVkZDRmMzQwMjhiOGZlMTBiMjdjMTRiYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTllNzYzNTVjZjExOTk0ODBjM2Y5OTgzNmIxNDg2Yzg0MWQ4OTFmYWFkOTA0YzYwOGUwOTMwMjJkMzc1N2FlZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmYzYTNiNTE4MDFiMWE4YmRkNzdmYzhmMTAwZTBhM2Q1YjE0Yjk2ODQ4ZjUyYWM1YmU4NTA3MWYxNmJkM2Y3OSJ9"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L54-L125",
+          "version": "repo-lines-v1:sha256:e8cc75667fb3d23d160a5b4e7c7e0ff8fb39e1109690f4aa2c16e4b6d77fcae4:eyJzZWxlY3RlZExpbmVDb3VudCI6NzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhM2EzYzFlZmVhMGZhY2ZmMjYwZDZkODllYjMyOWMzOTU5MjAyYTI3MTc5M2NmOTBkYzNlNzUxZWQ5NTdmNGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjUwMjkxZDljYzU2MzcyOWRjNWU0MDdhNGQ4YzgyODRjZTA2OTljOWJiMTk3MzY3NjJmNTMyZTUyNDhmNzFhN2MiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiYzk4ZDZiMGRjNDkyYzUwMTZkZjEwODA1YTNhNTRlYjljMTg0YTVhNjEzN2U3ZjRiZWNmYTBjMjIwNTUwZDAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ac8f01da617a4d718ce43ad37d27967a",
+      "statement": "`operations::boards::switch_board` is the durable board-switch path: it updates the configured board number, writes `~/.last_ticket`, upserts board metadata with `last_used`, and saves the configuration.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L347-L395",
+          "version": "repo-lines-v1:sha256:1fde46578b2dcb929162c687c17feef9aad0ee0664ede5c59e5cd81f21c7e08e:eyJzZWxlY3RlZExpbmVDb3VudCI6NDksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0YWQzM2RkM2JkMTJiNjVmYTdkN2Y4OGQ0MmUyMzFmZGJlNmEzZDhlNGU3MDJhNzFiMzdlMTg3YWQyZmJmYmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwNzFjNmU5MjJkNjRlM2MyZDEyZDFiNDAwODRjMzFjYzRlNzgwN2ZiNDJlN2Y3MjI5Y2M4ODYwNWU3ZmM4YjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY0ZGRhMGYzZGFmYmM1ODBkNDM4MGNjMDU3NmMxNmI5NmNhNTViY2ZmOTVlYmZiODYzNDA5MjRmMWI1ZGRjODUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUifQ"
+        },
+        {
+          "resource": "repo://src/operations/boards.rs#L12-L37",
+          "version": "repo-lines-v1:sha256:85469f3e74fbd402329ced477f9bfa2f61b0d15e68ecaa51a2716c1f13eabbb4:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkZDQzMWY2MmZmNjQxMjI5ZTdlNzJhOGMxYjJhYzFlOWE0MGI1OTE1MGU5MWE1Njk4YmU3M2Y4ZWFhMjIzNDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkxYzUxMjBlNmYwYTkzN2M1NzgxYmE0NzlmOTlmMDNmNzg0YjEwNjk1NDExMmVmNTFlYzI0Yjg3OTdiYzdlZjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkwNjM0Nzk1MzBmYTVkMmVlMTdlZDAzNTkzNmQzOTA1OTU0N2Q4ZTFlN2QwMmNhM2ExMWU3Nzk1ZDRhYmJiYjcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6c4e0f0234754030abe16732e8f0bd43",
+      "statement": "`Config::is_authenticated()` only checks for `session_id` and `csrf_token`, while `Session::open()` loads config and constructs the authenticated client that CLI, TUI, and MCP entrypoints share.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L343-L345",
+          "version": "repo-lines-v1:sha256:060d6ea6e2482e532239a145f961a76921e8023664c3e1ca5fec958190bf1821:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMGJiYTUwOGE4M2E3Yzk5YjhlZGQ5YjhmNjc2ODUyNDU0NDUwODZiNTY5YmVlNDBkYzcxYzFkMDYyOTA2MWI4NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDg5M2Y0MGUzNzgxZWI4OTZjODJkMDQ2YTA4MDY3YTExZTM1Y2RmMmYxZGZhZjI2ZmVhOTBiOGRiNjY3NjQxMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTU0ZDMzYzc3YWExYzk1NTNmMTE3OWM2ZWU2ODUwN2QyYTA0NDMyMTk5NGVjZDkwN2FlMzYyZjU3ZWM5ZWNlMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTBkMjBmOTY5ZmU4ZmM4YWRhYTQ3MTRiYjI2ODIyNjcyNGE1YTVkYzFiMGY5NDk4MDk2Y2UzMzRjMDNiYWE5ZCJ9"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L7-L20",
+          "version": "repo-lines-v1:sha256:fa0049efabbd769851922fec4ed7be49c58da7bd64c4a420e77938c8e5528c97:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRkMzZmMWQ4OGM2MWQwNjIwODg4MjVjZjg3MTZlMTcxMjNhYzFiYTQwN2M2Yzc5MmQ5ZmMxMzY4NzdmZTIzYjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRmMjBlNDI4ZDM2ZDRhZWI4YjkzZDFmNjMyOTVkYmNlNGQxNTI5OWI3NmI1ODNkNjc3NjUyNzAyZDU5ZTk0NzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRjOTZkOGNkZGIyM2NhOGIwYmIxMDRkMjIxMzI2OWYxMDg2OGE4OTdmZGEyMzFhYTRiY2RjZjgzMDQ5NzdhODQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6c66ba85095a4aea80ad37d7aea8cd7d",
+      "statement": "The weekly objectives cache is fresh for 24 hours from `last_synced_at`, and the update-check cache is fresh for 6 hours from `last_checked_at`; both timestamps are stored in `config.toml` as RFC3339 strings.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L128-L182",
+          "version": "repo-lines-v1:sha256:f9e7e852ebd2ac8f2027840676171e6ea74c1fba98b5775e148db6a3a0dc3774:eyJzZWxlY3RlZExpbmVDb3VudCI6NTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMyZGM2YjkyMDAxODA2YmVjOGRhNzVmMzgwZTU0ZDViMTNiZmFjYzdmYmEzYTZmMjE2YTUyZmMyMjg5MzBlMjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU4NGVkMGJjMzZlYjQzNmVkODJmYmMwMzEwYzAxOWQ0ODY2NjI1MWJlODA3ZDQwODY1OTlmNmU2NzBlMmU4YzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRiZDY4YjIxOTA1YzBlNzU3YmU3M2E1ZDk1MTY3MjA3YjVjMjkzNjFmYTBhMmIwYzJkZmJmNGVkNTIxMmU5YTEifQ"
+        },
+        {
+          "resource": "repo://src/config/mod.rs#L218-L250",
+          "version": "repo-lines-v1:sha256:4a05c415c0702533bc569493039f15816df1f31eb190b0c99dff758c8e32c268:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdiY2Q0NmY2ODMyMGZhYTZlM2Y3Y2MwMGNhYzM1NzkyYjU5Njc5NjM1Y2QzNTYwNTA0YzkxOWZmMDNjZTMyODkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQwYjMwMGU0MWI4ZmI3NWM2OTIwYmYwMmZhNWE5MWQxMzE0MTQwYTFmNjI1YjNiZDVhNmI4NDU5ZDY4Mjk0MGIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_272f4bf175954135a22b52b754f37339",
+      "statement": "The TUI resolves `theme.active` at startup and falls back to the default theme when the configured preset or custom theme file does not resolve.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L195-L215",
+          "version": "repo-lines-v1:sha256:4c3f55905556e6129be037ddb37a02d91e33dd9791bf001bad74a182e8479de5:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzM2I2YzU5NjY5OGZhMzllYjg4MDNmMmE2NmYzOWVmNjU4YjYzODczYzRkNTY4MDUwYjQyZGYwNGFjOGNhZjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE0OGQ3YzBmMDA1YmE5MTY3ZTViNzExNGZmMDFjMjM1YTM1MjgwZGZmNTk2NDUwNTkwNzU2YWU1ZTdmZWNlZjkifQ"
+        },
+        {
+          "resource": "repo://src/tui/theme.rs#L1-L40",
+          "version": "repo-lines-v1:sha256:e1eb5c8d79643d97f7dc241c9bbf1b71627b927c364a4a0d2ba977f3a0c79fc4:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1NmNlMzEwZmI4MDJmMzY3OWJjNzZmMGE1NTgwYTk4ZWU0NmQzMDkwZDZjYWM2NmNiMzU1NmVjYjQyNTFhYjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY1YWEzYTYwNTQ3YzRlNWUyODFlYjA4ZTkwNzg2MjBjOWZkZTlhZjc0ZDc4NGYwOTFlZmEzNGVhMTg3MWY0MjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY4NjljNGU0MWVlYjlkNWVmZmRmY2IyYzE4OTlmYmI4Yjg4YTA2N2U1NjZiN2U4MjcwMjM4ZTc5MmFlNmMxNzYifQ"
+        },
+        {
+          "resource": "repo://src/tui/theme.rs#L190-L220",
+          "version": "repo-lines-v1:sha256:1d4de5ab5678e92f9ace18e2fe01e5680c703a6017a5bf2189fc69ae180650de:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzNWE3ZTRkZjdiZDY2YTU0ODA3N2IwYzU2NThlOThmYmJkNmE5OTIwZTVmN2U3YjVkYjNkMDY2MDY4ZjUyZTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIzYWM1NmQ0Zjc0ZjZmZGFjZWQwYzI4MzUyZDk4YjQ4YTNlODgyMWYzYzAzOTIyMzQ2ZjBjZjk2MjU5MjcyYmEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU5ZmNhMjk3ODU5ZTI4YzE0NDNkNzZjZGQwNDMzODE0MDkyYmI0OTlkOGU4YTA4YzZhMTcwMjQ1ODM5ODMwZGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1MzNjNmRlZjg0ZDE4M2NiMTczN2Y3MWU0MWUwYWI5M2VlNzYwYWY0NWMwMjA0NjMxZDA5YzRlOTA0ZDQyYmIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_aca1b61bf545454283af2a6f8ca5224f",
+      "statement": "`config.toml` is credential-bearing user-local state; it is not encrypted, and the code does not enforce restrictive permissions, so the workstation or deployment environment is the protection boundary.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/login.rs#L43-L73",
+          "version": "repo-lines-v1:sha256:4bc02d211c782328deb8afac14a36a24f56cd47d114c5d6fd30a06c1e4cae4f8:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY1OGRmZmJkNTBkNzA2Yjg3NzQwZDBkNDc1ODFjZTBmZmQxODg5YThiYjc0NWMxZDM3MTkxNDY5ZWVkOWRiN2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA1YzMyOTYyZjcwMjMzNDA5ZjI3MGQ3ZDUyNWYyYWU5YTBlYWIzOWQ4NDI1Y2JlMWU0MGM3OTRiOGJlNjNiZTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFlYWQ4MDFmMDQxODYwNDZhZTJiMDVjZTk0ZDllMGU2NTZhMzk1ZTAyYjgyYjAwZjg4N2NkOTI5ODM3MWQ3YTkifQ"
+        },
+        {
+          "resource": "repo://src/config/mod.rs#L334-L414",
+          "version": "repo-lines-v1:sha256:ac4adbb88d0f8d38e629a1dec319e9a210a1c754f181072436d4e0e0aa893860:eyJzZWxlY3RlZExpbmVDb3VudCI6ODEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwZjJlNjliNjFkMGYwOWRkNGU4Nzk2ZThjYjk4NzNiYTc1MTFmMzE5YzE2NDE3YmIwYjYzMmYwZjNiNDhmYjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZlYmEyNDY5MjYxZWNjODI4MzU0ZGQ1YTFlZTUwYzYwMjM1ZmEzY2VmYTk2MGQzNGIwMDI0NzU3YWM1YzJhNWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYxODFiOTBlZjYwZTI1NDFkZjViMTUzZWRkNzlmZmI1YzJmMmMyZjczZTQ3OWQ0ODg3NDBiNjI1MWYyOTczZTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c5b29e9f02534f118d104c802779138a",
+      "statement": "`config.toml` is the main user-local persistence file for Hteam configuration; if it is missing, `Config::load()` falls back to defaults, and saving rewrites the whole pretty-serialized file after creating the directory tree as needed.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L334-L345",
+          "version": "repo-lines-v1:sha256:bb2962de7336d2d8f90e42a9c19e7d850822b37209e2dbb0f2a5681fd0606e5f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwZjJlNjliNjFkMGYwOWRkNGU4Nzk2ZThjYjk4NzNiYTc1MTFmMzE5YzE2NDE3YmIwYjYzMmYwZjNiNDhmYjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZlYmEyNDY5MjYxZWNjODI4MzU0ZGQ1YTFlZTUwYzYwMjM1ZmEzY2VmYTk2MGQzNGIwMDI0NzU3YWM1YzJhNWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEwZDIwZjk2OWZlOGZjOGFkYWE0NzE0YmIyNjgyMjY3MjRhNWE1ZGMxYjBmOTQ5ODA5NmNlMzM0YzAzYmFhOWQifQ"
+        },
+        {
+          "resource": "repo://src/config/mod.rs#L399-L414",
+          "version": "repo-lines-v1:sha256:f53e1adcd9cf567786f96235b5a5e2127a433152543679fa6c1495579119b7b8:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNkN2Q1YmUwODlmYjhmZTYzNGEzNThjYTE1NzBhMTkyNTM1N2U5OGJhNDZiMGMzYzkzYTFhMzQxNTc1YzE0YTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYxODFiOTBlZjYwZTI1NDFkZjViMTUzZWRkNzlmZmI1YzJmMmMyZjczZTQ3OWQ0ODg3NDBiNjI1MWYyOTczZTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d4d63e5d1b664a638a25398220a2df10",
+      "statement": "The persisted configuration includes auth cookies and board identity fields (`session_id`, `csrf_token`, optional bearer tokens, `board_number`, `board_id`, `user_id`), plus board metadata, TUI preferences, working hours, weekly-objective cache data, theme selection, and update-check metadata.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L140-L193",
+          "version": "repo-lines-v1:sha256:c1ec31a7691e91590cc2f633fac23716465586c6e68c49a1ec16e3dc1bf19ee2:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjljZDhjZDQ3M2EwZThhNTI5MjUxNmJlMGE4Y2NmY2JkZWM0ZGNkNWRlZmU0NmI3ZTgzMTBmMjUxMjliNzUyMTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ5ZDM0YTkxNTI1ZmI4NDUzZDhiZTM4OTg2ZTU5YmIxYzg4ZDMyZGJhZjBjNGFhNmNiMjQ1ZWY1ODk0NjJkMmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRhMDAxYzU0NDUwN2FjZjg1Njc4MWIwMzhhNjFlMjJlNGE2OWNkYTE1ODZkMTIwZmJiZDc2ODRlMjBlOWVjMmQifQ"
+        },
+        {
+          "resource": "repo://src/config/mod.rs#L15-L24",
+          "version": "repo-lines-v1:sha256:894c41b16e4323dcfe593b536842855d08a9a5649a7fcb8ad60fcd30059ff82c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NTkzNDkwZGJhMTAyMjZkZTA2NWRmZGI3NmY0YzgzNWI3ZDI3ODQ0ZjRkNTY0ZDIxOTVjMDdhN2NlZjAyODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI0ODYyN2E3MzU3M2ZmM2I2ZDY3NjU5MWVkMTRmOTNhYTE1MjU0YWViYWVlNjY4NzU4MjM2MDA5ZTQ0MmVjMDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNmMTdmMzllN2I2M2Q1MmVlMWRkZjFlMTVmYTlkZDE5Y2MwMGY3MWM0YTEwYzUxMGZiMjlhMWZkYzRkOGRlZWEifQ"
+        },
+        {
+          "resource": "repo://src/config/mod.rs#L199-L237",
+          "version": "repo-lines-v1:sha256:0f95eba1e76937ddc1c39e96dc7d055224c0322c79231c28fe33e6def60f3ce9:eyJzZWxlY3RlZExpbmVDb3VudCI6MzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjljZDhjZDQ3M2EwZThhNTI5MjUxNmJlMGE4Y2NmY2JkZWM0ZGNkNWRlZmU0NmI3ZTgzMTBmMjUxMjliNzUyMTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc5ZTU1OTU2Nzg0MDk3YjgwZTIzZWJjMDcyODdhOTZlMmEzOWUwMzgzZDA5NzJiMDE2ZDM0NDRlY2IyOTMyM2UiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY5NDUwMmJiZDdlYjY5ZTQ1NmMwY2Q4MmNjNDZlZTRhODc1ZWFmNDllMzI4NjhmZWY0NGI3MTQyOWVhMTNiNTMifQ"
+        },
+        {
+          "resource": "repo://src/config/mod.rs#L26-L47",
+          "version": "repo-lines-v1:sha256:ea20ef69a204faa740ebe9408ba4821ca3bac1c622dae11985eea5d0720cd4b7:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NTkzNDkwZGJhMTAyMjZkZTA2NWRmZGI3NmY0YzgzNWI3ZDI3ODQ0ZjRkNTY0ZDIxOTVjMDdhN2NlZjAyODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBjZWU2NDFkNjVhZjk4ZmY1MDgyNWFlN2IxNjU0ZjBkMmEzYzc1MDhmNzM3MjhlNzBiYTQ4NTBhYmZkNWYzODQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE0ZGMyMGNlYjk2ZGMzNDkxYWU2ZGViMDExZGJlMzAyZjcxYzgwOTc5NGJlZGVmMTQyZTkxNDYwNzdmYjNiZWQifQ"
+        },
+        {
+          "resource": "repo://src/config/mod.rs#L84-L94",
+          "version": "repo-lines-v1:sha256:098c069bc5fe42834dd46a0135a3440adb08c56f353fa7d0d2ce6878bd83d5dc:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NTkzNDkwZGJhMTAyMjZkZTA2NWRmZGI3NmY0YzgzNWI3ZDI3ODQ0ZjRkNTY0ZDIxOTVjMDdhN2NlZjAyODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRmMmRjZmE4OWVhNjQ0ZmNlNzdiZDI5MGEzNDc4ODUyZmI5OWY2YmZlOTRhNWY0OWMwMTI4NjE0YmU5NmQ5ZTUifQ"
+        },
+        {
+          "resource": "repo://src/config/mod.rs#L96-L123",
+          "version": "repo-lines-v1:sha256:c75f0640c143c749275ab0c419f6eb69d1aec04f4d710f69929746bbf33f8a88:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NTkzNDkwZGJhMTAyMjZkZTA2NWRmZGI3NmY0YzgzNWI3ZDI3ODQ0ZjRkNTY0ZDIxOTVjMDdhN2NlZjAyODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVlNmU5M2Y3OTZlYjc3ODAxYzk2NDRiODhhMTRmN2RlZTExMzdjYjU2ZmI4Y2U2OGZhMTFiOWJjYzMyYjY0NDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI1YmI1NTE2ZTg0OGRmZDc3NjkyMWJjOTEwY2QwYjQ2ZjI3ZTdiYzU3YjFkZmY3Mjc2MGY2ZTIxMjMzNzliMmYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_1f00d8c6bc274c77978f95e894ac70bc",
+      "statement": "`Config::is_authenticated()` only requires `session_id` and `csrf_token`; the client uses that gate when building an authenticated session.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L542-L542",
+          "version": "repo-lines-v1:sha256:fc61b1138afd964e3a8b457fdc97810f3b0210214784bd22b6e9c4e21b95e74f:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmM2MWIxMTM4YWZkOTY0ZTNhOGI0NTdmZGM5NzgxMGYzYjAyMTAyMTQ3ODRiZDIyYjZlOWM0ZTIxYjk1ZTc0ZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmM2MWIxMTM4YWZkOTY0ZTNhOGI0NTdmZGM5NzgxMGYzYjAyMTAyMTQ3ODRiZDIyYjZlOWM0ZTIxYjk1ZTc0ZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMmU4ZDk4NTUwNGE3OTliMzQwZWQ2ZWU0MDdiZDBhZjQ5MTFjY2Q4NzMyMTEzZjkyODI4YzFlMzI2MWI4YTJmNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDU2NTcyYzUzOTgxZTRhYTI2NjBmMmZmMWRiNjYxZDY2ZmEzZWZjZTE1ZWM1ZmY4ODg0ZDIxNzI3YWI1ZjhmMiJ9"
+        },
+        {
+          "resource": "repo://src/config/mod.rs#L343-L345",
+          "version": "repo-lines-v1:sha256:060d6ea6e2482e532239a145f961a76921e8023664c3e1ca5fec958190bf1821:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMGJiYTUwOGE4M2E3Yzk5YjhlZGQ5YjhmNjc2ODUyNDU0NDUwODZiNTY5YmVlNDBkYzcxYzFkMDYyOTA2MWI4NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDg5M2Y0MGUzNzgxZWI4OTZjODJkMDQ2YTA4MDY3YTExZTM1Y2RmMmYxZGZhZjI2ZmVhOTBiOGRiNjY3NjQxMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTU0ZDMzYzc3YWExYzk1NTNmMTE3OWM2ZWU2ODUwN2QyYTA0NDMyMTk5NGVjZDkwN2FlMzYyZjU3ZWM5ZWNlMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTBkMjBmOTY5ZmU4ZmM4YWRhYTQ3MTRiYjI2ODIyNjcyNGE1YTVkYzFiMGY5NDk4MDk2Y2UzMzRjMDNiYWE5ZCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_8b62e440575241eca2f9efc64008779e",
+      "statement": "`Session::open()` is the shared startup path for authenticated entrypoints: it loads `Config` and constructs an authenticated `HteamClient`, so CLI, TUI, and MCP surfaces reuse the same session-loading logic instead of rebuilding it independently.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/mod.rs#L259-L263",
+          "version": "repo-lines-v1:sha256:0ceb15d74e90be6627db749efd606d7ae93459bcb34ba81312a1181b1b35b18e:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjZmM2E2ODczMDBjYWZjOGQ4Y2E3NTRjZWFhNGFiMDY1Njc3Y2Y4ZmNhNjEwNDc5NWMzZTgwYzQ3ZDZjZTUzNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjZjOGY0NWQ5MjJjOGUxNDljYWQ0Mjk2NGVjNzlhNWMxMGZkMTE1MWQyZmRkMzM0ZTdiYmJhNTM0MjdlNWVlZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTllNzYzNTVjZjExOTk0ODBjM2Y5OTgzNmIxNDg2Yzg0MWQ4OTFmYWFkOTA0YzYwOGUwOTMwMjJkMzc1N2FlZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDY4NjYyMGI3YTc1MjlhNzMyMTFlMDNmMWVlZDY4ZWU3YzE2NmE5YTEwMDQ2M2EwZTZkMDE2NjA4NmZjMTM4NyJ9"
+        },
+        {
+          "resource": "repo://src/cli/mod.rs#L282-L283",
+          "version": "repo-lines-v1:sha256:8294863b18f0cd1f6e68bd5dd9ec15ef265ea0129412c2c030afbe7ec3f17929:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTA1ZGZjYzE4MWEwMThiOTFhYWJkMmJiYjIyMDQyNTM5NWFkOGViMWM4OGFiYmZkODA5OTg4NGExMzYzMDUzNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWE3MmUzMjI4NTZiNzhhYjcxZmY3NzM4NGFkMmM5MDM2NDBiODlkY2YzMjUzNzFjODM2YTA5YmZlNDc0MmQ4OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDRmYmJmNWQ0MzFlYzViMTUwMjc1OWEzMDQ5YjRmNDA4NmU0MzE2YjgxNzljYjRmMmI2NmVlYjkxNWRkODI5ZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTA5MzFmZjE4YWM5YjUxOWRlODNkZjQxZTQyODk0M2FlY2M4ZjhhNjUwMTNjMjU1NTIwZDZjZmI4NjI3YjNiMiJ9"
+        },
+        {
+          "resource": "repo://src/cli/mod.rs#L317-L318",
+          "version": "repo-lines-v1:sha256:ce68d8dff544a11b1533451cbe0ca25acf95d0b329a3f72ce960bc2b1a43c620:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTA1ZGZjYzE4MWEwMThiOTFhYWJkMmJiYjIyMDQyNTM5NWFkOGViMWM4OGFiYmZkODA5OTg4NGExMzYzMDUzNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjkyYmNiZDNmYTA5MTZkNjhlZWJmYTZlMjJkODNiZGFhMDgxZjdjOTg3N2RlMDMzMjI3OGZkZGQ4MzFkMjcyYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDRmYmJmNWQ0MzFlYzViMTUwMjc1OWEzMDQ5YjRmNDA4NmU0MzE2YjgxNzljYjRmMmI2NmVlYjkxNWRkODI5ZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDJlNjlhYzMwYzliYjMyOTE0M2FlZDM4MTIwM2MwZjhhMTBhMWZhYjVlNjUxNzU3N2ZkYWVmZmExN2VkN2Q2MiJ9"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L7-L20",
+          "version": "repo-lines-v1:sha256:fa0049efabbd769851922fec4ed7be49c58da7bd64c4a420e77938c8e5528c97:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRkMzZmMWQ4OGM2MWQwNjIwODg4MjVjZjg3MTZlMTcxMjNhYzFiYTQwN2M2Yzc5MmQ5ZmMxMzY4NzdmZTIzYjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRmMjBlNDI4ZDM2ZDRhZWI4YjkzZDFmNjMyOTVkYmNlNGQxNTI5OWI3NmI1ODNkNjc3NjUyNzAyZDU5ZTk0NzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRjOTZkOGNkZGIyM2NhOGIwYmIxMDRkMjIxMzI2OWYxMDg2OGE4OTdmZGEyMzFhYTRiY2RjZjgzMDQ5NzdhODQifQ"
+        },
+        {
+          "resource": "repo://src/tui/mod.rs#L102-L102",
+          "version": "repo-lines-v1:sha256:905dfcc181a018b91aabd2bbb220425395ad8eb1c88abbfd8099884a13630535:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTA1ZGZjYzE4MWEwMThiOTFhYWJkMmJiYjIyMDQyNTM5NWFkOGViMWM4OGFiYmZkODA5OTg4NGExMzYzMDUzNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTA1ZGZjYzE4MWEwMThiOTFhYWJkMmJiYjIyMDQyNTM5NWFkOGViMWM4OGFiYmZkODA5OTg4NGExMzYzMDUzNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNWFkNzBhMjQxYjFjNTIzMjBiZmMxMzMwMDhmMDM3ZDQ5NDgxNDcwYzhkZjgzZTU2MTY3NjU2MDE4ZWJjZDVhNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzM0M2QzZWQ0YzRjYzQwNjliYzkzYzFiZDlkNjU2NDQxZTI3YmZiZTk0ZTkyMmM2MDEyYTMzNWQ4ZDFlNjA5NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_5aa6ac39dcad458bace449be2cdcbb94",
+      "statement": "Request authentication uses the configured cookies and CSRF header when present, and only adds `Authorization: Bearer ...` when an access token exists; the bearer token supplements the cookie session rather than replacing it.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L542-L542",
+          "version": "repo-lines-v1:sha256:fc61b1138afd964e3a8b457fdc97810f3b0210214784bd22b6e9c4e21b95e74f:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmM2MWIxMTM4YWZkOTY0ZTNhOGI0NTdmZGM5NzgxMGYzYjAyMTAyMTQ3ODRiZDIyYjZlOWM0ZTIxYjk1ZTc0ZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmM2MWIxMTM4YWZkOTY0ZTNhOGI0NTdmZGM5NzgxMGYzYjAyMTAyMTQ3ODRiZDIyYjZlOWM0ZTIxYjk1ZTc0ZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMmU4ZDk4NTUwNGE3OTliMzQwZWQ2ZWU0MDdiZDBhZjQ5MTFjY2Q4NzMyMTEzZjkyODI4YzFlMzI2MWI4YTJmNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDU2NTcyYzUzOTgxZTRhYTI2NjBmMmZmMWRiNjYxZDY2ZmEzZWZjZTE1ZWM1ZmY4ODg0ZDIxNzI3YWI1ZjhmMiJ9"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L597-L597",
+          "version": "repo-lines-v1:sha256:7dd557226629bbd869af2730dd617370d18961437bef59bb80b23a0c9371f134:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiN2RkNTU3MjI2NjI5YmJkODY5YWYyNzMwZGQ2MTczNzBkMTg5NjE0MzdiZWY1OWJiODBiMjNhMGM5MzcxZjEzNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiN2RkNTU3MjI2NjI5YmJkODY5YWYyNzMwZGQ2MTczNzBkMTg5NjE0MzdiZWY1OWJiODBiMjNhMGM5MzcxZjEzNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmRjOTE4M2M4NDFmNWI2N2MxOGQxYzc2ZTczNGMzM2M2NDcxZTAxMmU3Y2M0NjFjMzRhOWYxM2ExZmJiYTkwNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWU3YjVkMWZkZGI5YjQ5NzAxOGUxMTYyNDUwMzgzMGYzYTYyZWZiNjFmNDhlMjM2NjhhZDg0MTkyNjIwMDNhMSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_5a2a1e8223f74f5faafaa95d5fb573a8",
+      "statement": "Login is update-safe: it clones the current config, injects the supplied cookies into the clone, probes authentication before persisting anything, and exits without saving new credentials if auth is unauthorized or the network probe fails.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/login.rs#L43-L62",
+          "version": "repo-lines-v1:sha256:6fb8f2d634b6161e6387fb2092229b20b8e0c3cbb39e0a9c9c1d2b95e8247e4f:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY1OGRmZmJkNTBkNzA2Yjg3NzQwZDBkNDc1ODFjZTBmZmQxODg5YThiYjc0NWMxZDM3MTkxNDY5ZWVkOWRiN2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFkOWUxMjU0NjQyNTU3NmQzZGVhZThjOWI5ZGJmMTI4ZDVkNmRkYWY1ZDdmZTg1NzkzNDkyN2RlZmZhM2I5ZGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA1YzMyOTYyZjcwMjMzNDA5ZjI3MGQ3ZDUyNWYyYWU5YTBlYWIzOWQ4NDI1Y2JlMWU0MGM3OTRiOGJlNjNiZTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImExM2UzNDg4ZDkxN2JmZDEwZWY1NTA2MGU2MWFmY2U3MWJkZTAzODYyNjFkZDEyZDc4MjU4MWI5ZDMzMTczMTUifQ"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L100-L125",
+          "version": "repo-lines-v1:sha256:98dfa93c30be28effa9ec48294e12689523a9f9262d6b362fa1c549d1a426881:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkwOWQwZmFiYTkzZmEyNDU5OWQ4ZmM2NWZiNWQwYzI3OWJhZTAwZWE5ODllYTc4OTE5YzVmMTg3ZDYyZWU4MmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiYzk4ZDZiMGRjNDkyYzUwMTZkZjEwODA1YTNhNTRlYjljMTg0YTVhNjEzN2U3ZjRiZWNmYTBjMjIwNTUwZDAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0ef68acce83144f999ad3cfd1d383e1e",
+      "statement": "Login resolves the active board only after authentication succeeds, preferring an explicit `--board`, then a still-visible configured board, then auto-selecting the only visible board; if no board is selected, it still saves cookies but leaves board switching to the user.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/login.rs#L64-L95",
+          "version": "repo-lines-v1:sha256:a7160f6f3ec0fc7ebd527647f593ad93f6533f084fdeb537a355f008ff5a87c5:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4ZGQ1YTI0NDQ5M2QxYjE4MDA2YmUwYzNiMThlNmM1NTE4MjI4YzcwODcwY2Y0NTIzZTM5MGY2YTNkMzBhODAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEzN2U3NGE3NDZmM2U0ZmE5OGQ3Y2I5OGRiMDdkMzBiZmY2NWNlZjY3NmYxN2FiMWVhNDkzYWM0ODQ5MDY4MTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjExZmIzNmYwNDZkNDFlYmExZjMyMzRjOTg0MmFiNGIyZDM0NzUyNmQxNjQ3OTY4YjU4NWU5MGMxMThlYWU1ZGEifQ"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L41-L52",
+          "version": "repo-lines-v1:sha256:c4f736ad3a76b90ac5317d6f3095fa301bc87ca4b44692261aa7ed08678db471:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBjNWRlMGUzMDk0YmIzY2FlOWQzMDdiZjhkM2IzMWM0ZWEwYmM5NjJiM2E0ODVmZmI0OGVjYWY0ZWI0ZDlkMzMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQxODAxN2ViMTY2YzQxNGFhMTU1YTM2N2MwNGNlMjdjMTRlYzRkNTcwODAwNzJjMTBmMzFlNTNmYmM1NzZmOTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY5M2IwMjRiZjAyNDI2Y2MzOWMzYTIxYTM1MzBiNDdmYzcwNzQ3NzZhMzE4MWNjMDFlY2MxZGVhM2NhNGMyYTYifQ"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L62-L98",
+          "version": "repo-lines-v1:sha256:21f4ba5cef156d18dad448845b2478a8dcddc330a6cb7da9761da3251a4ed22c:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkYzI5OTNlMjMxN2MwNDI2ZWEwOTdhNTIzOWYzNDBmZGIyZDE2MTVlZjY5YjYyOGVjMmI3N2NmZmU5MjRkZmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA5YTNhOGVjM2NlZmE3M2Y3YmY2MWZkMTFhNDRmMzNlOTMzY2I4YWE4NjlhYTk0ZTk5MWQ1YjcwYmMzOGM2MDUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6c80e8add52a4eb08c8779e716e75c6f",
+      "statement": "When login or board switching selects a board, Hteam persists the new `board_number`, writes `~/.last_ticket`, and upserts the board metadata entry with a current `last_used` timestamp.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L377-L395",
+          "version": "repo-lines-v1:sha256:2ce2a9c21260d4d395d8b2957362949253b1323a19ab30adc9ee18dd510fcad4:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE4OGNmNjhhYjc4ZjM3NTg3MDc3MDEyZmQwNmFiZDJmOTRjZDJmY2FjOTc3MTYwOWUwOTMxODhiMDc4Y2RjNTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwNzFjNmU5MjJkNjRlM2MyZDEyZDFiNDAwODRjMzFjYzRlNzgwN2ZiNDJlN2Y3MjI5Y2M4ODYwNWU3ZmM4YjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU2NTk3NjkxNGU4ODYyODM1ZWM2ZjI2M2M3OGI2MTIyMzIzNWIwNmM1YTcyZWNmYzI2MmIyMzk4MmFjOTc0NjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUifQ"
+        },
+        {
+          "resource": "repo://src/operations/boards.rs#L12-L36",
+          "version": "repo-lines-v1:sha256:99cb5b88ca4b65a9beacbb00ac0d7b13c9c4c8cb0d96f46afdeeb20ea25520a7:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkZDQzMWY2MmZmNjQxMjI5ZTdlNzJhOGMxYjJhYzFlOWE0MGI1OTE1MGU5MWE1Njk4YmU3M2Y4ZWFhMjIzNDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA3NmI2MThiMjI3MTVhN2VlYTU3NDIyNWUwZGRiNGRkN2FiNGRkM2VmNDViZWVmNWYxZTEwMWMwYmUxN2MxYjEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkxYzUxMjBlNmYwYTkzN2M1NzgxYmE0NzlmOTlmMDNmNzg0YjEwNjk1NDExMmVmNTFlYzI0Yjg3OTdiYzdlZjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQyMDEzNDBhOTZmYWI5NDQzNzdmOTkyNGJjOThlNTE2MWRhMzE1NjlmOGIxNWZiZjdkYmUwZTkzZTY5YWVjZDYifQ"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L100-L125",
+          "version": "repo-lines-v1:sha256:98dfa93c30be28effa9ec48294e12689523a9f9262d6b362fa1c549d1a426881:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkwOWQwZmFiYTkzZmEyNDU5OWQ4ZmM2NWZiNWQwYzI3OWJhZTAwZWE5ODllYTc4OTE5YzVmMTg3ZDYyZWU4MmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiYzk4ZDZiMGRjNDkyYzUwMTZkZjEwODA1YTNhNTRlYjljMTg0YTVhNjEzN2U3ZjRiZWNmYTBjMjIwNTUwZDAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a0f4a3522cd94ceba96292d1546395f1",
+      "statement": "Board-number resolution follows a single fallback chain: explicit override first, then the configured default, then the last board saved in `~/.last_ticket`; if none are available, the caller must treat a board as required.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L377-L395",
+          "version": "repo-lines-v1:sha256:2ce2a9c21260d4d395d8b2957362949253b1323a19ab30adc9ee18dd510fcad4:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE4OGNmNjhhYjc4ZjM3NTg3MDc3MDEyZmQwNmFiZDJmOTRjZDJmY2FjOTc3MTYwOWUwOTMxODhiMDc4Y2RjNTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwNzFjNmU5MjJkNjRlM2MyZDEyZDFiNDAwODRjMzFjYzRlNzgwN2ZiNDJlN2Y3MjI5Y2M4ODYwNWU3ZmM4YjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU2NTk3NjkxNGU4ODYyODM1ZWM2ZjI2M2M3OGI2MTIyMzIzNWIwNmM1YTcyZWNmYzI2MmIyMzk4MmFjOTc0NjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUifQ"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L23-L31",
+          "version": "repo-lines-v1:sha256:a2afb112ca07c83d57deab362d536e5d0beac4ad7f80cd14b4f999391f4ba164:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjRkY2YxODVjNDRjYTEyMmFhZjE4ODM5ZDAzZjczZDM2NGJmMjVhNWVkZDRmMzQwMjhiOGZlMTBiMjdjMTRiYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTllNzYzNTVjZjExOTk0ODBjM2Y5OTgzNmIxNDg2Yzg0MWQ4OTFmYWFkOTA0YzYwOGUwOTMwMjJkMzc1N2FlZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmYzYTNiNTE4MDFiMWE4YmRkNzdmYzhmMTAwZTBhM2Q1YjE0Yjk2ODQ4ZjUyYWM1YmU4NTA3MWYxNmJkM2Y3OSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_8c027ffdc18541a6a50fd9c65574522a",
+      "statement": "`operations::boards::switch_board()` is the durable switching path and also clears the client's cached `board_id` in memory so later board-specific requests do not reuse the previous board identity.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L597-L597",
+          "version": "repo-lines-v1:sha256:7dd557226629bbd869af2730dd617370d18961437bef59bb80b23a0c9371f134:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiN2RkNTU3MjI2NjI5YmJkODY5YWYyNzMwZGQ2MTczNzBkMTg5NjE0MzdiZWY1OWJiODBiMjNhMGM5MzcxZjEzNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiN2RkNTU3MjI2NjI5YmJkODY5YWYyNzMwZGQ2MTczNzBkMTg5NjE0MzdiZWY1OWJiODBiMjNhMGM5MzcxZjEzNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmRjOTE4M2M4NDFmNWI2N2MxOGQxYzc2ZTczNGMzM2M2NDcxZTAxMmU3Y2M0NjFjMzRhOWYxM2ExZmJiYTkwNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWU3YjVkMWZkZGI5YjQ5NzAxOGUxMTYyNDUwMzgzMGYzYTYyZWZiNjFmNDhlMjM2NjhhZDg0MTkyNjIwMDNhMSJ9"
+        },
+        {
+          "resource": "repo://src/operations/boards.rs#L12-L36",
+          "version": "repo-lines-v1:sha256:99cb5b88ca4b65a9beacbb00ac0d7b13c9c4c8cb0d96f46afdeeb20ea25520a7:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkZDQzMWY2MmZmNjQxMjI5ZTdlNzJhOGMxYjJhYzFlOWE0MGI1OTE1MGU5MWE1Njk4YmU3M2Y4ZWFhMjIzNDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA3NmI2MThiMjI3MTVhN2VlYTU3NDIyNWUwZGRiNGRkN2FiNGRkM2VmNDViZWVmNWYxZTEwMWMwYmUxN2MxYjEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkxYzUxMjBlNmYwYTkzN2M1NzgxYmE0NzlmOTlmMDNmNzg0YjEwNjk1NDExMmVmNTFlYzI0Yjg3OTdiYzdlZjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQyMDEzNDBhOTZmYWI5NDQzNzdmOTkyNGJjOThlNTE2MWRhMzE1NjlmOGIxNWZiZjdkYmUwZTkzZTY5YWVjZDYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_273821d42d0c46bda89dc75fde4e277c",
+      "statement": "The TUI reads `hidden_lists`, `known_projects`, `working_hours`, and `theme.active` from the session configuration at startup; hidden lists are normalized to lowercase, preference edits reload durable config before saving, and `known_projects` behaves as a most-recently-used list of project ids with optional cached names.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L84-L123",
+          "version": "repo-lines-v1:sha256:8156d9f755e40c4b5da94214aa2076f89d94caea1bdc7ebcf72e692221f0fe25:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NTkzNDkwZGJhMTAyMjZkZTA2NWRmZGI3NmY0YzgzNWI3ZDI3ODQ0ZjRkNTY0ZDIxOTVjMDdhN2NlZjAyODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI1YmI1NTE2ZTg0OGRmZDc3NjkyMWJjOTEwY2QwYjQ2ZjI3ZTdiYzU3YjFkZmY3Mjc2MGY2ZTIxMjMzNzliMmYifQ"
+        },
+        {
+          "resource": "repo://src/tui/app.rs#L1-L1",
+          "version": "repo-lines-v1:sha256:fb73827e4e0329e879d1a34220d4192daed2203745c28a068a3feb7f9ae09919:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmI3MzgyN2U0ZTAzMjllODc5ZDFhMzQyMjBkNDE5MmRhZWQyMjAzNzQ1YzI4YTA2OGEzZmViN2Y5YWUwOTkxOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmI3MzgyN2U0ZTAzMjllODc5ZDFhMzQyMjBkNDE5MmRhZWQyMjAzNzQ1YzI4YTA2OGEzZmViN2Y5YWUwOTkxOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTI3N2Y2MjkzMGQxNmQ2OGI3N2EwZmMyM2RhZmFiMGUwNTg5ZTllMDdiMGU0ZTc1YTIxMmI0NDZmMGIxNmU1MCJ9"
+        },
+        {
+          "resource": "repo://src/tui/events.rs#L1-L1",
+          "version": "repo-lines-v1:sha256:953d9a6092846f6e69bb42f33bee63a1445d004d5d248c6cc7771bc2e0bcbcac:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTUzZDlhNjA5Mjg0NmY2ZTY5YmI0MmYzM2JlZTYzYTE0NDVkMDA0ZDVkMjQ4YzZjYzc3NzFiYzJlMGJjYmNhYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTUzZDlhNjA5Mjg0NmY2ZTY5YmI0MmYzM2JlZTYzYTE0NDVkMDA0ZDVkMjQ4YzZjYzc3NzFiYzJlMGJjYmNhYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiM2Q4YmQ1NjdkOTcyOTE5ZTk5MGIzMzk2YTZhNTQ1N2RiMDJmZjhhODU2MDg0Zjc0MmIxNGNkYmYwZTk0NDc4NyJ9"
+        },
+        {
+          "resource": "repo://src/tui/mod.rs#L1-L1",
+          "version": "repo-lines-v1:sha256:6b408625f2bccaf504f59145b6a89c385c588c0e9dff43919babd52fe0ef44bd:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNmI0MDg2MjVmMmJjY2FmNTA0ZjU5MTQ1YjZhODljMzg1YzU4OGMwZTlkZmY0MzkxOWJhYmQ1MmZlMGVmNDRiZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNmI0MDg2MjVmMmJjY2FmNTA0ZjU5MTQ1YjZhODljMzg1YzU4OGMwZTlkZmY0MzkxOWJhYmQ1MmZlMGVmNDRiZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWNiZWMwM2RmMTQzNzRjYjE0MDQwM2ZhYjhiNGVlZDcxNGZiZjVmOTYxNDcxODk3M2Q2ZDY3ZWNkODU2YjUwNCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_f2ae91b5fa884ee69829ee67b6580b3f",
+      "statement": "`working_hours` only affects display logic: when the configured range parses and the current time falls within it, the TUI can render the remaining-work-time footer; invalid or missing values simply suppress that footer.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L96-L123",
+          "version": "repo-lines-v1:sha256:c75f0640c143c749275ab0c419f6eb69d1aec04f4d710f69929746bbf33f8a88:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NTkzNDkwZGJhMTAyMjZkZTA2NWRmZGI3NmY0YzgzNWI3ZDI3ODQ0ZjRkNTY0ZDIxOTVjMDdhN2NlZjAyODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVlNmU5M2Y3OTZlYjc3ODAxYzk2NDRiODhhMTRmN2RlZTExMzdjYjU2ZmI4Y2U2OGZhMTFiOWJjYzMyYjY0NDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI1YmI1NTE2ZTg0OGRmZDc3NjkyMWJjOTEwY2QwYjQ2ZjI3ZTdiYzU3YjFkZmY3Mjc2MGY2ZTIxMjMzNzliMmYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_5577eebcb59d400ba6dbf993dad5a2ea",
+      "statement": "`theme.active` is resolved at startup for rendering, and invalid built-in or custom theme names fall back to `default` with a warning rather than failing the TUI startup.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L195-L216",
+          "version": "repo-lines-v1:sha256:a8a5583c4c52533d5898a7a0d106b438d7f58f10026e6c3253d85062fd64687d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzM2I2YzU5NjY5OGZhMzllYjg4MDNmMmE2NmYzOWVmNjU4YjYzODczYzRkNTY4MDUwYjQyZGYwNGFjOGNhZjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFkNzRmMzJiMDA4NTFkODQ0OTQxYzFjNWRhZjM0ODVhZmQ1NTYxN2I3Mjk5OGJjYWJjYzc5ZjkwNzFkYWM4MjAifQ"
+        },
+        {
+          "resource": "repo://src/tui/theme.rs#L1-L1",
+          "version": "repo-lines-v1:sha256:856ce310fb802f3679bc76f0a5580a98ee46d3090d6cac66cb3556ecb4251ab1:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODU2Y2UzMTBmYjgwMmYzNjc5YmM3NmYwYTU1ODBhOThlZTQ2ZDMwOTBkNmNhYzY2Y2IzNTU2ZWNiNDI1MWFiMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODU2Y2UzMTBmYjgwMmYzNjc5YmM3NmYwYTU1ODBhOThlZTQ2ZDMwOTBkNmNhYzY2Y2IzNTU2ZWNiNDI1MWFiMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzA0OWI4NjkyYWRmZDY2ZTQyZjk4MTUzMWE0ZWVhNWRkYTk3ZGUzYmE1NTVlZDBkYmUyY2MzMjljOTM0MzJjNCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_36998281245e4ea28232f083556a2bb6",
+      "statement": "The weekly-objectives cache uses `last_synced_at` and a 24-hour TTL, while the update-check cache uses `last_checked_at` and a 6-hour TTL; these caches are separate from board-selection recency data.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L128-L193",
+          "version": "repo-lines-v1:sha256:32202bd4fb4329686a07d04369dbeeeffd6420d42ad24b54a062b8a87e2ad02a:eyJzZWxlY3RlZExpbmVDb3VudCI6NjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMyZGM2YjkyMDAxODA2YmVjOGRhNzVmMzgwZTU0ZDViMTNiZmFjYzdmYmEzYTZmMjE2YTUyZmMyMjg5MzBlMjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU4NGVkMGJjMzZlYjQzNmVkODJmYmMwMzEwYzAxOWQ0ODY2NjI1MWJlODA3ZDQwODY1OTlmNmU2NzBlMmU4YzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRhMDAxYzU0NDUwN2FjZjg1Njc4MWIwMzhhNjFlMjJlNGE2OWNkYTE1ODZkMTIwZmJiZDc2ODRlMjBlOWVjMmQifQ"
+        },
+        {
+          "resource": "repo://src/config/mod.rs#L218-L250",
+          "version": "repo-lines-v1:sha256:4a05c415c0702533bc569493039f15816df1f31eb190b0c99dff758c8e32c268:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdiY2Q0NmY2ODMyMGZhYTZlM2Y3Y2MwMGNhYzM1NzkyYjU5Njc5NjM1Y2QzNTYwNTA0YzkxOWZmMDNjZTMyODkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQwYjMwMGU0MWI4ZmI3NWM2OTIwYmYwMmZhNWE5MWQxMzE0MTQwYTFmNjI1YjNiZDVhNmI4NDU5ZDY4Mjk0MGIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0abc26836da046628946e0979b4c50ca",
+      "statement": "`hteam interactive` loads the config at startup and shows the active board when one is configured, but it does not mutate persisted session state by itself.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/interactive.rs#L21-L33",
+          "version": "repo-lines-v1:sha256:b81b935ee021c78881ad81e84258c20d63034137cd1c64e540bc1df6a3df9313:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1MGU2MWRjYTNjMjZjMzcxYzkxZWY4YTNlMTM3M2VmZDA3ZWEyZDNjOTE5NTYxZDM5MTY2MTNkYTIyN2UxN2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZmYTQ0NzA3NWM0YmY2YzA2MTc3YWM5YzUzZDcwNzQ1YTE5ZmVmMzEyZTc1YzA4MDIzZTYxYjhhMDlhMDE0YWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg0MmYyMDNhZTZmOGRiN2IyZjJlYzM3MWFmMTkzNWJmOTNhMGI4ZTcyN2ZjYmMyNDAzNzQ5YTYyMmEwYjU0NjAifQ"
+        },
+        {
+          "resource": "repo://src/cli/interactive.rs#L35-L71",
+          "version": "repo-lines-v1:sha256:ed9567e791f00fdf02526b840a143303d40b916e3de849237af9e02d4cfdc0f6:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4YjRjYmIxMmYxMjA1ZDI4YWI0NTM3ZDhjMmU3MTE1Zjk4YmNmNjZmY2EwNDY4ZGYyODNjZWY0NTZiNGU2ZGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4OTc3MWZlMWI2NjI4ODc1YWEyM2U3ZGJlNGFhNzE0NjFkMDBjZGZiNjZkZGYxMWI5ZDgyMGFjNTg5N2ZkZjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc1ODhhNzM2YmQ5MmY3N2M4Y2RlNWMwOTg0ODdkYTA5Nzk1NjcwZTg0ODMzOTJmNGVhZWFlZjQ3MGM5ZmFmYjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk0MThhODU2NTkwY2ExZjc1ODY1YWYwYWVhM2NkNDVkZjY1YWU1YmI3ZmFjOGZhMWJlNTQ3OWY2Y2MzYzI4NGUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_82c90c265b384ec2b80546811a56c047",
+      "statement": "The CLI parser exposes `--board` globally for board-scoped commands, while `tui`, `interactive`, and `mcp` derive their runtime behavior from the shared configuration layer rather than separate session systems.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/mod.rs#L148-L205",
+          "version": "repo-lines-v1:sha256:8401a3bc835fd2de0705f800ab9dc3bb50bcaa3441d37267dec7146539cbd0c2:eyJzZWxlY3RlZExpbmVDb3VudCI6NTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkwYTNlOWU1YzI1M2E0OGZkZTcyYTk2YzdlYjViZjkyMGViMzE5YzY2MWRhYTUwYWVkY2FlNWM4MzgzZTY0M2EiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRlY2UxMWZmY2E4ZmJlZmViODgwZjI2MmI2MTJlZWM0Yjg5MTc5NGZkMWU4YTY2NjY2MDgxYjQyYWZhYmM2N2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFmNjYxYjdjYjFkMmVkMGYzMWE4ZjJkYzQ0NTU1Y2JjYjkyMzVjN2Y4MjJkNTZhMWE2MjFhZDBmZTBhOGE0ZjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUxNzdjMzhhMjk4NGMwZmFlMDZmOGQ3ZmE2MTFlNWVhY2U4ZTZiY2RmYTc1MTYxMTY5OTZjZmE1YjlmODliNDMifQ"
+        },
+        {
+          "resource": "repo://src/cli/mod.rs#L22-L41",
+          "version": "repo-lines-v1:sha256:59300471bae636441ee96dde15dc7082a30a1dcd90f66566803113b478f5a8d7:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFmOTAxMWMyY2JiOWQ5NDJmZTE3MjhiNDdlZmFkMTQ5MzU3YTgwM2Y1YmMzYzM4OWZiMzQ2ZjZlOTBmYjhhYzgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU3NTU2MTZkYTE4NTBmMmVhOGNkODFkYjk3OTMyZjRhYzM5YWJmZDhhMDZkZDQwZmJhMDViODU0M2VkMWU5ZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFkMzg0M2E0NGFjNWMyNWM2NmJlZWZmYjIzNTMyMDNhMTUwNzliNzM1ZjkyYjQ5NmZiNGFmMmRhZTlhMTRiNDUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e61a20b485f5465e8a70bbe1b8d107b3",
+      "statement": "Hteam persists user-local session and preference state in `config.toml` under the platform config directory plus companion files `~/.last_ticket`, `~/.hteam_history`, and `tui.log` in the config directory.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L15-L24",
+          "version": "repo-lines-v1:sha256:894c41b16e4323dcfe593b536842855d08a9a5649a7fcb8ad60fcd30059ff82c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NTkzNDkwZGJhMTAyMjZkZTA2NWRmZGI3NmY0YzgzNWI3ZDI3ODQ0ZjRkNTY0ZDIxOTVjMDdhN2NlZjAyODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI0ODYyN2E3MzU3M2ZmM2I2ZDY3NjU5MWVkMTRmOTNhYTE1MjU0YWViYWVlNjY4NzU4MjM2MDA5ZTQ0MmVjMDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNmMTdmMzllN2I2M2Q1MmVlMWRkZjFlMTVmYTlkZDE5Y2MwMGY3MWM0YTEwYzUxMGZiMjlhMWZkYzRkOGRlZWEifQ"
+        },
+        {
+          "resource": "repo://src/config/mod.rs#L253-L283",
+          "version": "repo-lines-v1:sha256:2ff8098020ed53862a7a54a05ecd022f6aa5620fdf83da7765a9aabdd2a6de09:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NTkzNDkwZGJhMTAyMjZkZTA2NWRmZGI3NmY0YzgzNWI3ZDI3ODQ0ZjRkNTY0ZDIxOTVjMDdhN2NlZjAyODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIwNTk2MGNmMDI5YTlhOTBiNjk1NzZhY2FmOTViMGZlYTI0ZmNiMDczMmM1ZTEwMWJiZWJhYmYyN2MzN2ViZjEifQ"
+        },
+        {
+          "resource": "repo://src/config/mod.rs#L377-L395",
+          "version": "repo-lines-v1:sha256:2ce2a9c21260d4d395d8b2957362949253b1323a19ab30adc9ee18dd510fcad4:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE4OGNmNjhhYjc4ZjM3NTg3MDc3MDEyZmQwNmFiZDJmOTRjZDJmY2FjOTc3MTYwOWUwOTMxODhiMDc4Y2RjNTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwNzFjNmU5MjJkNjRlM2MyZDEyZDFiNDAwODRjMzFjYzRlNzgwN2ZiNDJlN2Y3MjI5Y2M4ODYwNWU3ZmM4YjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU2NTk3NjkxNGU4ODYyODM1ZWM2ZjI2M2M3OGI2MTIyMzIzNWIwNmM1YTcyZWNmYzI2MmIyMzk4MmFjOTc0NjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUifQ"
+        },
+        {
+          "resource": "repo://src/tui/mod.rs#L127-L140",
+          "version": "repo-lines-v1:sha256:8100877d53f8bc62a110fc1f1c7221ba5eee3d8fa45473259206d41c11e0f4d6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4ZmExYzYyNjE2YWQ1ZGRiZjViNWQ1YWIwMzBmNjBiMGVkMmViNmIwMDY0ZTAwMzgwNTQ5OWY1YWY5ZjQyZmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhhYjA4NTA5ZmFjMDQ3MGViN2NjNmU1YTI0MTIyZmU3ZWE0M2U2MmM5YTc5MmFhMzE0ODJjYWVmNDEzNjExOWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYwNmNjM2NmNjc0MGY4MWJiZjhlMzFiMmRiNTYzNTdkYTg5NGI5ZjdjYmQ2MjUyNzQwNDI4OTRlM2VkMDRlZjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIwYWZkYWI0Y2I1YmU4MjMzMGY0NWZmMWRhZmZjMmFiZTIxM2ZhMmI0YWNiNDRkMWI2YzY5Y2U5OGE2ZDUxN2UifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9eb4e2a7d8da41a98b37485bd93a1e8d",
+      "statement": "The persisted config schema includes auth cookies and cached board/user identity, board metadata with last-used timestamps, variables, TUI hidden-list and known-project MRU state, working-hours settings, weekly-objectives cache fields, theme selection, and update-check cache fields.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L140-L193",
+          "version": "repo-lines-v1:sha256:c1ec31a7691e91590cc2f633fac23716465586c6e68c49a1ec16e3dc1bf19ee2:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjljZDhjZDQ3M2EwZThhNTI5MjUxNmJlMGE4Y2NmY2JkZWM0ZGNkNWRlZmU0NmI3ZTgzMTBmMjUxMjliNzUyMTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ5ZDM0YTkxNTI1ZmI4NDUzZDhiZTM4OTg2ZTU5YmIxYzg4ZDMyZGJhZjBjNGFhNmNiMjQ1ZWY1ODk0NjJkMmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRhMDAxYzU0NDUwN2FjZjg1Njc4MWIwMzhhNjFlMjJlNGE2OWNkYTE1ODZkMTIwZmJiZDc2ODRlMjBlOWVjMmQifQ"
+        },
+        {
+          "resource": "repo://src/config/mod.rs#L15-L24",
+          "version": "repo-lines-v1:sha256:894c41b16e4323dcfe593b536842855d08a9a5649a7fcb8ad60fcd30059ff82c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NTkzNDkwZGJhMTAyMjZkZTA2NWRmZGI3NmY0YzgzNWI3ZDI3ODQ0ZjRkNTY0ZDIxOTVjMDdhN2NlZjAyODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI0ODYyN2E3MzU3M2ZmM2I2ZDY3NjU5MWVkMTRmOTNhYTE1MjU0YWViYWVlNjY4NzU4MjM2MDA5ZTQ0MmVjMDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNmMTdmMzllN2I2M2Q1MmVlMWRkZjFlMTVmYTlkZDE5Y2MwMGY3MWM0YTEwYzUxMGZiMjlhMWZkYzRkOGRlZWEifQ"
+        },
+        {
+          "resource": "repo://src/config/mod.rs#L199-L251",
+          "version": "repo-lines-v1:sha256:93818cd7c315884a3c95d8cee761bded7d923ca5f003bc53b21d385f7e44602c:eyJzZWxlY3RlZExpbmVDb3VudCI6NTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjljZDhjZDQ3M2EwZThhNTI5MjUxNmJlMGE4Y2NmY2JkZWM0ZGNkNWRlZmU0NmI3ZTgzMTBmMjUxMjliNzUyMTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc5ZTU1OTU2Nzg0MDk3YjgwZTIzZWJjMDcyODdhOTZlMmEzOWUwMzgzZDA5NzJiMDE2ZDM0NDRlY2IyOTMyM2UiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg5YTI3M2Y4NjhlNjc2Y2U1NWU5ZmJhNmY4ZWQxY2I1NjZkZjA2YzFhOWNjYmI1OTAyM2YxNGYxYzkxOTU5OGUifQ"
+        },
+        {
+          "resource": "repo://src/config/mod.rs#L253-L283",
+          "version": "repo-lines-v1:sha256:2ff8098020ed53862a7a54a05ecd022f6aa5620fdf83da7765a9aabdd2a6de09:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NTkzNDkwZGJhMTAyMjZkZTA2NWRmZGI3NmY0YzgzNWI3ZDI3ODQ0ZjRkNTY0ZDIxOTVjMDdhN2NlZjAyODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIwNTk2MGNmMDI5YTlhOTBiNjk1NzZhY2FmOTViMGZlYTI0ZmNiMDczMmM1ZTEwMWJiZWJhYmYyN2MzN2ViZjEifQ"
+        },
+        {
+          "resource": "repo://src/config/mod.rs#L26-L94",
+          "version": "repo-lines-v1:sha256:874fab212096b5d54c5cb72c51b8e42ca8270b933de869f698fa124cd024b414:eyJzZWxlY3RlZExpbmVDb3VudCI6NjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NTkzNDkwZGJhMTAyMjZkZTA2NWRmZGI3NmY0YzgzNWI3ZDI3ODQ0ZjRkNTY0ZDIxOTVjMDdhN2NlZjAyODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBjZWU2NDFkNjVhZjk4ZmY1MDgyNWFlN2IxNjU0ZjBkMmEzYzc1MDhmNzM3MjhlNzBiYTQ4NTBhYmZkNWYzODQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRmMmRjZmE4OWVhNjQ0ZmNlNzdiZDI5MGEzNDc4ODUyZmI5OWY2YmZlOTRhNWY0OWMwMTI4NjE0YmU5NmQ5ZTUifQ"
+        },
+        {
+          "resource": "repo://src/config/mod.rs#L96-L125",
+          "version": "repo-lines-v1:sha256:922be7be6349dc89289a21ee06d5ddfdbe9c058fe3549a08257609f1a572319b:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NTkzNDkwZGJhMTAyMjZkZTA2NWRmZGI3NmY0YzgzNWI3ZDI3ODQ0ZjRkNTY0ZDIxOTVjMDdhN2NlZjAyODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIzYzgxNWViZGMxZTM2YzQ2Mjk3OGFmZTYyYWUyZmM5YTc1YmE2ZGZjNzQyOGYxMGIxMGQ0NzY5MzIxOWVmYTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVlNmU5M2Y3OTZlYjc3ODAxYzk2NDRiODhhMTRmN2RlZTExMzdjYjU2ZmI4Y2U2OGZhMTFiOWJjYzMyYjY0NDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyNTdhNTZjNThiMDc5ODE1NTFhZTZkZDljZmEwNDkxODNiZGQ1YWYzMzAzOTBlNTU1YjY5OTY2NzA5MWU2YjMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_119ef529fb4c418cbb3e400b78645c52",
+      "statement": "`Config::load()` tolerates a missing config file by returning defaults, while `Config::save()` rewrites the whole pretty-serialized file and creates parent directories when needed.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L285-L359",
+          "version": "repo-lines-v1:sha256:544dee97aa245eaff92523f6ee4a5bb79dd150ec4f84483c68ee1c2977a46f05:eyJzZWxlY3RlZExpbmVDb3VudCI6NzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFiZTg2MDZiMDYxODZmNzNiOGZhYzI1MmIzYWU3Zjg1M2VmZWRiYTVhOTYxNGU2MWQyNTkzZGJjZTJmODU2ZjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEyM2ZjNDc3ZmZhYTA4YjU0MWIzMWU0ZDQ0Mjg5Y2I1NDBiZTI4NDNmZDliMjllY2I5ODY2NjI1ZGQzMTQ2MWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJhOWQ5MTUxYzE0ZTgzMzNjZGQwYmJjZjhhM2NkMGFlNTU4ZWYyZTA1ZjcxNDdkY2Y0N2IyYjU1MTkyOTBhYzAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg0YzQwMDQ1MGJkOGQ2NGZhMWIxM2FkZjYzZmM2ZjY0YzIzMTQ1YTI1M2ZhZTI5ZGQyOGEzODZkYTQ0NzEwNTMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a7641e0fb95c4bdc88f607b3b4e841d2",
+      "statement": "`Session::open()` is the shared startup path for authenticated entrypoints: it loads `Config` and builds an authenticated `HteamClient`, so CLI, TUI, and MCP surfaces inherit the same session-loading logic.",
+      "evidence": [
+        {
+          "resource": "repo://src/operations/session.rs#L7-L20",
+          "version": "repo-lines-v1:sha256:fa0049efabbd769851922fec4ed7be49c58da7bd64c4a420e77938c8e5528c97:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRkMzZmMWQ4OGM2MWQwNjIwODg4MjVjZjg3MTZlMTcxMjNhYzFiYTQwN2M2Yzc5MmQ5ZmMxMzY4NzdmZTIzYjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRmMjBlNDI4ZDM2ZDRhZWI4YjkzZDFmNjMyOTVkYmNlNGQxNTI5OWI3NmI1ODNkNjc3NjUyNzAyZDU5ZTk0NzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRjOTZkOGNkZGIyM2NhOGIwYmIxMDRkMjIxMzI2OWYxMDg2OGE4OTdmZGEyMzFhYTRiY2RjZjgzMDQ5NzdhODQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_fdf602c52015412d90c3e57fda206183",
+      "statement": "Authentication is considered present only when both `session_id` and `csrf_token` exist, and requests add `Authorization: Bearer ...` only when an access token is available; the bearer token supplements the cookie session instead of replacing it.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L1-L6",
+          "version": "repo-lines-v1:sha256:f2160f806cb32b0ee793f0a53b9653115f586db91eb46e8501e60ac0d7e7b385:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDI0NTk3MWZhZDIyMDQyOTRlZjZkMzlmMzE4MzkxNjVhZTk4NjU4YzU5MDc2ODFkZTdmMGRkNGE0YTJhZGUwZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiN2FiM2Y3NWMyMDJmNmQyZGZjNDVhZmE4OTIwNGI1MTVjOWIwMjg1OWNiNDA3NDQ1MDQyOTRkNjAzYjQ1NTJkOSJ9"
+        },
+        {
+          "resource": "repo://src/client/mod.rs#L380-L430",
+          "version": "repo-lines-v1:sha256:25ec98f11110bdb00f4ba50a4b27c84f7bc14ca835a3deda4c7c4acfcb0dd9c5:eyJzZWxlY3RlZExpbmVDb3VudCI6NTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIwYWNkNjBmM2NiMDAwNGQ1MjhiNTM0NDE1YzdmZDIxNjQzNjYzYjQ0MDA0ODgzYzVjYmU0N2MyZGI0NDJhNmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1YjliNjk2NTc2NzNkNmQxNzliYjMwM2M2OTNjODEwMzdiYjYxMDBjY2UzZDFjNDBlMzY5NzkwM2E3M2IwNjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhhOThkOWE1OTY1YmRiZDQ0ZTM0NGJjZjgyNGIzYjllMTY1MTgyZTA1ZDY0YjVmZWFiZmYyMGY2Y2FjNTE4ZGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI5OGU5ZmY3YmE1ZDJmZGVmMTMwZDViOGJhNGExNWE4ZTQ0NjZjNGM1ZjgxZmRjZWUwOTEzY2I5MjY1YWU5MDQifQ"
+        },
+        {
+          "resource": "repo://src/config/mod.rs#L15-L24",
+          "version": "repo-lines-v1:sha256:894c41b16e4323dcfe593b536842855d08a9a5649a7fcb8ad60fcd30059ff82c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NTkzNDkwZGJhMTAyMjZkZTA2NWRmZGI3NmY0YzgzNWI3ZDI3ODQ0ZjRkNTY0ZDIxOTVjMDdhN2NlZjAyODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI0ODYyN2E3MzU3M2ZmM2I2ZDY3NjU5MWVkMTRmOTNhYTE1MjU0YWViYWVlNjY4NzU4MjM2MDA5ZTQ0MmVjMDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNmMTdmMzllN2I2M2Q1MmVlMWRkZjFlMTVmYTlkZDE5Y2MwMGY3MWM0YTEwYzUxMGZiMjlhMWZkYzRkOGRlZWEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f996f20905824c8985b74747305d38ea",
+      "statement": "Login probes the API before persisting credentials: it clones the current config, injects the supplied cookies, calls `check_auth`, and exits without saving if the probe is unauthorized or returns a network error.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/login.rs#L26-L62",
+          "version": "repo-lines-v1:sha256:a133b91c8e7657b0e851467ce66fd88447ecfa3ad2d5fc50a318268748ac5fd0:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2OGMwNDEwYzc3ZDgyMjBkNTUzZTc0YTc5MDIwOGEzNjFiMjQzYjhkMGI4ZTcxYzY4MTUwZGRkMTJmMDRhYjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFkOWUxMjU0NjQyNTU3NmQzZGVhZThjOWI5ZGJmMTI4ZDVkNmRkYWY1ZDdmZTg1NzkzNDkyN2RlZmZhM2I5ZGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlmMDk2MzJhZTc1ODMyZGMxNjRlZDhlOWNlNmI1YzUxMDk5ZWY2MTAwYTQ5ODM4OTE5NjI1NDBhMjZiOGI1NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImExM2UzNDg4ZDkxN2JmZDEwZWY1NTA2MGU2MWFmY2U3MWJkZTAzODYyNjFkZDEyZDc4MjU4MWI5ZDMzMTczMTUifQ"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L100-L125",
+          "version": "repo-lines-v1:sha256:98dfa93c30be28effa9ec48294e12689523a9f9262d6b362fa1c549d1a426881:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkwOWQwZmFiYTkzZmEyNDU5OWQ4ZmM2NWZiNWQwYzI3OWJhZTAwZWE5ODllYTc4OTE5YzVmMTg3ZDYyZWU4MmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiYzk4ZDZiMGRjNDkyYzUwMTZkZjEwODA1YTNhNTRlYjljMTg0YTVhNjEzN2U3ZjRiZWNmYTBjMjIwNTUwZDAifQ"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L54-L60",
+          "version": "repo-lines-v1:sha256:b12ea10a2b11edd0403d75e348b381a369f0c70108364b256f0334a9b4b34566:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmEzYTNjMWVmZWEwZmFjZmYyNjBkNmQ4OWViMzI5YzM5NTkyMDJhMjcxNzkzY2Y5MGRjM2U3NTFlZDk1N2Y0ZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTAyOTFkOWNjNTYzNzI5ZGM1ZTQwN2E0ZDhjODI4NGNlMDY5OWM5YmIxOTczNjc2MmY1MzJlNTI0OGY3MWE3YyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODI4MTI3YjQ4OWNkZDBlMTg0MDkzNTdiYzEzM2FhZDJiNGE0MDAzYWZmODUzYTNlYjZjOWQ0YTlmMzg3NWJkOSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_e55dcd5f43e9452598746a3119768481",
+      "statement": "Post-auth board selection during login follows a strict precedence: explicit `--board` first, then a still-visible configured board, then automatic selection when exactly one board is visible; otherwise the caller is told to switch manually or that no Execution boards are available.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/login.rs#L64-L95",
+          "version": "repo-lines-v1:sha256:a7160f6f3ec0fc7ebd527647f593ad93f6533f084fdeb537a355f008ff5a87c5:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4ZGQ1YTI0NDQ5M2QxYjE4MDA2YmUwYzNiMThlNmM1NTE4MjI4YzcwODcwY2Y0NTIzZTM5MGY2YTNkMzBhODAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEzN2U3NGE3NDZmM2U0ZmE5OGQ3Y2I5OGRiMDdkMzBiZmY2NWNlZjY3NmYxN2FiMWVhNDkzYWM0ODQ5MDY4MTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjExZmIzNmYwNDZkNDFlYmExZjMyMzRjOTg0MmFiNGIyZDM0NzUyNmQxNjQ3OTY4YjU4NWU5MGMxMThlYWU1ZGEifQ"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L41-L52",
+          "version": "repo-lines-v1:sha256:c4f736ad3a76b90ac5317d6f3095fa301bc87ca4b44692261aa7ed08678db471:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBjNWRlMGUzMDk0YmIzY2FlOWQzMDdiZjhkM2IzMWM0ZWEwYmM5NjJiM2E0ODVmZmI0OGVjYWY0ZWI0ZDlkMzMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQxODAxN2ViMTY2YzQxNGFhMTU1YTM2N2MwNGNlMjdjMTRlYzRkNTcwODAwNzJjMTBmMzFlNTNmYmM1NzZmOTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY5M2IwMjRiZjAyNDI2Y2MzOWMzYTIxYTM1MzBiNDdmYzcwNzQ3NzZhMzE4MWNjMDFlY2MxZGVhM2NhNGMyYTYifQ"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L62-L98",
+          "version": "repo-lines-v1:sha256:21f4ba5cef156d18dad448845b2478a8dcddc330a6cb7da9761da3251a4ed22c:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkYzI5OTNlMjMxN2MwNDI2ZWEwOTdhNTIzOWYzNDBmZGIyZDE2MTVlZjY5YjYyOGVjMmI3N2NmZmU5MjRkZmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA5YTNhOGVjM2NlZmE3M2Y3YmY2MWZkMTFhNDRmMzNlOTMzY2I4YWE4NjlhYTk0ZTk5MWQ1YjcwYmMzOGM2MDUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_00d6ed4eadb24266a4a94522b1f5f4d3",
+      "statement": "Successful login persistence writes the new cookies, optionally updates the configured board number, saves `~/.last_ticket`, and upserts the board name plus `last_used` timestamp into the `[boards.<id>]` map before saving `config.toml`.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L377-L395",
+          "version": "repo-lines-v1:sha256:2ce2a9c21260d4d395d8b2957362949253b1323a19ab30adc9ee18dd510fcad4:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE4OGNmNjhhYjc4ZjM3NTg3MDc3MDEyZmQwNmFiZDJmOTRjZDJmY2FjOTc3MTYwOWUwOTMxODhiMDc4Y2RjNTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwNzFjNmU5MjJkNjRlM2MyZDEyZDFiNDAwODRjMzFjYzRlNzgwN2ZiNDJlN2Y3MjI5Y2M4ODYwNWU3ZmM4YjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU2NTk3NjkxNGU4ODYyODM1ZWM2ZjI2M2M3OGI2MTIyMzIzNWIwNmM1YTcyZWNmYzI2MmIyMzk4MmFjOTc0NjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUifQ"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L100-L125",
+          "version": "repo-lines-v1:sha256:98dfa93c30be28effa9ec48294e12689523a9f9262d6b362fa1c549d1a426881:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkwOWQwZmFiYTkzZmEyNDU5OWQ4ZmM2NWZiNWQwYzI3OWJhZTAwZWE5ODllYTc4OTE5YzVmMTg3ZDYyZWU4MmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiYzk4ZDZiMGRjNDkyYzUwMTZkZjEwODA1YTNhNTRlYjljMTg0YTVhNjEzN2U3ZjRiZWNmYTBjMjIwNTUwZDAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_fdfd44d4811a446e8f2810ea690be7fe",
+      "statement": "Board-number resolution for runtime operations uses one precedence chain everywhere: explicit override, then the configured default board number, then `~/.last_ticket`; if none are present, callers must fail with a missing-board error instead of inventing a board.",
+      "evidence": [
+        {
+          "resource": "repo://src/operations/session.rs#L23-L31",
+          "version": "repo-lines-v1:sha256:a2afb112ca07c83d57deab362d536e5d0beac4ad7f80cd14b4f999391f4ba164:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjRkY2YxODVjNDRjYTEyMmFhZjE4ODM5ZDAzZjczZDM2NGJmMjVhNWVkZDRmMzQwMjhiOGZlMTBiMjdjMTRiYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTllNzYzNTVjZjExOTk0ODBjM2Y5OTgzNmIxNDg2Yzg0MWQ4OTFmYWFkOTA0YzYwOGUwOTMwMjJkMzc1N2FlZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmYzYTNiNTE4MDFiMWE4YmRkNzdmYzhmMTAwZTBhM2Q1YjE0Yjk2ODQ4ZjUyYWM1YmU4NTA3MWYxNmJkM2Y3OSJ9"
+        },
+        {
+          "resource": "repo://src/tui/mod.rs#L101-L126",
+          "version": "repo-lines-v1:sha256:0b73d8fbb0229372b1e9891d7ac94f16174e5df11e3873e2d479e3f663e88b07:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1MjU2ZGM4Y2EwZTYzMDUwNDU3ZDY5MDY3MDBmOTY1NDA0NDY2M2U2ZTMzYzlmMmM3ZTE4MTJkZTM4ODUzMDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg0ZTQyMDhjZDZmZmI4YzRhMzU0N2IyZjU0YWRhMTk5NzhjM2YzNjVlNzhmOTUwMmVmNTE0NWNkZDJhYTg1NDMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE1MDNmNTBkMTMxMDM0NzgzMGMyNTA1OTRjZjI0OGI3MTY3ZDA1NThlNDE0NzAzOTMxNzNiYTRhODhhMDc4NjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUzYjM2Mjk5OTgxNzY5M2JhNWViZDJkMTUxY2VhOGUwM2QzNTRiNGUwZDU5MDU3NWFkMzIzM2E2NjMyYjIwOWEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b8bb3aad4a26462b95fc46d9291e3155",
+      "statement": "`operations::boards::switch_board()` is the durable board-switch path: it updates the configured board number, saves `~/.last_ticket`, derives a display name from an explicit name, an existing board entry, or `Board <id>`, stamps `last_used`, and saves the config.",
+      "evidence": [
+        {
+          "resource": "repo://src/operations/boards.rs#L12-L37",
+          "version": "repo-lines-v1:sha256:85469f3e74fbd402329ced477f9bfa2f61b0d15e68ecaa51a2716c1f13eabbb4:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkZDQzMWY2MmZmNjQxMjI5ZTdlNzJhOGMxYjJhYzFlOWE0MGI1OTE1MGU5MWE1Njk4YmU3M2Y4ZWFhMjIzNDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkxYzUxMjBlNmYwYTkzN2M1NzgxYmE0NzlmOTlmMDNmNzg0YjEwNjk1NDExMmVmNTFlYzI0Yjg3OTdiYzdlZjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkwNjM0Nzk1MzBmYTVkMmVlMTdlZDAzNTkzNmQzOTA1OTU0N2Q4ZTFlN2QwMmNhM2ExMWU3Nzk1ZDRhYmJiYjcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_66a6c86bba5e4bb99d3dcf352b047d21",
+      "statement": "Board switching clears the client's cached `board_id` in memory so later board-specific API calls do not reuse the previous board identity.",
+      "evidence": [
+        {
+          "resource": "repo://src/client/mod.rs#L484-L520",
+          "version": "repo-lines-v1:sha256:2d40bd142ab6a6f6ec89b2c5ba2a32d86c1dcf9fd8d633842e7a6cff7e9f05b7:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVmMTkxYzVjNGRiZTI5ZWRiN2Y0NWYyYTg2ODg3Y2NjZjE0Yjg5MDc1NmEyNTY5ZWYzYzBhODFkOTk5MjU2ZDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU3NDQyMTRkZWVjZDNkNDMyZTI0ZDI4OTA5NTkwZjhiMTRiZjE1YjI4MGY4NTEzN2M1ZTM4MGRlMDY3Zjg5NzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU1M2RhYTI2ZGFlMmIxZWMzZDQ4YWE5NTM4OTk2YzQ1YzZmYTQ0YzZjNzRlZjAwZGRjOWUwMjJkNDI5YTkxNTIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_5b34569aa43040a6a27b2dc7df508b4f",
+      "statement": "The TUI loads `hidden_lists`, `known_projects`, `working_hours`, and `theme.active` from config at startup; hidden list names are normalized to lowercase, hidden lists still remain fetchable, and toggling list visibility reloads durable configuration before saving to avoid overwriting concurrent file changes.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/events.rs#L1501-L1525",
+          "version": "repo-lines-v1:sha256:8f7b94034d1bf29d450e4502a4eb6ca127b4fd6ed95e53bd77163b62daabd13c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI2NGY2NzgwNmZiYjY1ODNjODQ0OGM2OTFjODEzZTM1ODlhYTQ1ZWE0YTc5MmEwNTA2YjZlYzhjNzk5NTk5YTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI0NjNjZjliMmU5YjNlM2Q0MjIyYzVmZTRmOWQ1MjZhZDBiOTVmMTcwYmQzZDE2NjRlNjA2MWU4MjdhODZjNzkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiZjcyZTFmZWM2NjM2OTA5ZTJkYWI0YWQ2YzY5ODE5ZTYyYmUwODhmMjgzN2NmZDM0NzdiN2MxYjAzNGE2NzAifQ"
+        },
+        {
+          "resource": "repo://src/tui/events.rs#L1670-L1720",
+          "version": "repo-lines-v1:sha256:1c8b2f637e1a70456088755391b68aa821b8bf0926c80a582f8d574388102f2f:eyJzZWxlY3RlZExpbmVDb3VudCI6NTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJmNTVkOGQzMmU5NjFlY2RmZDI1ZWIyYmZmZGFlMTVjMzgzMmNlNTJkNjI5MTM4Yzk2NTk1NTdkYmU1NGJiY2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUyYjExMzk1N2RjY2Y0ZDVlM2Y5ODE4ZDM4MTgwOGYzODc0NzBkMTZkNWI4MWQ3MmU0YzYwNzRjNGQxNmJjNDciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU1M2QyZjA2YWViZjBiZjI5NWM0ODIyZjEyZGRhMDQ1NDAzYmY0YjIwMWU4MjNmYzk1YzVkZTcwZTViNTgyZTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFiZGRjM2E1OGFjZTNlOGVhYjM1ZmViZDhmZTc0OGJiYjI4ZDU2ODI0ZWE1ODBlYjdkMWE3ODg5MzE5ZjQ2ZjAifQ"
+        },
+        {
+          "resource": "repo://src/tui/mod.rs#L107-L140",
+          "version": "repo-lines-v1:sha256:8b460959ac408e39530fd1142701c76d8ab2d9c818a0eaeb9ac92bb094e80466:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM5ZTFlOGZmMWQ3OTAyYTkyZjg3MjZiNDQ1MjUzNGQ3M2IxNDY4ZTBmZmU4YjI0YTJmNmU0NTQ1ZDc5ZGZhYmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhhYjA4NTA5ZmFjMDQ3MGViN2NjNmU1YTI0MTIyZmU3ZWE0M2U2MmM5YTc5MmFhMzE0ODJjYWVmNDEzNjExOWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY4MzQxY2I2YjlkZDljNjY3MDE5OGIyOTYyZWQzNTM0YzRkYzFjMzRlNzMyOWFjMzVhMTc5YTAxNDY1ZGVkZDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIwYWZkYWI0Y2I1YmU4MjMzMGY0NWZmMWRhZmZjMmFiZTIxM2ZhMmI0YWNiNDRkMWI2YzY5Y2U5OGE2ZDUxN2UifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_21addbc0ed5448d0bd057d05a9f43e5b",
+      "statement": "`known_projects` is a persisted MRU of project ids with optional cached names; selecting or loading a project moves it to the front of the list, persists it to `[tui] known_projects`, and the projects popup auto-loads the first remembered project when no project is active yet.",
+      "evidence": [
+        {
+          "resource": "repo://src/operations/projects.rs#L296-L317",
+          "version": "repo-lines-v1:sha256:6f6e0fcb5241205e0eeb23bbdc1a470671963bf9ef44d73b9dc1b0a61d3ac69c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJjNWQ0YzY5NDU1ZGI4ZTRjZmE5ODEyNGE5NGNlOTQwZmU5M2ZkYTM5NmUyNzFhMDgyNzQ1ZThkNGNjYjM5MmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYwNjNjNGQxYWY4Y2Q4OWJiMGJkZDc2NTdmZmNiZjY4MDZhNjEwZDc5ZDZjOGQ0YzMwN2MyNDFkZjM5MDA1MjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiYzk4ZDZiMGRjNDkyYzUwMTZkZjEwODA1YTNhNTRlYjljMTg0YTVhNjEzN2U3ZjRiZWNmYTBjMjIwNTUwZDAifQ"
+        },
+        {
+          "resource": "repo://src/tui/events.rs#L1511-L1525",
+          "version": "repo-lines-v1:sha256:0a3e5f41b8ad3ebae722ce018b6882cdb1a80ded463eb722735e17fd1cc3d9dd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1NzI0MWExMTRlY2RjOGFhZmEwMmUyMjkzZjk1M2JmMzkzZDcwN2YyZDQxNGVlN2E1ODRiNmQzYTRlMjBiY2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRmYWI3MTBkZGY3ODU5ZTU3NTc2NGE5MTNhMDAyYzc0NTg1ZmZhNzAwMTUxMGNiODgxMWRhODNkMmNmNzRiMzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiZjcyZTFmZWM2NjM2OTA5ZTJkYWI0YWQ2YzY5ODE5ZTYyYmUwODhmMjgzN2NmZDM0NzdiN2MxYjAzNGE2NzAifQ"
+        },
+        {
+          "resource": "repo://src/tui/events.rs#L1680-L1710",
+          "version": "repo-lines-v1:sha256:52cd43883416a041268ec11aea1f1adc0dd61be297282caab3f676133281fd90:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZlNDVlYjQ5ODkzY2JjOGI4MTNhOTY0MzhkYmY4N2UwOGNkZjJkNjMwMDZiYTk0ODY2NThkYzg1MGU3ZjEzYzYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZjMTJiZmE5MWUzMGY3MTVmNTE4MmU5NzY4NDgxYTJhNjUyZjc3MDRmNzgwNGRiZDk5NzkxOTQxMTQ3MDU2ZjAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRmYWI3MTBkZGY3ODU5ZTU3NTc2NGE5MTNhMDAyYzc0NTg1ZmZhNzAwMTUxMGNiODgxMWRhODNkMmNmNzRiMzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU1ODE4YTQwYWQ1NGI1ODU4MjUyMjgwMjJjNzEzNDUzNDgyODQxNzA4MzYwNDI3ZTM0NzMyNDIzNzUwMGIwMzcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d1049277f3e442fcac43bf898fa2d7c2",
+      "statement": "`working_hours` only affects display logic: the TUI shows the remaining-work-time footer only when the configured range parses successfully and the current time falls inside that range; invalid or missing values suppress the footer.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L96-L126",
+          "version": "repo-lines-v1:sha256:f474b0b77a05db041c58f26c5f47878ea7eef9ce42162c160820a197c0a17901:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NTkzNDkwZGJhMTAyMjZkZTA2NWRmZGI3NmY0YzgzNWI3ZDI3ODQ0ZjRkNTY0ZDIxOTVjMDdhN2NlZjAyODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVlNmU5M2Y3OTZlYjc3ODAxYzk2NDRiODhhMTRmN2RlZTExMzdjYjU2ZmI4Y2U2OGZhMTFiOWJjYzMyYjY0NDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdlYWEzNWM5YjExZTFkZTgwNDA0Mzk5ZWMwODgwNWM3YmE2ODAwMzBjNWIyYjdiY2M4ZmYwMDI4NjUyY2NhYzkifQ"
+        },
+        {
+          "resource": "repo://src/tui/ui.rs#L530-L585",
+          "version": "repo-lines-v1:sha256:522379f72832908b4ee05ce17fc63d662784f1e8394caa5f45b00447c412ddfc:eyJzZWxlY3RlZExpbmVDb3VudCI6NTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhmNTczZDJmOGIwMjQ4Njk0MzVhYjFkNWZiOTNjZTNiMzk0Y2E1OGY0YWQ3NDI4ZDQxNzY5MjllYWYyNzQ3NTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJmMDE1YTViNWM0NWU4MjFjZDg1MGYxMTMwYjg0YzFhMDljNzM2YzIwYWVkNDVhN2M5ODA2ZGFlODczMDJkNmQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc5ODAxMGUwZTVkZjAxZGFmNDVhMTIyYzRjOWYxZTQ2MzI0NDk4YmJhYzhiY2Q2ODUzZmFhNTk4MzFmNWUzZTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc5ODAxMGUwZTVkZjAxZGFmNDVhMTIyYzRjOWYxZTQ2MzI0NDk4YmJhYzhiY2Q2ODUzZmFhNTk4MzFmNWUzZTcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b4b5be7b08974abbb630b0f81316fe61",
+      "statement": "`theme.active` is resolved once at TUI startup and falls back to `default` with a warning when it does not match a built-in theme or a parseable custom theme file.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L195-L215",
+          "version": "repo-lines-v1:sha256:4c3f55905556e6129be037ddb37a02d91e33dd9791bf001bad74a182e8479de5:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzM2I2YzU5NjY5OGZhMzllYjg4MDNmMmE2NmYzOWVmNjU4YjYzODczYzRkNTY4MDUwYjQyZGYwNGFjOGNhZjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE0OGQ3YzBmMDA1YmE5MTY3ZTViNzExNGZmMDFjMjM1YTM1MjgwZGZmNTk2NDUwNTkwNzU2YWU1ZTdmZWNlZjkifQ"
+        },
+        {
+          "resource": "repo://src/tui/mod.rs#L116-L140",
+          "version": "repo-lines-v1:sha256:602907b24a688c96c3f0a6aa7ac007e28dcbef1cc08b1b84631d49f69025a6ac:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY5NWU5Y2ZhZDc1OTkyNjU0ZjczY2U2Nzg5MTNjZmIzZWVhNzk0YWE3ZDAzYWQ3NjRkMTg5OWYwZWY5ZDE0NDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhhYjA4NTA5ZmFjMDQ3MGViN2NjNmU1YTI0MTIyZmU3ZWE0M2U2MmM5YTc5MmFhMzE0ODJjYWVmNDEzNjExOWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjgzMzE2ZGZjMWVhMjQ4NDY0YTU0ODViYzEzOGRlYjFkNTJhNjJiMTkzZmM5NmE0YTk0YmVmMDIxYzJkZTVlY2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIwYWZkYWI0Y2I1YmU4MjMzMGY0NWZmMWRhZmZjMmFiZTIxM2ZhMmI0YWNiNDRkMWI2YzY5Y2U5OGE2ZDUxN2UifQ"
+        },
+        {
+          "resource": "repo://src/tui/theme.rs#L15-L27",
+          "version": "repo-lines-v1:sha256:5d4574133d352f064ee44d686041c83fa8295f7a66286f4605fe86aaf8d28ba7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjczNWVjNGQ1NDYyZDQzMTUxYjRkNDAwNDdlNDliY2UwMjc1Mjk0MzY0NjBmNTM3NGM4ZDhhNzg1ZjczM2MzMGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc5MjZjNjUzOGRhOWEzMTg0M2JhNWExMjU2NzMzZThiY2NjMmU5M2U1ODdmMmRkMDdiNDkzYzYxNWYzZWM4YTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBjNjM1YmY5ZGFjYjc5ZTRhMmNlYWQxNWJiODk0ZTkxMTQyODc5Yzg1ZGI1ZjhjNDE2ZjJhNjhmZjQ1NDhjNDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBlMGZmZDMzMDFjMjc5OWI3Zjk5MWNmZjA0NjEyNTYzZGRkMmEwNDE3MWYxYjYxMzE3MDk0NzJhNTA4OGViYTIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f36788c45c56447aa7200235e67a1468",
+      "statement": "Weekly-objectives caching is fresh only when `last_synced_at` parses as RFC3339 and is less than 24 hours old; if a cached title exists, the stored title and objectives can be reconstructed into a `WeeklyObjectivesSet`.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L128-L193",
+          "version": "repo-lines-v1:sha256:32202bd4fb4329686a07d04369dbeeeffd6420d42ad24b54a062b8a87e2ad02a:eyJzZWxlY3RlZExpbmVDb3VudCI6NjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMyZGM2YjkyMDAxODA2YmVjOGRhNzVmMzgwZTU0ZDViMTNiZmFjYzdmYmEzYTZmMjE2YTUyZmMyMjg5MzBlMjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU4NGVkMGJjMzZlYjQzNmVkODJmYmMwMzEwYzAxOWQ0ODY2NjI1MWJlODA3ZDQwODY1OTlmNmU2NzBlMmU4YzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRhMDAxYzU0NDUwN2FjZjg1Njc4MWIwMzhhNjFlMjJlNGE2OWNkYTE1ODZkMTIwZmJiZDc2ODRlMjBlOWVjMmQifQ"
+        },
+        {
+          "resource": "repo://src/operations/objectives.rs#L1-L80",
+          "version": "repo-lines-v1:sha256:3befc32e63f4740e91b458f487803ad36fccfda0151d58c8fe4d6df96ab4fa02:eyJzZWxlY3RlZExpbmVDb3VudCI6ODAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQyNDU5NzFmYWQyMjA0Mjk0ZWY2ZDM5ZjMxODM5MTY1YWU5ODY1OGM1OTA3NjgxZGU3ZjBkZDRhNGEyYWRlMGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMyMzdmZjY2NGJhNTViOGY3OTllMjAwODBiYjEzYWEyOGNmZGE4MDBiYTgyMzkxYTBjMGJkMjlkY2NjM2VhNjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI4MjEwZWYzZTIyNTUzMGJjNzcwYTY3OTEwN2RlZWEzM2U3YjdlYTlmM2FhZGY2MDVkNjkzNWVmNTFmNjBmZjkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d3638db7b31d439d96093d50e56df000",
+      "statement": "Update checking uses a separate persisted cache with a 6-hour freshness window; when fresh and a latest version is cached, the startup update flow reuses that version instead of calling GitHub again.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L218-L250",
+          "version": "repo-lines-v1:sha256:4a05c415c0702533bc569493039f15816df1f31eb190b0c99dff758c8e32c268:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdiY2Q0NmY2ODMyMGZhYTZlM2Y3Y2MwMGNhYzM1NzkyYjU5Njc5NjM1Y2QzNTYwNTA0YzkxOWZmMDNjZTMyODkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQwYjMwMGU0MWI4ZmI3NWM2OTIwYmYwMmZhNWE5MWQxMzE0MTQwYTFmNjI1YjNiZDVhNmI4NDU5ZDY4Mjk0MGIifQ"
+        },
+        {
+          "resource": "repo://src/operations/update.rs#L44-L79",
+          "version": "repo-lines-v1:sha256:e71f300ffcf370db4adaec3f61c65ffd6728f346cbb90e561df4a419922f8ba1:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYxOGY5ZGExNWJhMmFkM2RmODlhMzIxMzE1NGNmZmFjZTk4ZDJkNGRmYzZkYzQ3YjA4ZTUyMjdkMjU3OTY0ZWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc2NjIyNGM2YzM2Yzc1YmNlMDYzOTAzYTk2MTk5OTM2NWFmZDdjMWZiMDNkNzc1ZDEyN2QzN2E1ZDYzOGY4MWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY3Yzg5NTc2NjU3YzJmNTE0YTM2Mjc0OGMzODhhZmE2ZjZkODE0Mzk5OTljMTk5MDJjZTJmNDM3ZTZmYTExYTAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_08afe23bac134a5d92489c4be7af06dc",
+      "statement": "The CLI exposes `--board` globally for board-scoped commands, while `interactive`, `tui`, and `mcp` all derive their runtime behavior from the shared configuration and session-loading path rather than maintaining separate config systems.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/mod.rs#L22-L41",
+          "version": "repo-lines-v1:sha256:59300471bae636441ee96dde15dc7082a30a1dcd90f66566803113b478f5a8d7:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFmOTAxMWMyY2JiOWQ5NDJmZTE3MjhiNDdlZmFkMTQ5MzU3YTgwM2Y1YmMzYzM4OWZiMzQ2ZjZlOTBmYjhhYzgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU3NTU2MTZkYTE4NTBmMmVhOGNkODFkYjk3OTMyZjRhYzM5YWJmZDhhMDZkZDQwZmJhMDViODU0M2VkMWU5ZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFkMzg0M2E0NGFjNWMyNWM2NmJlZWZmYjIzNTMyMDNhMTUwNzliNzM1ZjkyYjQ5NmZiNGFmMmRhZTlhMTRiNDUifQ"
+        },
+        {
+          "resource": "repo://src/cli/mod.rs#L98-L118",
+          "version": "repo-lines-v1:sha256:dd5075899bd9a9113b7e169203fbc32b73bf4802302629e3a36b3d69f8f20e82:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZjMmQ1MjM4NTA2ZDZhY2MwYmVmNTY1YzRlNjFlZWI2ZWVkODU5ZmRiYjZmMzViN2JjODliNzJjOTgwMWM4ZTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFmMGNkYjk3MmE3YmZiN2VkMjQ2ZjlmZjY3MjM4NWU1NWY0OTY4ZmMxMTA0M2RjNWI2ODRkNTFkZmEzMWRiY2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ0ZjRjMzRhMThkOTMwZmM0ZTFiNmUxODRhMTlmYzQzZWVlMDEwODVkMGJhZmFlMzdjZGI5YTU4YWE4MTRmYjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUxODhjZDI5MDNmMzkzYWVjZGVmNTM2OTRiZTA2Y2U5NTRlNTBjZTg3MmNlYWQ2YThiMDQ5NjQ5NDdjZDJlMDIifQ"
+        },
+        {
+          "resource": "repo://src/operations/session.rs#L15-L20",
+          "version": "repo-lines-v1:sha256:f5cfd2c47662cb6c233a02482cbfebccf683f47dc907b156510046f94039f575:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjAzNTIxYjViZGZhZWI3OTYzNjllMTEzMTA4MjAyMjBlM2ExMjUwZTBjYTk3MjIwYTNhMjU5YWQyNDE1NzBkYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDg5M2Y0MGUzNzgxZWI4OTZjODJkMDQ2YTA4MDY3YTExZTM1Y2RmMmYxZGZhZjI2ZmVhOTBiOGRiNjY3NjQxMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiM2MyNDZlZmU0NWZjYTA5MGU2Y2QwOTM4YmEzMTkwN2YzM2IwODgxNjkyNDg5MThhNWM3NTA2OTJkMzcwOGUzNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGM5NmQ4Y2RkYjIzY2E4YjBiYjEwNGQyMjEzMjY5ZjEwODY4YTg5N2ZkYTIzMWFhNGJjZGNmODMwNDk3N2E4NCJ9"
+        },
+        {
+          "resource": "repo://src/tui/mod.rs#L101-L126",
+          "version": "repo-lines-v1:sha256:0b73d8fbb0229372b1e9891d7ac94f16174e5df11e3873e2d479e3f663e88b07:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1MjU2ZGM4Y2EwZTYzMDUwNDU3ZDY5MDY3MDBmOTY1NDA0NDY2M2U2ZTMzYzlmMmM3ZTE4MTJkZTM4ODUzMDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg0ZTQyMDhjZDZmZmI4YzRhMzU0N2IyZjU0YWRhMTk5NzhjM2YzNjVlNzhmOTUwMmVmNTE0NWNkZDJhYTg1NDMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE1MDNmNTBkMTMxMDM0NzgzMGMyNTA1OTRjZjI0OGI3MTY3ZDA1NThlNDE0NzAzOTMxNzNiYTRhODhhMDc4NjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUzYjM2Mjk5OTgxNzY5M2JhNWViZDJkMTUxY2VhOGUwM2QzNTRiNGUwZDU5MDU3NWFkMzIzM2E2NjMyYjIwOWEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8c992029273f42ad9510de7671bb49bc",
+      "statement": "`hteam interactive` loads config at startup and prints the active board when one is configured, but it does not mutate persisted session state by itself.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/interactive.rs#L1-L80",
+          "version": "repo-lines-v1:sha256:88f6b3345a4336a45fb686e5990d4b25890b04a4dba9fb28a76980e4d2ddaa2b:eyJzZWxlY3RlZExpbmVDb3VudCI6ODAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkMGY1ZmQ0N2E5ZTIyYmU5ZWEzMDAyMDhiNjE4NjY3MWIzYzE1NmM0YjNiZjE4YTY5OGRlNTE4NzQxZDM4NWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJiYTIzYTY3MmY2NWUyNDQ5YzllOTM4OGQxYjA3NDMyNjM2MGRmOWUzM2NhNGQ4NDE5MDY3YTM1N2M5Mzg4ZDMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6cd488a68394411a99c4e2c4868a50fd",
+      "statement": "`config.toml` is not encrypted and the code does not enforce restrictive permissions, so the workstation or deployment environment is the protection boundary for secrets stored there.",
+      "evidence": [
+        {
+          "resource": "repo://src/config/mod.rs#L38-L53",
+          "version": "repo-lines-v1:sha256:a17079c5e20f00e050714b1a543a779622746ea65a7ebf0d0de66bbdb7da541e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImViYjIxY2Y0MWU5MmNiNWU5MTEyMjRiYjE3ZDIxY2VhMTc5NTk5NzRhN2E0ZTY3YTI1Y2Q0ZDNjMDM2NDU4NzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI4MmNhNGVkOGM2YmZiNzM2NzYzYWI4MTkwNWZlNzY3ZDZjMjI5NmFjNWE1YWRhMzg3ZTUyMjUyMDMwMzIyYzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM0N2Q2OTY3OGRlNDg4OTI4OTdjYzUzMTQzNzFkMjY1NmMzYjMwNGUyZTNkMjYzMGQxOTU4MDk1NzY4ZDc3NGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFlODg2ODFjMDQ0ZDdhYzk5ODAxNzgyZGM3MzkyNTk4ZWEwYzk5ZDU2OTNkNzg3NDZhODJmMjRiMjQwNjdkOGIifQ"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-08-29T04:34:19.305Z"
+    "at": "2026-10-27T23:40:03.433Z"
   }
 }

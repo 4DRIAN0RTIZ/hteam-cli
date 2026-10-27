@@ -1,4 +1,4 @@
 # Files
 
-- [Cards and Board State](cards-and-board-state.md) - Explains how Hteam board, list, card, and edit-form data fit together, including which identifiers must not be confused and how the client preserves card state across list, detail, board-card, and edit-form endpoints.
-- [Session and Configuration](session-configuration.md) - How Hteam authenticates sessions, resolves boards, and persists user-local configuration that affects CLI, TUI, and MCP behavior.
+- [Cards, Lists, and Board State](cards-and-board-state.md) - Describes Hteam card and list payloads, how operation vs project task families route requests, and how board-card, detail, and edit-form data are merged into safe read/write state.
+- [Session and Configuration Model](session-configuration.md) - How Hteam persists authentication cookies, board defaults, MRU projects, theme selection, working hours, weekly-objectives cache, and update-check cache across CLI, TUI, and MCP entrypoints.

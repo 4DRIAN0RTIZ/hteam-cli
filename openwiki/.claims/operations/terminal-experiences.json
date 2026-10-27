@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:2f84f50491ba1fb05b47cd827d7fd81587aa1655a7d05b2d60898dc0e63382c3",
+  "pageVersion": "sha256:da19befa3f9334950fb3ad6cd25f35dbfe83447a075d40d097ae32b4e14e2b1d",
   "claims": [
     {
       "id": "claim_0c9140e68fde40ff9a5e34ad49cc2bb0",
       "statement": "Board switching persists the active board to config, updates the saved board metadata, and writes the last-ticket file.",
       "evidence": [
         {
-          "resource": "repo://src/config/mod.rs#L330-L348",
+          "resource": "repo://src/config/mod.rs#L377-L395",
           "version": "repo-lines-v1:sha256:2ce2a9c21260d4d395d8b2957362949253b1323a19ab30adc9ee18dd510fcad4:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE4OGNmNjhhYjc4ZjM3NTg3MDc3MDEyZmQwNmFiZDJmOTRjZDJmY2FjOTc3MTYwOWUwOTMxODhiMDc4Y2RjNTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwNzFjNmU5MjJkNjRlM2MyZDEyZDFiNDAwODRjMzFjYzRlNzgwN2ZiNDJlN2Y3MjI5Y2M4ODYwNWU3ZmM4YjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU2NTk3NjkxNGU4ODYyODM1ZWM2ZjI2M2M3OGI2MTIyMzIzNWIwNmM1YTcyZWNmYzI2MmIyMzk4MmFjOTc0NjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoyLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM3OTRkMDJhODEyMTk0NGQxNzZkMjY1ZTliYjljYzU5ZjZhYjg5MGJjYWRmOGFlZmRlYmRiYmI0ZjJlYTg0NDQifQ"
         },
         {
@@ -21,22 +21,558 @@
       "statement": "The page documents the three terminal surfaces separately: one-shot CLI, REPL, and TUI, with operational emphasis on safe command execution, output conventions, context resolution, and failure handling.",
       "evidence": [
         {
-          "resource": "repo://src/cli/interactive.rs#L18-L70",
+          "resource": "repo://src/cli/interactive.rs#L19-L71",
           "version": "repo-lines-v1:sha256:f1d200143d2949b3f1d26f922ab53d250c8a20a1dbdb501d1cc280f133dbf41e:eyJzZWxlY3RlZExpbmVDb3VudCI6NTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIzMzNlZmNmNzExY2UyMTk5MGRmNTY3ZmIyOTY3MmExMzZlZWIwMmQ0M2UzZTgwMTA0Y2M0M2UwZTIyYzZhMmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4OTc3MWZlMWI2NjI4ODc1YWEyM2U3ZGJlNGFhNzE0NjFkMDBjZGZiNjZkZGYxMWI5ZDgyMGFjNTg5N2ZkZjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRkNWM0ZWUwMDJhZDdhNmYzYzA3OWE0YjZkNDlhNWM2YTBiYWFhNDE1ZDRiOTMyOWRjNzFkY2EyMmZkYWJkZjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk0MThhODU2NTkwY2ExZjc1ODY1YWYwYWVhM2NkNDVkZjY1YWU1YmI3ZmFjOGZhMWJlNTQ3OWY2Y2MzYzI4NGUifQ"
         },
         {
-          "resource": "repo://src/cli/mod.rs#L14-L135",
-          "version": "repo-lines-v1:sha256:175bb15e91ad82616342a8ea6c3db04a1b4b3f3b7f08f2038bb3d535db7c065b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIyLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIzOWVjZDMzMmVkOTVkNDkxYjFjNjFlOTVkN2JiYmRlNDg4OGZmMjJiOWQxMGZhNzcwODRkOTUyNjkwM2Y3NGE5IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJkYTU4YTY5MWY1NGVjNDhkMmNiZTkwMTZlODcyNTQ4NWQ2YjAwYzg3MWQwNzAzZWQzZTNjOTdkMjk5NWIyMWUyIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIzZGE4ZThkNDMxMzFiZDliZjVmYmVmNjFhNGU2YmI3MDMxZDhiZDE0YmIyNzQ3ZWY3YjIyMDYyNzY0MjE0MDJmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJjYjUwM2ZmODdhYjkzNDc4YTdmNWMxYzlkNjM5ZTY0YjA0MmE0ODk4NTZjNjg3ZDIyNjgxZDAwOTNkNjYyODg5In0"
+          "resource": "repo://src/cli/mod.rs#L16-L156",
+          "version": "repo-lines-v1:sha256:67239be90ae3b22528c81fe27e947d5a9d7b9f5033e7ad5183cdb976c2a0553d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIzOWVjZDMzMmVkOTVkNDkxYjFjNjFlOTVkN2JiYmRlNDg4OGZmMjJiOWQxMGZhNzcwODRkOTUyNjkwM2Y3NGE5IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJkYTU4YTY5MWY1NGVjNDhkMmNiZTkwMTZlODcyNTQ4NWQ2YjAwYzg3MWQwNzAzZWQzZTNjOTdkMjk5NWIyMWUyIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIzZGE4ZThkNDMxMzFiZDliZjVmYmVmNjFhNGU2YmI3MDMxZDhiZDE0YmIyNzQ3ZWY3YjIyMDYyNzY0MjE0MDJmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJjYjUwM2ZmODdhYjkzNDc4YTdmNWMxYzlkNjM5ZTY0YjA0MmE0ODk4NTZjNjg3ZDIyNjgxZDAwOTNkNjYyODg5In0"
         },
         {
           "resource": "repo://src/tui/mod.rs#L41-L70",
           "version": "repo-lines-v1:sha256:7bde593d3f1da11335057377e6920335e5a7225ea5a74811701e22be92194eab:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI0OGFiNWNmMjA0YzhkMTQyMmU3MTk5YTI5YWVlODlhYjI4NTZhODk5M2JhNGQwMDY3NDJmNmI0YmMzN2Q5MTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQxNmJhN2Q3NDg2MGY0OWYzZmY1MDFiMGY5NWZmYTRiZGY1YWRhOWZjZjMyZWFmNjM3NDZmNmE0MDE1OTBkNTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlmMWIzZjZhMDY5YmYxZGQ5OWMyMTMyNmNjZTYyOGZjOTAyNjMyZWZmZTNkYmEyMzdjYTQ3YjY2NTA3ZGU4NGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkxYzEyODk0OGM0MGU2MTk0ODY2ZjA0ZmMyNjQ5ZDgyMWFiOTNmNDZiMDI1ZWNiOTJjZDI1MTRlNzRmZWI1OWMifQ"
         }
       ]
+    },
+    {
+      "id": "claim_25cb27cc726f4659932a529b5bc34cd9",
+      "statement": "The page documents the one-shot CLI, REPL, and TUI as separate terminal surfaces, including their shared operations layer, the command router, and the completion-generation surface.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/interactive.rs#L11-L72",
+          "version": "repo-lines-v1:sha256:d9386d323a6a779b23573f806d3771615d22bc3524383bc8b41b81147415f17d:eyJzZWxlY3RlZExpbmVDb3VudCI6NjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkwYTNlOWU1YzI1M2E0OGZkZTcyYTk2YzdlYjViZjkyMGViMzE5YzY2MWRhYTUwYWVkY2FlNWM4MzgzZTY0M2EiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU3YzdkZTAzMTk5MjY1YjEyOGIzM2ZiNzRiMThlN2UzMjcyMmM1YzFjZmNiZDc1ZGEyNTdmNmUzNDBmN2JmMTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYyODU1ODM3YjY1ZDNmZjVkY2Q1ZGNmYmIzYWYyMmY4YjNhNjQ0MmVjY2JhZTlmZjJmOTYyODA1NWYwNjJlNzMifQ"
+        },
+        {
+          "resource": "repo://src/cli/mod.rs#L148-L199",
+          "version": "repo-lines-v1:sha256:4bb0faae6ac29b978a865f78e8196e8ef144c90b11ee98c4aa5121fc9806f812:eyJzZWxlY3RlZExpbmVDb3VudCI6NTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkwYTNlOWU1YzI1M2E0OGZkZTcyYTk2YzdlYjViZjkyMGViMzE5YzY2MWRhYTUwYWVkY2FlNWM4MzgzZTY0M2EiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFkOWUxMjU0NjQyNTU3NmQzZGVhZThjOWI5ZGJmMTI4ZDVkNmRkYWY1ZDdmZTg1NzkzNDkyN2RlZmZhM2I5ZGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFmNjYxYjdjYjFkMmVkMGYzMWE4ZjJkYzQ0NTU1Y2JjYjkyMzVjN2Y4MjJkNTZhMWE2MjFhZDBmZTBhOGE0ZjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNiZTA2MzVmNjlkM2JmYmQxMjRhY2Y2ZjQ4ZGRiNjVkZTZkNzRmODdhODRjNTdhMTZmNjMwYjM0NjIzN2Q4ODQifQ"
+        },
+        {
+          "resource": "repo://src/cli/mod.rs#L22-L40",
+          "version": "repo-lines-v1:sha256:135459acc5bcba56433247259069ac8ab3f22b563ab3bf13be9c6123228853a5:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFmOTAxMWMyY2JiOWQ5NDJmZTE3MjhiNDdlZmFkMTQ5MzU3YTgwM2Y1YmMzYzM4OWZiMzQ2ZjZlOTBmYjhhYzgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY3N2U3N2JlMjhiYjIyMzhmZDk1N2UwMmNkMzc5OWI5MWRlZTBiYzBlMjE2ZWY2OGExZDAyMWFlNThkYTY1ODUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU3NTU2MTZkYTE4NTBmMmVhOGNkODFkYjk3OTMyZjRhYzM5YWJmZDhhMDZkZDQwZmJhMDViODU0M2VkMWU5ZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUxODhjZDI5MDNmMzkzYWVjZGVmNTM2OTRiZTA2Y2U5NTRlNTBjZTg3MmNlYWQ2YThiMDQ5NjQ5NDdjZDJlMDIifQ"
+        },
+        {
+          "resource": "repo://src/cli/mod.rs#L43-L119",
+          "version": "repo-lines-v1:sha256:5d1be63520d8e84ede3d348559a3d0e9d33eecebd85c0de83a53f156a940fb22:eyJzZWxlY3RlZExpbmVDb3VudCI6NzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVjZjE2MzI3YjIzNzE5MjcwOGRjODVjYTc5MWQ0MGE4YmQzOTA1YzFjZDYwMjhjMzYyNjM3ZjU0YzFjMTY5NDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJlYTExMTg0NzI5NGJiNTBlOTNmYTY2NjZjNGM4YjRmZWRkYjEzNWNkOGI4Zjk1MDE4NmRiMWQzMWMzMzRkZjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQwZWNkNzBiZWIwMzYxM2MyMDczOTU1ZGE1N2E5NmNmNzY0N2E1ZjlkN2YyNWViODY5MzJhZDAwYTU3Zjk0MjUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e2c28b0e336a48aeb06312fd674cf1c1",
+      "statement": "The REPL is a convenience dispatcher that reuses CLI handlers with `json = false`, reads and saves history from `~/.hteam_history` or `.hteam_history`, continues after command errors, and exposes a local shell escape through `! <command>`.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/interactive.rs#L19-L69",
+          "version": "repo-lines-v1:sha256:92a1c42f90758748d42daa14816683d5963957a4a179d5d2f24940c15c576f96:eyJzZWxlY3RlZExpbmVDb3VudCI6NTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIzMzNlZmNmNzExY2UyMTk5MGRmNTY3ZmIyOTY3MmExMzZlZWIwMmQ0M2UzZTgwMTA0Y2M0M2UwZTIyYzZhMmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ0NDEzYmU5MDExOWE0OThhOTliM2M5NTIyN2MxNjFlM2RjMzZiNDUzZjAyMjY3OTdmNmQxMjAzMmNhYjM5NWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRkNWM0ZWUwMDJhZDdhNmYzYzA3OWE0YjZkNDlhNWM2YTBiYWFhNDE1ZDRiOTMyOWRjNzFkY2EyMmZkYWJkZjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjExZmIzNmYwNDZkNDFlYmExZjMyMzRjOTg0MmFiNGIyZDM0NzUyNmQxNjQ3OTY4YjU4NWU5MGMxMThlYWU1ZGEifQ"
+        },
+        {
+          "resource": "repo://src/cli/interactive.rs#L74-L165",
+          "version": "repo-lines-v1:sha256:c1dfc0c32d2334789fcb4b5c76038c73fd9d8afa4887107f81c2cae242f4d7ab:eyJzZWxlY3RlZExpbmVDb3VudCI6OTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZiMWVmNDM4MWZiY2YzOTU4NmE3ZjA2ZmRiMjk1OWMwYzU0ZWRjZjM5NjI3YzcyYTgxMmZmNzI1NjhmYzg4ZmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM1ZjZmNDY2ZTU5Y2ZjMzA3MDNjNDVmNzJhZjY1ZGU1NGFjMzYzZDM1NGNjMWEzMzMwMzUwYWNkNDUyNDM0YzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVjZGQ3NmViMzUyMzNiOTIzYTA0ZjVmMjIzNzMxY2ExMjQzMjU2YTA5NjliMDQzMzExYTQxMzkzNDZiZjE4YzgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d142c48879d34eb596ae1e293ab2d0f0",
+      "statement": "The TUI resolves its initial board from `--board` or configured/default board resolution, loads hidden lists, known projects, working-hours, and theme configuration before building `App`, performs an initial refresh, and only then enters raw mode and the alternate screen.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/app.rs#L117-L320",
+          "version": "repo-lines-v1:sha256:cb825b029e408ff305751f1e2a32a7c161dd54d3dc2bafecb9140d9ba54f13c6:eyJzZWxlY3RlZExpbmVDb3VudCI6MjA0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJmYzNmYzE0MGRlOWY0YzI3NzhmOTc2N2VjN2NhNGM0NmU1ODU0OWRlM2FjMzNhMGRiZDViY2Y4OTFmNjU3NGE2IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwZDQyYjYyZDM1MDdjNjM0Nzk0YjhhNDE4ODA0MjcyZTIzZGRlMmFiYTcwOGU2NTVjMDdlN2FlZjBkY2UxYTEwIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIxOWU3NjM1NWNmMTE5OTQ4MGMzZjk5ODM2YjE0ODZjODQxZDg5MWZhYWQ5MDRjNjA4ZTA5MzAyMmQzNzU3YWVlIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI5NmY2ZmFkMmM5ZWFmZmQ3Zjg0ZDUwZDEyMWFmMTU0N2NlNDlhMTczY2IzOTZkZGNhZGQwYzgzYTExNTI1ZjhjIn0"
+        },
+        {
+          "resource": "repo://src/tui/mod.rs#L101-L152",
+          "version": "repo-lines-v1:sha256:bb052c17b6f42600c4f8e4f6d13ba53ca9b32820cda91ff8ec4ae17eb70f2762:eyJzZWxlY3RlZExpbmVDb3VudCI6NTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1MjU2ZGM4Y2EwZTYzMDUwNDU3ZDY5MDY3MDBmOTY1NDA0NDY2M2U2ZTMzYzlmMmM3ZTE4MTJkZTM4ODUzMDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE1MDNmNTBkMTMxMDM0NzgzMGMyNTA1OTRjZjI0OGI3MTY3ZDA1NThlNDE0NzAzOTMxNzNiYTRhODhhMDc4NjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRmMDZiMzgwYTUzYzViYWIzMTc1ZTQ4NjZkMWY5ZThhMDRmMzY2OGQyN2JiZDNmMjY0ZGRlYzc5MGM4MGE3NDUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_5a0bfeb2f6984dea9a6887f046dd6ac5",
+      "statement": "The TUI `App` owns transient interaction state such as lists, cards, working-on records, popup/input flags, comments, reminders, project detail, selection, scroll offsets, and footer status; it intentionally fetches cards for all lists so unhiding does not require another card request.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/app.rs#L117-L320",
+          "version": "repo-lines-v1:sha256:cb825b029e408ff305751f1e2a32a7c161dd54d3dc2bafecb9140d9ba54f13c6:eyJzZWxlY3RlZExpbmVDb3VudCI6MjA0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJmYzNmYzE0MGRlOWY0YzI3NzhmOTc2N2VjN2NhNGM0NmU1ODU0OWRlM2FjMzNhMGRiZDViY2Y4OTFmNjU3NGE2IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwZDQyYjYyZDM1MDdjNjM0Nzk0YjhhNDE4ODA0MjcyZTIzZGRlMmFiYTcwOGU2NTVjMDdlN2FlZjBkY2UxYTEwIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIxOWU3NjM1NWNmMTE5OTQ4MGMzZjk5ODM2YjE0ODZjODQxZDg5MWZhYWQ5MDRjNjA4ZTA5MzAyMmQzNzU3YWVlIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI5NmY2ZmFkMmM5ZWFmZmQ3Zjg0ZDUwZDEyMWFmMTU0N2NlNDlhMTczY2IzOTZkZGNhZGQwYzgzYTExNTI1ZjhjIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_c2af3b6715ec4b9a9f60155b2033b74b",
+      "statement": "The TUI event loop expires status messages, redraws every loop, polls for key presses, and routes input by popup state before normal board navigation; refresh reloads lists, cards, user shift, and working state, and failures are surfaced in the footer rather than terminating the session when possible.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/mod.rs#L214-L434",
+          "version": "repo-lines-v1:sha256:90dd54cf29ff7300a0d20cb05b835c467f32d6a373980131c5096f63a2ed24be:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJkMTk2YzllNzQ3MDRkZWFmMTI2MzhhNDE1MWMzZjA3YTAwNjhiNDQ4MWI1NWJkODJhNzEwZjg1MzdiNTU2OGE2IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI2ZTQ1ZTI3OTBhMjg5MzBmZmIzYmYyMjFkYjZiY2ZkY2IxNGI5NWY3N2QyMTU4MGY2NzYwYzMxODkxNzk2Mzc0IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI1NTM3MjVkMGM4YWU4NWQ1YjU0MTliNzhlMjdiNWYxNWNlMjU5OWExNjNlMGY4YzE1OTAwNzNlMzY0NWFjZjdiIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJiNTg5OThjNzgxODhkYjRlOWI4YzM2OTU2N2IwYmM4YTMzZjYxNDMyZDgxZmI1YWYwNDVhNTM4OTkwZDNmZGRmIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_75f07fae65eb402e90a97b842e36825d",
+      "statement": "The TUI persists only explicit durable choices or diagnostic output: hidden lists are stored in configuration, known projects are updated MRU-style, board switching persists the active board through the shared board-switch operation, and status messages are also appended best-effort to `~/.config/hteam/tui.log` without failing the interaction if logging fails.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/events.rs#L32-L140",
+          "version": "repo-lines-v1:sha256:6c183c5f6bed439f654d35a203aeedd13a06385417a4c62add737cd5ac2c9f0c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJmYTgyOTUxOGQ0Y2ZiZThkOWM4NTBjYmM5NDczMjVjOTc1MjA3ODc2ODA3MjBkNGVjNWE0N2RhODk3NmZkNDUzIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI2NjQxYjNhODVjZTY0MDI0ZDdkODkyZjRlMjUzMDE4MDA3NTY4YTZmNGFmMDUyNzAzM2I2MmE3NDU1MDM4ODQwIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJkYmY4ZDAzNGUwYTVlMGY2YTQ4MDk0MTg0NDA2MTRkM2NlNmEzZGY2MWI3NGYwMTFjZjk0MjNkODc3ODBhNGRjIn0"
+        },
+        {
+          "resource": "repo://src/tui/mod.rs#L101-L152",
+          "version": "repo-lines-v1:sha256:bb052c17b6f42600c4f8e4f6d13ba53ca9b32820cda91ff8ec4ae17eb70f2762:eyJzZWxlY3RlZExpbmVDb3VudCI6NTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1MjU2ZGM4Y2EwZTYzMDUwNDU3ZDY5MDY3MDBmOTY1NDA0NDY2M2U2ZTMzYzlmMmM3ZTE4MTJkZTM4ODUzMDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE1MDNmNTBkMTMxMDM0NzgzMGMyNTA1OTRjZjI0OGI3MTY3ZDA1NThlNDE0NzAzOTMxNzNiYTRhODhhMDc4NjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRmMDZiMzgwYTUzYzViYWIzMTc1ZTQ4NjZkMWY5ZThhMDRmMzY2OGQyN2JiZDNmMjY0ZGRlYzc5MGM4MGE3NDUifQ"
+        },
+        {
+          "resource": "repo://src/tui/mod.rs#L72-L99",
+          "version": "repo-lines-v1:sha256:806f73f96b4c4643da6c3185813bedcb7c9437818ab51d08b172213ded2610d7:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjljZTFhYjJmOWNiZGI5MGQ1YWM5ODhhNDY3MjUwMjFkYmM1ZDllMjE4NWZiNDUyN2ZmOTYzNTIyYzk0MTIzZDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFlZmRmYjA0YTFmY2MxZTkwMmI0MDg4NTgxMzdkYjY3MzI2ZTM5NjFlNjlhNzExN2IwNWMxMmJjMmZmODQwZjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA3ZTdlNGY2YWY2ODAyYzIxZjg1ZjJlNjQ1MGRlMTc3Zjk2MTc2ZTFkZWVlODFlMmI3MGU2ZTM0MDViYWU3ZmIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_33134db65eb542b4aebf3b4633206187",
+      "statement": "The TUI board-switch popup is a state boundary: confirming another board clears cached board data, updates both the TUI state and the client board cache, persists the selection, and then refreshes so board-sensitive operations resolve against the new board.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/mod.rs#L112-L115",
+          "version": "repo-lines-v1:sha256:f815cd5ad503fb535e357e1f9f2aa4699c0c9b2ee87bb4751f44bc1fe3d02504:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmM4MzQxZTM1M2IyZWUxYTJhMDMxMmRlMDkwOGExZTU1N2Y3ODBmMmE3MWFiMDEwZGZkYWYzMTU2MGViNGRlMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTA5ZTNiNDU5MzNlMGY4Mjg3ODI1MmJkMmZhNGRjZjJjNjdiOGJmN2U2ZTcyNWY5ZjNmNTRmMjMxNDA5MzhiOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTQ4NTYxNjhlMGIyNTViOTgwOTBlMGIxMmYyNjVlZjhkNzZkNGRlNjJlZWVkZDRhOGFkYjNlYWI2MDY4Nzg3MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzlkMWU0ZjJlZDAzYzRhN2VjZTllYTZhNzE0OTkzN2Y0MzhkMGQ4MWNjNjJhNDdjOGRlYjhlOTBiYWY1ZjBmNiJ9"
+        },
+        {
+          "resource": "repo://src/tui/mod.rs#L214-L434",
+          "version": "repo-lines-v1:sha256:90dd54cf29ff7300a0d20cb05b835c467f32d6a373980131c5096f63a2ed24be:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJkMTk2YzllNzQ3MDRkZWFmMTI2MzhhNDE1MWMzZjA3YTAwNjhiNDQ4MWI1NWJkODJhNzEwZjg1MzdiNTU2OGE2IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI2ZTQ1ZTI3OTBhMjg5MzBmZmIzYmYyMjFkYjZiY2ZkY2IxNGI5NWY3N2QyMTU4MGY2NzYwYzMxODkxNzk2Mzc0IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI1NTM3MjVkMGM4YWU4NWQ1YjU0MTliNzhlMjdiNWYxNWNlMjU5OWExNjNlMGY4YzE1OTAwNzNlMzY0NWFjZjdiIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJiNTg5OThjNzgxODhkYjRlOWI4YzM2OTU2N2IwYmM4YTMzZjYxNDMyZDgxZmI1YWYwNDVhNTM4OTkwZDNmZGRmIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_9fab9f3ca84f450f8e398be415ac3129",
+      "statement": "The terminal guard is constructed only after the initial remote refresh, enables raw mode before entering the alternate screen, and on drop attempts to disable raw mode, leave the alternate screen, and restore redirected stderr while ignoring cleanup errors.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/mod.rs#L143-L151",
+          "version": "repo-lines-v1:sha256:f5b699095139f864a7af29f4c3ef4172f1c52c94f21dc820408bec30bae3f976:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGQxMGM0NGJiMWZjOWJkMTU5MzVmM2YyZTgzOTBkMTU1YTg5NGNkZmMxNjBlODMyNDFjZDQ3NzkxNWNmYjdkNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGVjZTExZmZjYThmYmVmZWI4ODBmMjYyYjYxMmVlYzRiODkxNzk0ZmQxZThhNjY2NjYwODFiNDJhZmFiYzY3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2Q4OTAxZjFmNjU4NjI4ZTIxMDFkYzYwOGE3MDU1ZThkOGEwNDM1MGIwOTBlNGUxNDc3OGE0YjhhY2VlYTQ3NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMmNiZWYzNTE0ODQ4MGU0NjEzZmE1MmIzMzI3MTFhZmM1MTc1ODdjNzQyZTkyNWFhMDQzZmI5NmM3YTI1NjY0YiJ9"
+        },
+        {
+          "resource": "repo://src/tui/mod.rs#L27-L63",
+          "version": "repo-lines-v1:sha256:4e060513ee228079ecf8719827b2754ab39424bfa5889864201a75ed14cc6a76:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIxMWY4NTdmODU3OThjYWFiOTlhNzRlODE5MmNjNDhjZDEyNzUxOTAwNWZmMjM4M2M5ZTZjMzliOTJkN2Y5YzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEwYmRjYzBmNjE1OTQzMWZlYTU2NWJiNzRiMzgzOWFlZTEyYTZkYTZhOWZlNWI3ODA5Mzk1NTUzZjlhODZkM2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIwNTNlNDZjMWI4ODI3ZTA2NmM4Y2U0NzkyMDkzMDhlMjI0MmE3NTVjZDFhODE0YzM0YzQ4ODA2MjIxYWQyZGUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d577d83ac2de4eb790b7f68002ff4cb6",
+      "statement": "`hteam completions <shell>` uses `clap_complete::generate` against the live `Cli::command()` definition and writes the generated script to stdout without opening a session or mutating configuration.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/mod.rs#L19-L20",
+          "version": "repo-lines-v1:sha256:177488dfc3c1861d0556f0d37ad5695d592819e4c0d723200dfd587b75f3da7f:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjUwMzJmOGM0N2RiMGIzMWZkOWIyMjQwYTllNDY5YmZmZjM2NjQ4ZDUyMjhlOTA2YzNmOWQxZDRhYjBlZTY2YyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiN2E3ZjI2OWEzNTUwNTYwMzg0MWI5MWI3ODE0ZjE3NjUyZDcwNGEwMGIxYjA0YTBmMjIzMTBiOTMyNzgxMjVlZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZGY1NzAzZmIwZmE3OWQ1YjI3OTczYmUyMTdlZWM5YmE4MWFlODQ1NmNjYWJiZTM3YzhmODdhMDljMjc5YWYwNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMThiNmM1MWZlMWNlNzdiOTdiNzkzYzA2MDdlYWFiOTBjM2Q0Y2ZlYzRiZDhmNmFkOGE2NTA4MTNiMmVjN2RkNyJ9"
+        },
+        {
+          "resource": "repo://src/cli/mod.rs#L193-L198",
+          "version": "repo-lines-v1:sha256:07b4e0548362ac2d17e6363f51b0de5f2ae803cb8aa345ae824fcdad2fa3917b:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODZjNWFhMDhlYTMwNmJjYmU3NGFhYmI2OWI4YTk1OWI1MDAyZGQyNTQ2NTI3YjM0OTdhYWJiNWI0ZDNmZTE3MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTZiMDQ0OTE0Njk3MjJlODM2M2E5NGU0MDQ0NTM4ZTAxM2EyYTIxN2UzNmIxZTU2OGJhNjBhY2I3YjRjOGYyZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjE2YWZkY2I3Nzc4MDVlZDhmYzVlZmFjZDc5ZDk1NGE2NmM3OGExZTk3Zjg5ZGM4ZThjZmNiNGFjYmJmY2IwZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWMyMTU4YTVmMDU2NzhkYWQ3YTAxMjU2YTk4NTE0NWNhMTQxYWUzYjVkZDlhZmQ0MmE4MzJmOTc0MmYwMTNiOSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_4e546c0820eb489dac80cecb120b2e9f",
+      "statement": "The terminal layer exposes three surfaces over the same authenticated client and operations layer: the one-shot CLI, the line-oriented REPL, and the Ratatui/Crossterm TUI; MCP is separate from terminal UI behavior.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/interactive.rs",
+          "version": "repo-file-v1:sha256:f922b67657a6de5ad8311d4c65b1df0f45f652100e4d13a48d91fc013c75e794"
+        },
+        {
+          "resource": "repo://src/tui/app.rs",
+          "version": "repo-file-v1:sha256:a08017000bde700b1e6b06c7734d83d20178aed19c42ef2fe79db0bacf52c4b0"
+        },
+        {
+          "resource": "repo://src/tui/mod.rs",
+          "version": "repo-file-v1:sha256:50ea82dc36ad64b609e48bf08e26d65b82a067ccf204fa23280e9c4d8a0f6173"
+        }
+      ]
+    },
+    {
+      "id": "claim_f41ea821619e4970b6b0466b9d588515",
+      "statement": "`cli::run` parses one selected subcommand at a time, with global `--board` and `--json` options shaping board resolution and output format for applicable commands.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/interactive.rs",
+          "version": "repo-file-v1:sha256:f922b67657a6de5ad8311d4c65b1df0f45f652100e4d13a48d91fc013c75e794"
+        }
+      ]
+    },
+    {
+      "id": "claim_0ceaca26542c4470a049ed838b9240d8",
+      "statement": "The REPL loads history from `~/.hteam_history` when possible, falls back to `.hteam_history` if no home directory is available, records every nonblank line, and saves history best-effort on exit.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/interactive.rs",
+          "version": "repo-file-v1:sha256:f922b67657a6de5ad8311d4c65b1df0f45f652100e4d13a48d91fc013c75e794"
+        }
+      ]
+    },
+    {
+      "id": "claim_7d2b75dec9774382ac76e83e31e444b3",
+      "statement": "The REPL dispatches board, list, card, move, detail, working, comment, and related commands by splitting on whitespace and calling existing CLI handlers rather than reimplementing API calls.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/interactive.rs",
+          "version": "repo-file-v1:sha256:f922b67657a6de5ad8311d4c65b1df0f45f652100e4d13a48d91fc013c75e794"
+        }
+      ]
+    },
+    {
+      "id": "claim_8bbd552c9695487a9dfdca366f24e636",
+      "statement": "`! <command>` in the REPL runs `sh -c <command>` with the user's privileges, so it is a local shell escape rather than an Hteam API command.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/interactive.rs",
+          "version": "repo-file-v1:sha256:f922b67657a6de5ad8311d4c65b1df0f45f652100e4d13a48d91fc013c75e794"
+        }
+      ]
+    },
+    {
+      "id": "claim_41a73646c0dc425aa3802b2b24698d6c",
+      "statement": "The TUI resolves its initial board before entering raw mode or the alternate screen, then performs an initial refresh so startup API feedback happens in the ordinary terminal.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/mod.rs",
+          "version": "repo-file-v1:sha256:50ea82dc36ad64b609e48bf08e26d65b82a067ccf204fa23280e9c4d8a0f6173"
+        }
+      ]
+    },
+    {
+      "id": "claim_4a0a7c3606014bfa86f40a3e908fc029",
+      "statement": "`TerminalGuard` is responsible for entering raw mode and the alternate screen, and its `Drop` implementation attempts both restoration steps while ignoring cleanup errors.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/mod.rs",
+          "version": "repo-file-v1:sha256:50ea82dc36ad64b609e48bf08e26d65b82a067ccf204fa23280e9c4d8a0f6173"
+        }
+      ]
+    },
+    {
+      "id": "claim_0b05ebfc966f475f8712a4d396ad0a3a",
+      "statement": "While the TUI session is active, stderr is redirected on Unix to the same `tui.log` file used for footer status logging, and restoration on drop is best-effort.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/app.rs",
+          "version": "repo-file-v1:sha256:a08017000bde700b1e6b06c7734d83d20178aed19c42ef2fe79db0bacf52c4b0"
+        },
+        {
+          "resource": "repo://src/tui/mod.rs",
+          "version": "repo-file-v1:sha256:50ea82dc36ad64b609e48bf08e26d65b82a067ccf204fa23280e9c4d8a0f6173"
+        }
+      ]
+    },
+    {
+      "id": "claim_d7d8f95cfd144074966049e2e42738e0",
+      "statement": "`App` owns the TUI's transient interaction state, including loaded lists and cards, per-list selection, popups, reminders, comments, project detail, scroll state, and footer status.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/app.rs",
+          "version": "repo-file-v1:sha256:a08017000bde700b1e6b06c7734d83d20178aed19c42ef2fe79db0bacf52c4b0"
+        }
+      ]
+    },
+    {
+      "id": "claim_7d87a7c558ea4aad9c7cf22e74fa7032",
+      "statement": "The TUI keeps cards cached for all lists, including hidden ones, so unhiding a list does not require another card fetch.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/app.rs",
+          "version": "repo-file-v1:sha256:a08017000bde700b1e6b06c7734d83d20178aed19c42ef2fe79db0bacf52c4b0"
+        }
+      ]
+    },
+    {
+      "id": "claim_982629d10466475682245c2fd07378fe",
+      "statement": "`App::set_status` both updates the footer message and appends the message best-effort to `~/.config/hteam/tui.log`, and `expire_status` clears that footer message after its TTL elapses.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/app.rs",
+          "version": "repo-file-v1:sha256:a08017000bde700b1e6b06c7734d83d20178aed19c42ef2fe79db0bacf52c4b0"
+        }
+      ]
+    },
+    {
+      "id": "claim_d2b1d22196f64dea9fae652793bb8104",
+      "statement": "The TUI persists only selected durable choices: hidden lists are written back to `[tui] hidden_lists`, known projects are updated when loaded, and board switching persists through the shared board-switch operation.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/app.rs",
+          "version": "repo-file-v1:sha256:a08017000bde700b1e6b06c7734d83d20178aed19c42ef2fe79db0bacf52c4b0"
+        },
+        {
+          "resource": "repo://src/tui/events.rs",
+          "version": "repo-file-v1:sha256:f08bfa775889d5c99898bec5f12faa2f225cceffbe47a7ebe88642f995276d37"
+        }
+      ]
+    },
+    {
+      "id": "claim_595270f8c8ad443cb10a97f0c3d7022b",
+      "statement": "The TUI event loop processes only key-press events, refreshes by polling jobs and then drawing, and ignores non-key terminal events.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/mod.rs",
+          "version": "repo-file-v1:sha256:50ea82dc36ad64b609e48bf08e26d65b82a067ccf204fa23280e9c4d8a0f6173"
+        }
+      ]
+    },
+    {
+      "id": "claim_a10fe581c82e485ba49af9cf8caeccb8",
+      "statement": "Open popups consume keys before normal board navigation, and the TUI exposes popup-specific key handling for help, changelog, reminders, weekly objectives, task detail, description editing, comments, and project switching.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/mod.rs",
+          "version": "repo-file-v1:sha256:50ea82dc36ad64b609e48bf08e26d65b82a067ccf204fa23280e9c4d8a0f6173"
+        }
+      ]
+    },
+    {
+      "id": "claim_9e5609418e2f471494fa47dd886f0d01",
+      "statement": "`r` triggers a board refresh that reloads user shift, lists, cards for every list, and working-on state; failures are handled nonfatally so existing in-memory data can remain visible.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/mod.rs",
+          "version": "repo-file-v1:sha256:50ea82dc36ad64b609e48bf08e26d65b82a067ccf204fa23280e9c4d8a0f6173"
+        },
+        {
+          "resource": "repo://src/tui/net.rs",
+          "version": "repo-file-v1:sha256:a17671d97a178da4672c1a1bb76be5eea649aa9f7bc7e6a2edba290b0ede6aaa"
+        }
+      ]
+    },
+    {
+      "id": "claim_716c6f8936dc45d5a220d388b339773e",
+      "statement": "Board switching in the TUI is a state boundary: confirming a different board clears cached board UI state, synchronizes both `App.board_number` and the client cache, persists the selection, and then refreshes.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/events.rs",
+          "version": "repo-file-v1:sha256:f08bfa775889d5c99898bec5f12faa2f225cceffbe47a7ebe88642f995276d37"
+        },
+        {
+          "resource": "repo://src/tui/net.rs",
+          "version": "repo-file-v1:sha256:a17671d97a178da4672c1a1bb76be5eea649aa9f7bc7e6a2edba290b0ede6aaa"
+        }
+      ]
+    },
+    {
+      "id": "claim_2152f28a52184a3fa08ce77aa2b2a753",
+      "statement": "Moving a card in the TUI is optimistic; on failure it rolls back the local list mutation and reports the error in the footer instead of terminating the session.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/events.rs",
+          "version": "repo-file-v1:sha256:f08bfa775889d5c99898bec5f12faa2f225cceffbe47a7ebe88642f995276d37"
+        },
+        {
+          "resource": "repo://src/tui/net.rs",
+          "version": "repo-file-v1:sha256:a17671d97a178da4672c1a1bb76be5eea649aa9f7bc7e6a2edba290b0ede6aaa"
+        }
+      ]
+    },
+    {
+      "id": "claim_28b33ea45ae6417f956120eed161b591",
+      "statement": "There are no TUI-specific tests in the inspected source, so important coverage currently lives in command parsing, completion snapshots, and operation/client tests; TUI changes around refresh, rollback, persistence, or board switching should be validated with focused tests or integration checks.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/interactive.rs",
+          "version": "repo-file-v1:sha256:f922b67657a6de5ad8311d4c65b1df0f45f652100e4d13a48d91fc013c75e794"
+        },
+        {
+          "resource": "repo://src/tui/mod.rs",
+          "version": "repo-file-v1:sha256:50ea82dc36ad64b609e48bf08e26d65b82a067ccf204fa23280e9c4d8a0f6173"
+        }
+      ]
+    },
+    {
+      "id": "claim_fd488292af5b4f0c925ae4e56eddf9dc",
+      "statement": "The one-shot CLI, `hteam interactive`, and `hteam tui` are three terminal-facing surfaces that share the same authenticated client and operations layer, while MCP remains a separate stdio integration surface.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/interactive.rs",
+          "version": "repo-file-v1:sha256:f922b67657a6de5ad8311d4c65b1df0f45f652100e4d13a48d91fc013c75e794"
+        },
+        {
+          "resource": "repo://src/tui/mod.rs",
+          "version": "repo-file-v1:sha256:50ea82dc36ad64b609e48bf08e26d65b82a067ccf204fa23280e9c4d8a0f6173"
+        }
+      ]
+    },
+    {
+      "id": "claim_06d9b0173a704d4092b6ab4cb8ab6d5a",
+      "statement": "The one-shot CLI uses `Cli::parse()` plus `cli::run` to dispatch exactly one subcommand asynchronously, with global `--board` and `--json` options influencing board resolution and output style for many handlers.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/interactive.rs",
+          "version": "repo-file-v1:sha256:f922b67657a6de5ad8311d4c65b1df0f45f652100e4d13a48d91fc013c75e794"
+        },
+        {
+          "resource": "repo://src/cli/mod.rs",
+          "version": "repo-file-v1:sha256:95f144b7052708a9e563b570d6124133a9436df3d95ccff57b1220fcbcf3b17a"
+        }
+      ]
+    },
+    {
+      "id": "claim_c9df3849a7a34c02a5d67e92c13da991",
+      "statement": "Board switching persists the active board into configuration and related state so the choice is available to later runtimes, rather than only affecting the current command.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/interactive.rs",
+          "version": "repo-file-v1:sha256:f922b67657a6de5ad8311d4c65b1df0f45f652100e4d13a48d91fc013c75e794"
+        },
+        {
+          "resource": "repo://src/tui/app.rs",
+          "version": "repo-file-v1:sha256:a08017000bde700b1e6b06c7734d83d20178aed19c42ef2fe79db0bacf52c4b0"
+        }
+      ]
+    },
+    {
+      "id": "claim_b6417c37c37f4770867b2f284db6373c",
+      "statement": "The REPL uses Rustyline history stored in `~/.hteam_history` when a home directory exists, falls back to `.hteam_history` otherwise, adds every nonblank submitted line to history, saves history best-effort on exit, and keeps running after command-processing errors.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/interactive.rs",
+          "version": "repo-file-v1:sha256:f922b67657a6de5ad8311d4c65b1df0f45f652100e4d13a48d91fc013c75e794"
+        }
+      ]
+    },
+    {
+      "id": "claim_e0ec3e564e814595b4db792bf109a43d",
+      "statement": "The REPL splits input on whitespace instead of implementing shell-style quoting, and its command handlers call existing CLI entrypoints with `json = false` rather than reimplementing API calls.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/interactive.rs",
+          "version": "repo-file-v1:sha256:f922b67657a6de5ad8311d4c65b1df0f45f652100e4d13a48d91fc013c75e794"
+        }
+      ]
+    },
+    {
+      "id": "claim_c76140815e524289b1fda4d8eed5295d",
+      "statement": "`! <command>` in the REPL executes `sh -c <command>` with the user’s privileges and is intentionally outside the Hteam API command surface.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/interactive.rs",
+          "version": "repo-file-v1:sha256:f922b67657a6de5ad8311d4c65b1df0f45f652100e4d13a48d91fc013c75e794"
+        }
+      ]
+    },
+    {
+      "id": "claim_5636f1960ad142c5a686146ce10fadba",
+      "statement": "`hteam tui` resolves its initial board from either `--board` or configured/default board resolution, loads hidden lists, known projects, working-hours, and the active theme from configuration, performs an initial refresh, and only then enters raw mode and the alternate screen.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/mod.rs",
+          "version": "repo-file-v1:sha256:50ea82dc36ad64b609e48bf08e26d65b82a067ccf204fa23280e9c4d8a0f6173"
+        }
+      ]
+    },
+    {
+      "id": "claim_1f778988587d4e508a10d6a23601530a",
+      "statement": "The TUI startup path replays startup changelog and update-available notices after the initial refresh, and a theme resolution warning is applied as footer status; these notices are prepared before raw mode so startup feedback appears in the ordinary terminal.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/mod.rs",
+          "version": "repo-file-v1:sha256:50ea82dc36ad64b609e48bf08e26d65b82a067ccf204fa23280e9c4d8a0f6173"
+        }
+      ]
+    },
+    {
+      "id": "claim_b43bef5fc43c43c381d85b7dd92125d4",
+      "statement": "The TUI runtime owns transient display state such as downloaded lists, cards, selection, popup state, scroll offsets, and footer status; it fetches cards for all lists, including hidden ones, and clamps selections after refresh or list visibility changes.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/app.rs",
+          "version": "repo-file-v1:sha256:a08017000bde700b1e6b06c7734d83d20178aed19c42ef2fe79db0bacf52c4b0"
+        }
+      ]
+    },
+    {
+      "id": "claim_90333ee31d17415daed2ae8c1b5fbe5c",
+      "statement": "TUI status messages are transient in the footer, expire after three seconds, and are also appended best-effort to `~/.config/hteam/tui.log` for diagnosis without failing the interaction.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/app.rs",
+          "version": "repo-file-v1:sha256:a08017000bde700b1e6b06c7734d83d20178aed19c42ef2fe79db0bacf52c4b0"
+        }
+      ]
+    },
+    {
+      "id": "claim_ad2aebcd9e0645f8915e1b055bb80e5b",
+      "statement": "The TUI event loop processes key-press events on a polling loop, gives popup handlers priority over normal navigation, supports refresh and live board switching, and treats refresh failures as recoverable status updates rather than process-terminating errors.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/app.rs",
+          "version": "repo-file-v1:sha256:a08017000bde700b1e6b06c7734d83d20178aed19c42ef2fe79db0bacf52c4b0"
+        },
+        {
+          "resource": "repo://src/tui/mod.rs",
+          "version": "repo-file-v1:sha256:50ea82dc36ad64b609e48bf08e26d65b82a067ccf204fa23280e9c4d8a0f6173"
+        }
+      ]
+    },
+    {
+      "id": "claim_a9cff0ba3ef948e2b600edef0f6c4d55",
+      "statement": "Moving a card in the TUI is optimistic: the UI updates its local collection before the operation runs, and on failure it rolls back the optimistic change and reports the error in the footer.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/app.rs",
+          "version": "repo-file-v1:sha256:a08017000bde700b1e6b06c7734d83d20178aed19c42ef2fe79db0bacf52c4b0"
+        }
+      ]
+    },
+    {
+      "id": "claim_5533150037124c30bfc263a210f359d7",
+      "statement": "Confirming a different board in the TUI clears cached lists, cards, selections, and working-on state, updates both the app and client board number, persists the chosen board, and then performs a full refresh so later operations resolve against the new board.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/app.rs",
+          "version": "repo-file-v1:sha256:a08017000bde700b1e6b06c7734d83d20178aed19c42ef2fe79db0bacf52c4b0"
+        }
+      ]
+    },
+    {
+      "id": "claim_a6b3f41834a342f7adf627ad8e293f8c",
+      "statement": "`TerminalGuard` owns the successful transition into raw mode and the alternate screen; it is constructed only after the initial refresh, restores the terminal in `Drop`, ignores cleanup failures, and restores the terminal before the caller observes the run-loop result because `drop(guard)` is called explicitly.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/mod.rs",
+          "version": "repo-file-v1:sha256:50ea82dc36ad64b609e48bf08e26d65b82a067ccf204fa23280e9c4d8a0f6173"
+        }
+      ]
+    },
+    {
+      "id": "claim_365c89c1b71f411f8eaeea5d8b9fe10d",
+      "statement": "On Unix, the TUI redirects stderr to the same `tui.log` file used for footer diagnostics while the session is active, snapshots the original stderr file descriptor, and restores stderr on shutdown if redirection succeeded.",
+      "evidence": [
+        {
+          "resource": "repo://src/tui/app.rs",
+          "version": "repo-file-v1:sha256:a08017000bde700b1e6b06c7734d83d20178aed19c42ef2fe79db0bacf52c4b0"
+        },
+        {
+          "resource": "repo://src/tui/mod.rs",
+          "version": "repo-file-v1:sha256:50ea82dc36ad64b609e48bf08e26d65b82a067ccf204fa23280e9c4d8a0f6173"
+        }
+      ]
+    },
+    {
+      "id": "claim_283c820baa8847658bb90ac7e5446731",
+      "statement": "Theme selection is resolved once during TUI startup from `[theme] active`, built-in theme names are listed in `theme` commands, and custom themes are validated early so malformed theme files fail before the TUI is opened.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/theme.rs",
+          "version": "repo-file-v1:sha256:0af9f80318bb062ccde91cb6794496c1ce4171a9f19d9af20c922e97f04458b0"
+        },
+        {
+          "resource": "repo://src/tui/mod.rs",
+          "version": "repo-file-v1:sha256:50ea82dc36ad64b609e48bf08e26d65b82a067ccf204fa23280e9c4d8a0f6173"
+        }
+      ]
+    },
+    {
+      "id": "claim_06d970be1bd24e3c962cb77c731138ec",
+      "statement": "The `theme` CLI subcommand separates inspection from persistence: `theme list` reports built-in and custom theme names, while `theme set` validates and stores the new active theme in configuration and only affects the next TUI launch.",
+      "evidence": [
+        {
+          "resource": "repo://src/cli/theme.rs",
+          "version": "repo-file-v1:sha256:0af9f80318bb062ccde91cb6794496c1ce4171a9f19d9af20c922e97f04458b0"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-08-29T04:34:19.305Z"
+    "at": "2026-10-27T23:40:03.433Z"
   }
 }

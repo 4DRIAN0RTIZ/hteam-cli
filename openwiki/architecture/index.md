@@ -1,3 +1,3 @@
 # Files
 
-- [System overview](system-overview.md) - Architecture overview for the Hteam Rust binary. Explains how CLI, REPL, TUI, and MCP entrypoints share operations, and where configuration, session, and transport state are owned.
+- [System Overview](system-overview.md) - Architecture map for the Hteam Rust binary. Explains how CLI, TUI, and MCP entrypoints share one operations core and one reqwest-based client while keeping presentation adapters thin.
