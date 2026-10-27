@@ -8,7 +8,8 @@ use tokio::task::JoinSet;
 use crate::client::HteamClient;
 use crate::models::{
     BoardEntry, Card, CardDetail, Comment, FollowUp, Label, List, ProjectMilestone, ProjectSummary,
-    ProjectTask, Reminder, UserSuggestion, WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
+    ProjectTask, ProjectTaskTreeNode, Reminder, UserSuggestion, WeeklyObjectivesSet,
+    WorkShiftRecord, WorkingOnStatus,
 };
 use crate::operations;
 
@@ -38,10 +39,11 @@ impl Jobs {
     }
 }
 
-/// Milestones + tasks snapshot returned after a successful project write.
+/// Milestones + tasks + tree snapshot returned after a successful project write.
 type ProjectDetailRefresh = (
     Result<Vec<ProjectMilestone>, String>,
     Result<Vec<ProjectTask>, String>,
+    Result<Vec<ProjectTaskTreeNode>, String>,
 );
 
 /// Result of a background network job. Applied on the TUI thread so draws and
@@ -122,6 +124,7 @@ pub enum JobOutcome {
         project_id: u64,
         milestones: Result<Vec<ProjectMilestone>, String>,
         tasks: Result<Vec<ProjectTask>, String>,
+        tree: Result<Vec<ProjectTaskTreeNode>, String>,
     },
     ProjectMilestoneSaved {
         id: u64,
@@ -315,6 +318,45 @@ fn enrich_detail_responsible(app: &App, card_id: u64, mut detail: CardDetail) ->
     detail
 }
 
+fn tree_contains_id(nodes: &[ProjectTaskTreeNode], id: u64) -> bool {
+    nodes
+        .iter()
+        .any(|n| n.id == id || tree_contains_id(&n.children, id))
+}
+
+fn apply_project_task_tree(
+    app: &mut App,
+    tree: Result<Vec<ProjectTaskTreeNode>, String>,
+    after_write: bool,
+) {
+    match tree {
+        Ok(list) => {
+            app.project_task_tree = list;
+            // Drop expand flags for nodes that disappeared after a refresh.
+            app.project_tree_expanded
+                .retain(|id| tree_contains_id(&app.project_task_tree, *id));
+            let len = super::events::project_task_tree_visible_len(
+                &app.project_task_tree,
+                &app.project_tree_expanded,
+            );
+            if app.selected_tree_idx >= len && len > 0 {
+                app.selected_tree_idx = len - 1;
+            }
+            if len == 0 {
+                app.selected_tree_idx = 0;
+            }
+        }
+        Err(e) => {
+            let msg = if after_write {
+                format!("Guardado, pero falló el refresh del árbol: {e}")
+            } else {
+                format!("Error cargando árbol de tasks: {e}")
+            };
+            app.set_status(msg);
+        }
+    }
+}
+
 fn apply_project_write_result(
     app: &mut App,
     result: Result<String, String>,
@@ -324,7 +366,7 @@ fn apply_project_write_result(
     match result {
         Ok(msg) => {
             app.set_status(msg);
-            if let Some((milestones, tasks)) = refresh {
+            if let Some((milestones, tasks, tree)) = refresh {
                 match milestones {
                     Ok(list) => {
                         app.project_milestones = list;
@@ -359,6 +401,7 @@ fn apply_project_write_result(
                         app.set_status(format!("Guardado, pero falló el refresh de tasks: {e}"));
                     }
                 }
+                apply_project_task_tree(app, tree, true);
             }
         }
         Err(e) => app.set_status(format!("Error guardando {kind}: {e}")),
@@ -665,6 +708,7 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
             project_id,
             milestones,
             tasks,
+            tree,
         } => {
             if app.requests.projects != id || app.active_project != Some(project_id) {
                 app.end_busy();
@@ -699,6 +743,7 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
                 }
                 Err(e) => app.set_status(format!("Error cargando tasks: {}", e)),
             }
+            apply_project_task_tree(app, tree, false);
         }
         JobOutcome::MilestoneFormLoaded {
             id,
