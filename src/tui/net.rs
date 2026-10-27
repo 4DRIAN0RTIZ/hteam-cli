@@ -7,8 +7,9 @@ use tokio::task::JoinSet;
 
 use crate::client::HteamClient;
 use crate::models::{
-    BoardEntry, Card, CardDetail, Comment, FollowUp, Label, List, ProjectMilestone, ProjectSummary,
-    ProjectTask, Reminder, UserSuggestion, WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
+    BoardEntry, Card, CardDetail, Comment, FollowUp, Label, List, ProjectMilestone,
+    ProjectStatusSummary, ProjectSummary, ProjectTask, ProjectTaskTreeNode, Reminder,
+    UserSuggestion, WeeklyObjectivesSet, WorkShiftRecord, WorkingOnStatus,
 };
 use crate::operations;
 
@@ -37,6 +38,13 @@ impl Jobs {
         });
     }
 }
+
+/// Milestones + tasks + tree snapshot returned after a successful project write.
+type ProjectDetailRefresh = (
+    Result<Vec<ProjectMilestone>, String>,
+    Result<Vec<ProjectTask>, String>,
+    Result<Vec<ProjectTaskTreeNode>, String>,
+);
 
 /// Result of a background network job. Applied on the TUI thread so draws and
 /// key handling never await HTTP.
@@ -111,11 +119,72 @@ pub enum JobOutcome {
         result: Result<(), String>,
         cards: Option<Result<Vec<Card>, String>>,
     },
-    ProjectLoaded {
+    ProjectMilestonesLoaded {
         id: u64,
         project_id: u64,
-        milestones: Result<Vec<ProjectMilestone>, String>,
-        tasks: Result<Vec<ProjectTask>, String>,
+        result: Result<Vec<ProjectMilestone>, String>,
+    },
+    ProjectTasksLoaded {
+        id: u64,
+        project_id: u64,
+        result: Result<Vec<ProjectTask>, String>,
+    },
+    ProjectTreeLoaded {
+        id: u64,
+        project_id: u64,
+        result: Result<Vec<ProjectTaskTreeNode>, String>,
+    },
+    ProjectStatusLoaded {
+        id: u64,
+        project_id: u64,
+        result: Result<ProjectStatusSummary, String>,
+    },
+    ProjectMembersLoaded {
+        id: u64,
+        project_id: u64,
+        result: Result<(String, Vec<super::app::ProjectMemberEntry>), String>,
+    },
+    ProjectMemberResolved {
+        id: u64,
+        project_id: u64,
+        result: Result<super::app::ProjectMemberEntry, String>,
+    },
+    ProjectMembersSaved {
+        id: u64,
+        project_id: u64,
+        result: Result<Vec<u64>, String>,
+    },
+    ProjectMilestoneSaved {
+        id: u64,
+        project_id: u64,
+        result: Result<String, String>,
+        /// Fresh milestones+tasks after a successful write; `None` on error.
+        refresh: Option<ProjectDetailRefresh>,
+    },
+    ProjectMilestoneDeleted {
+        id: u64,
+        project_id: u64,
+        result: Result<String, String>,
+        /// Fresh milestones list after a successful delete.
+        refresh: Option<Result<Vec<ProjectMilestone>, String>>,
+    },
+    MilestoneFormLoaded {
+        id: u64,
+        project_id: u64,
+        milestone_id: u64,
+        result: Result<crate::client::MilestoneFormFields, String>,
+    },
+    ProjectTaskFormLoaded {
+        id: u64,
+        project_id: u64,
+        task_id: u64,
+        result: Result<crate::client::TaskEditFormBaseline, String>,
+    },
+    ProjectTaskSaved {
+        id: u64,
+        project_id: u64,
+        result: Result<String, String>,
+        refresh: Option<ProjectDetailRefresh>,
     },
     LiveProjects {
         id: u64,
@@ -282,6 +351,107 @@ fn enrich_detail_responsible(app: &App, card_id: u64, mut detail: CardDetail) ->
         }
     }
     detail
+}
+
+fn tree_contains_id(nodes: &[ProjectTaskTreeNode], id: u64) -> bool {
+    nodes
+        .iter()
+        .any(|n| n.id == id || tree_contains_id(&n.children, id))
+}
+
+fn apply_project_task_tree(
+    app: &mut App,
+    tree: Result<Vec<ProjectTaskTreeNode>, String>,
+    after_write: bool,
+) {
+    match tree {
+        Ok(list) => {
+            app.project_task_tree = list;
+            app.project_task_tree_loaded = true;
+            // Drop expand flags for nodes that disappeared after a refresh.
+            app.project_tree_expanded
+                .retain(|id| tree_contains_id(&app.project_task_tree, *id));
+            let len = super::events::project_task_tree_visible_len(
+                &app.project_task_tree,
+                &app.project_tree_expanded,
+            );
+            if app.selected_tree_idx >= len && len > 0 {
+                app.selected_tree_idx = len - 1;
+            }
+            if len == 0 {
+                app.selected_tree_idx = 0;
+            }
+        }
+        Err(e) => {
+            let msg = if after_write {
+                format!("Guardado, pero falló el refresh del árbol: {e}")
+            } else {
+                format!("Error cargando árbol de tasks: {e}")
+            };
+            app.set_status(msg);
+        }
+    }
+}
+
+fn apply_project_write_result(
+    app: &mut App,
+    result: Result<String, String>,
+    refresh: Option<ProjectDetailRefresh>,
+    kind: &str,
+) {
+    match result {
+        Ok(msg) => {
+            app.set_status(msg);
+            app.project_status = None;
+            app.requests.bump_project_status();
+            if !super::events::project_members_dirty(app) {
+                app.project_members = None;
+                app.requests.bump_project_members();
+            }
+            if let Some((milestones, tasks, tree)) = refresh {
+                match milestones {
+                    Ok(list) => {
+                        app.project_milestones = list;
+                        app.project_milestones_loaded = true;
+                        if app.selected_milestone_idx >= app.project_milestones.len()
+                            && !app.project_milestones.is_empty()
+                        {
+                            app.selected_milestone_idx = app.project_milestones.len() - 1;
+                        }
+                        if app.project_milestones.is_empty() {
+                            app.selected_milestone_idx = 0;
+                        }
+                    }
+                    Err(e) => {
+                        app.set_status(format!(
+                            "Guardado, pero falló el refresh de milestones: {e}"
+                        ));
+                    }
+                }
+                match tasks {
+                    Ok(list) => {
+                        app.project_tasks = list;
+                        app.project_tasks_loaded = true;
+                        if app.selected_task_idx >= app.project_tasks.len()
+                            && !app.project_tasks.is_empty()
+                        {
+                            app.selected_task_idx = app.project_tasks.len() - 1;
+                        }
+                        if app.project_tasks.is_empty() {
+                            app.selected_task_idx = 0;
+                        }
+                    }
+                    Err(e) => {
+                        app.set_status(format!("Guardado, pero falló el refresh de tasks: {e}"));
+                    }
+                }
+                // Tree may be stale after task/milestone writes.
+                app.project_task_tree_loaded = false;
+                apply_project_task_tree(app, tree, true);
+            }
+        }
+        Err(e) => app.set_status(format!("Error guardando {kind}: {e}")),
+    }
 }
 
 pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
@@ -579,25 +749,281 @@ pub fn apply_outcome(app: &mut App, outcome: JobOutcome) {
                 Err(e) => app.set_status(format!("Error guardando descripción: {}", e)),
             }
         }
-        JobOutcome::ProjectLoaded {
+        JobOutcome::ProjectMilestonesLoaded {
             id,
             project_id,
-            milestones,
-            tasks,
+            result,
         } => {
-            if app.requests.projects != id || app.active_project != Some(project_id) {
+            if app.requests.project_milestones != id || app.active_project != Some(project_id) {
                 app.end_busy();
                 return;
             }
             app.end_busy();
-            match milestones {
-                Ok(list) => app.project_milestones = list,
-                Err(e) => app.set_status(format!("Error cargando milestones: {}", e)),
+            match result {
+                Ok(list) => {
+                    app.project_milestones = list;
+                    app.project_milestones_loaded = true;
+                    if app.selected_milestone_idx >= app.project_milestones.len()
+                        && !app.project_milestones.is_empty()
+                    {
+                        app.selected_milestone_idx = app.project_milestones.len() - 1;
+                    }
+                    if app.project_milestones.is_empty() {
+                        app.selected_milestone_idx = 0;
+                    }
+                }
+                Err(e) => app.set_status(format!("Error cargando milestones: {e}")),
             }
-            match tasks {
-                Ok(list) => app.project_tasks = list,
-                Err(e) => app.set_status(format!("Error cargando tasks: {}", e)),
+        }
+        JobOutcome::ProjectTasksLoaded {
+            id,
+            project_id,
+            result,
+        } => {
+            if app.requests.project_tasks != id || app.active_project != Some(project_id) {
+                app.end_busy();
+                return;
             }
+            app.end_busy();
+            match result {
+                Ok(list) => {
+                    app.project_tasks = list;
+                    app.project_tasks_loaded = true;
+                    if app.selected_task_idx >= app.project_tasks.len()
+                        && !app.project_tasks.is_empty()
+                    {
+                        app.selected_task_idx = app.project_tasks.len() - 1;
+                    }
+                    if app.project_tasks.is_empty() {
+                        app.selected_task_idx = 0;
+                    }
+                }
+                Err(e) => app.set_status(format!("Error cargando tasks: {e}")),
+            }
+        }
+        JobOutcome::ProjectTreeLoaded {
+            id,
+            project_id,
+            result,
+        } => {
+            if app.requests.project_task_tree != id || app.active_project != Some(project_id) {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            apply_project_task_tree(app, result, false);
+        }
+        JobOutcome::ProjectStatusLoaded {
+            id,
+            project_id,
+            result,
+        } => {
+            if app.requests.project_status != id || app.active_project != Some(project_id) {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            match result {
+                Ok(summary) => {
+                    super::events::cache_project_name_for_net(
+                        app,
+                        project_id,
+                        summary.project.name.clone(),
+                    );
+                    app.project_status = Some(summary);
+                }
+                Err(e) => app.set_status(format!("Error cargando resumen: {e}")),
+            }
+        }
+        JobOutcome::ProjectMembersLoaded {
+            id,
+            project_id,
+            result,
+        } => {
+            if app.requests.project_members != id || app.active_project != Some(project_id) {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            match result {
+                Ok((name, list)) => {
+                    super::events::cache_project_name_for_net(app, project_id, name);
+                    app.project_members_baseline = list.iter().map(|m| m.id).collect();
+                    app.selected_member_idx = 0;
+                    app.project_members = Some(list);
+                }
+                Err(e) => app.set_status(format!("Error cargando miembros: {e}")),
+            }
+        }
+        JobOutcome::ProjectMemberResolved {
+            id,
+            project_id,
+            result,
+        } => {
+            if app.requests.project_members != id || app.active_project != Some(project_id) {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            match result {
+                Ok(entry) => {
+                    let Some(members) = app.project_members.as_mut() else {
+                        app.set_status("Miembros no cargados; reabrí la sección.");
+                        return;
+                    };
+                    if members.iter().any(|m| m.id == entry.id) {
+                        app.set_status(format!("{} ya está en la lista", entry.label));
+                        return;
+                    }
+                    members.push(entry.clone());
+                    app.selected_member_idx = members.len() - 1;
+                    app.set_status(format!("Agregado {} (sin guardar)", entry.label));
+                }
+                Err(e) => app.set_status(format!("Error resolviendo usuario: {e}")),
+            }
+        }
+        JobOutcome::ProjectMembersSaved {
+            id,
+            project_id,
+            result,
+        } => {
+            if app.requests.project_members_write != id || app.active_project != Some(project_id) {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            match result {
+                Ok(ids) => {
+                    app.project_members_baseline = ids;
+                    app.set_status("Miembros guardados.");
+                }
+                Err(e) => app.set_status(format!("Error guardando miembros: {e}")),
+            }
+        }
+        JobOutcome::MilestoneFormLoaded {
+            id,
+            project_id,
+            milestone_id,
+            result,
+        } => {
+            if app.requests.project_milestone_form != id || app.active_project != Some(project_id) {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            match result {
+                Ok(fields) => {
+                    super::events::open_milestone_edit_form(
+                        app,
+                        milestone_id,
+                        fields.name,
+                        fields.description,
+                    );
+                }
+                Err(e) => {
+                    app.milestone_form_edit_id = None;
+                    app.milestone_name_input.clear();
+                    app.set_status(format!("Error cargando milestone: {}", e));
+                }
+            }
+        }
+        JobOutcome::ProjectMilestoneSaved {
+            id,
+            project_id,
+            result,
+            refresh,
+        } => {
+            if app.requests.project_milestone_write != id || app.active_project != Some(project_id)
+            {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            apply_project_write_result(app, result, refresh, "milestone");
+        }
+        JobOutcome::ProjectMilestoneDeleted {
+            id,
+            project_id,
+            result,
+            refresh,
+        } => {
+            if app.requests.project_milestone_delete != id || app.active_project != Some(project_id)
+            {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            app.pending_milestone_delete = None;
+            match result {
+                Ok(msg) => {
+                    app.set_status(msg);
+                    app.project_status = None;
+                    app.requests.bump_project_status();
+                    app.project_task_tree_loaded = false;
+                    app.project_tasks_loaded = false;
+                    if let Some(milestones) = refresh {
+                        match milestones {
+                            Ok(list) => {
+                                app.project_milestones = list;
+                                app.project_milestones_loaded = true;
+                                if app.selected_milestone_idx >= app.project_milestones.len()
+                                    && !app.project_milestones.is_empty()
+                                {
+                                    app.selected_milestone_idx = app.project_milestones.len() - 1;
+                                }
+                                if app.project_milestones.is_empty() {
+                                    app.selected_milestone_idx = 0;
+                                }
+                            }
+                            Err(e) => app.set_status(format!(
+                                "Eliminado, pero falló el refresh de milestones: {e}"
+                            )),
+                        }
+                    }
+                }
+                Err(e) => app.set_status(format!("Error eliminando milestone: {e}")),
+            }
+        }
+        JobOutcome::ProjectTaskFormLoaded {
+            id,
+            project_id,
+            task_id,
+            result,
+        } => {
+            if app.requests.project_task_form != id || app.active_project != Some(project_id) {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            match result {
+                Ok(fields) => {
+                    super::events::open_project_task_edit_form(
+                        app,
+                        task_id,
+                        fields.milestone,
+                        fields.dependence,
+                        fields.dependence_label,
+                        fields.start_date,
+                    );
+                }
+                Err(e) => {
+                    app.project_task_form_edit_id = None;
+                    app.set_status(format!("Error cargando task: {}", e));
+                }
+            }
+        }
+        JobOutcome::ProjectTaskSaved {
+            id,
+            project_id,
+            result,
+            refresh,
+        } => {
+            if app.requests.project_task_write != id || app.active_project != Some(project_id) {
+                app.end_busy();
+                return;
+            }
+            app.end_busy();
+            apply_project_write_result(app, result, refresh, "task");
         }
         JobOutcome::LiveProjects {
             id,

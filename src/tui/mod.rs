@@ -476,7 +476,48 @@ async fn run_loop(
         }
 
         if app.show_projects {
-            if app.composing_project {
+            if app.composing_member {
+                match key.code {
+                    KeyCode::Esc => events::cancel_composing_member(app),
+                    KeyCode::Enter => events::submit_member_input(client.clone(), app, &jobs),
+                    KeyCode::Backspace => events::member_input_backspace(app),
+                    KeyCode::Char(c) => events::member_input_push(app, c),
+                    _ => {}
+                }
+                continue;
+            }
+            if app.composing_project_task {
+                match key.code {
+                    KeyCode::Esc => events::cancel_project_task_form(app),
+                    KeyCode::Tab => events::toggle_project_task_form_field(app),
+                    KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        events::submit_project_task_form(client.clone(), app, &jobs);
+                    }
+                    KeyCode::Enter => {
+                        events::submit_project_task_form(client.clone(), app, &jobs);
+                    }
+                    KeyCode::Backspace => events::project_task_form_input_backspace(app),
+                    KeyCode::Char(c) => events::project_task_form_input_push(app, c),
+                    _ => {}
+                }
+            } else if app.composing_milestone {
+                match key.code {
+                    KeyCode::Esc => events::cancel_milestone_form(app),
+                    KeyCode::Tab => events::toggle_milestone_form_field(app),
+                    KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        events::submit_milestone_form(client.clone(), app, &jobs);
+                    }
+                    // Create: Enter from name saves. Edit: name is locked, Enter always saves.
+                    KeyCode::Enter
+                        if app.milestone_form_edit_id.is_some() || !app.milestone_desc_focused =>
+                    {
+                        events::submit_milestone_form(client.clone(), app, &jobs);
+                    }
+                    KeyCode::Backspace => events::milestone_form_input_backspace(app),
+                    KeyCode::Char(c) => events::milestone_form_input_push(app, c),
+                    _ => {}
+                }
+            } else if app.composing_project {
                 match key.code {
                     KeyCode::Esc => events::cancel_composing_project(app),
                     KeyCode::Enter => events::submit_project_input(client.clone(), app, &jobs),
@@ -509,12 +550,75 @@ async fn run_loop(
                 }
             } else {
                 match key.code {
+                    KeyCode::Esc if app.pending_milestone_delete.is_some() => {
+                        events::cancel_pending_milestone_delete(app);
+                    }
                     KeyCode::Esc | KeyCode::Char('q') => events::close_projects(app),
+                    KeyCode::Char('a')
+                        if app.projects_detail_focused
+                            && app.projects_detail_section
+                                == app::ProjectDetailSection::Members =>
+                    {
+                        events::start_composing_member(app);
+                    }
                     KeyCode::Char('a') => events::start_composing_project(app),
+                    KeyCode::Char('n') if app.projects_detail_focused => {
+                        match app.projects_detail_section {
+                            app::ProjectDetailSection::Milestones => {
+                                events::start_create_milestone(app);
+                            }
+                            app::ProjectDetailSection::Tasks => {
+                                events::start_create_project_task(app);
+                            }
+                            app::ProjectDetailSection::Tree => {
+                                app.set_status(
+                                    "El árbol es solo lectura. Creá tasks desde la sección Tasks.",
+                                );
+                            }
+                            app::ProjectDetailSection::Status => {
+                                app.set_status(
+                                    "El resumen es solo lectura. Creá desde Milestones o Tasks.",
+                                );
+                            }
+                            app::ProjectDetailSection::Members => {
+                                events::start_composing_member(app);
+                            }
+                        }
+                    }
+                    KeyCode::Char('e') if app.projects_detail_focused => {
+                        match app.projects_detail_section {
+                            app::ProjectDetailSection::Milestones => {
+                                events::start_edit_milestone(client.clone(), app, &jobs);
+                            }
+                            app::ProjectDetailSection::Tasks => {
+                                events::start_edit_project_task(client.clone(), app, &jobs);
+                            }
+                            app::ProjectDetailSection::Tree => {
+                                app.set_status(
+                                    "El árbol es solo lectura. Editá tasks desde la sección Tasks.",
+                                );
+                            }
+                            app::ProjectDetailSection::Status => {
+                                app.set_status("El resumen es solo lectura.");
+                            }
+                            app::ProjectDetailSection::Members => {
+                                app.set_status("En miembros: a agregar, d quitar, s guardar.");
+                            }
+                        }
+                    }
                     KeyCode::Char('L') => events::toggle_live_projects(client.clone(), app, &jobs),
                     KeyCode::Tab => events::toggle_projects_focus(app),
+                    KeyCode::Char('h') | KeyCode::Left if app.projects_detail_focused => {
+                        events::cycle_projects_detail_section(app, -1);
+                        events::maybe_load_lazy_project_section(client.clone(), app, &jobs);
+                    }
+                    KeyCode::Char('l') | KeyCode::Right if app.projects_detail_focused => {
+                        events::cycle_projects_detail_section(app, 1);
+                        events::maybe_load_lazy_project_section(client.clone(), app, &jobs);
+                    }
                     KeyCode::Char('j') | KeyCode::Down => {
                         if app.projects_detail_focused {
+                            events::move_detail_selection(app, 1);
                             app.projects_scroll.by(1);
                         } else {
                             events::move_project_selection(app, 1);
@@ -522,10 +626,54 @@ async fn run_loop(
                     }
                     KeyCode::Char('k') | KeyCode::Up => {
                         if app.projects_detail_focused {
+                            events::move_detail_selection(app, -1);
                             app.projects_scroll.by(-1);
                         } else {
                             events::move_project_selection(app, -1);
                         }
+                    }
+                    KeyCode::Enter | KeyCode::Char(' ')
+                        if app.projects_detail_focused
+                            && app.projects_detail_section == app::ProjectDetailSection::Tree =>
+                    {
+                        events::toggle_tree_node(app);
+                    }
+                    KeyCode::Char('d') | KeyCode::Char('x')
+                        if app.projects_detail_focused
+                            && app.projects_detail_section
+                                == app::ProjectDetailSection::Members =>
+                    {
+                        events::remove_selected_member(app);
+                    }
+                    KeyCode::Char('d')
+                        if app.projects_detail_focused
+                            && app.projects_detail_section
+                                == app::ProjectDetailSection::Milestones =>
+                    {
+                        events::request_or_confirm_milestone_delete(client.clone(), app, &jobs);
+                    }
+                    KeyCode::Enter
+                        if app.projects_detail_focused
+                            && app.projects_detail_section
+                                == app::ProjectDetailSection::Milestones
+                            && app.pending_milestone_delete.is_some() =>
+                    {
+                        events::request_or_confirm_milestone_delete(client.clone(), app, &jobs);
+                    }
+                    KeyCode::Char('s')
+                        if app.projects_detail_focused
+                            && app.projects_detail_section
+                                == app::ProjectDetailSection::Members =>
+                    {
+                        events::save_project_members(client.clone(), app, &jobs);
+                    }
+                    KeyCode::Char('s')
+                        if key.modifiers.contains(KeyModifiers::CONTROL)
+                            && app.projects_detail_focused
+                            && app.projects_detail_section
+                                == app::ProjectDetailSection::Members =>
+                    {
+                        events::save_project_members(client.clone(), app, &jobs);
                     }
                     KeyCode::Enter if !app.projects_detail_focused => {
                         events::select_known_project(client.clone(), app, &jobs);

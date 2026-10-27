@@ -30,16 +30,24 @@ fn err(e: anyhow::Error) -> McpError {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 struct BoardParam {
-    #[schemars(description = "ID del board (usa el configurado por defecto si se omite)")]
+    #[schemars(
+        description = "ID de operación o proyecto (usa el board configurado si se omite; con family=project es obligatorio)"
+    )]
     board: Option<u64>,
+    #[schemars(
+        description = "Familia del tablero: operation (default) o project. project usa /project-new/care/projects/{id}/…"
+    )]
+    family: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 struct ListCardsParams {
     #[schemars(description = "ID de la lista")]
     list_id: u64,
-    #[schemars(description = "ID del board (opcional)")]
+    #[schemars(description = "ID de operación o proyecto (opcional)")]
     board: Option<u64>,
+    #[schemars(description = "Familia del tablero: operation (default) o project")]
+    family: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -54,8 +62,19 @@ struct SearchCardsParams {
     labels: Option<Vec<String>>,
     #[schemars(description = "Limitar a una lista del board (opcional)")]
     list_id: Option<u64>,
-    #[schemars(description = "ID del board (opcional; usa el configurado si se omite)")]
+    #[schemars(
+        description = "ID de operación o proyecto (opcional; usa el configurado si se omite)"
+    )]
     board: Option<u64>,
+    #[schemars(description = "Familia del tablero: operation (default) o project")]
+    family: Option<String>,
+}
+
+fn mcp_family(family: Option<&str>) -> Result<crate::client::TaskFamily, McpError> {
+    match family {
+        None => Ok(crate::client::TaskFamily::Operation),
+        Some(s) => crate::client::TaskFamily::parse(s).map_err(err),
+    }
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -213,6 +232,73 @@ struct ProjectParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+struct ProjectMilestoneCreateParams {
+    #[schemars(description = "ID del proyecto")]
+    project_id: u64,
+    #[schemars(description = "Nombre del milestone")]
+    name: String,
+    #[schemars(description = "Descripción opcional")]
+    description: Option<String>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct ProjectMilestoneDeleteParams {
+    #[schemars(description = "ID del proyecto")]
+    project_id: u64,
+    #[schemars(description = "ID del milestone a eliminar; debe no tener tasks asociadas")]
+    milestone_id: u64,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct ProjectMilestoneEditParams {
+    #[schemars(description = "ID del proyecto")]
+    project_id: u64,
+    #[schemars(description = "ID del milestone")]
+    milestone_id: u64,
+    #[schemars(description = "Nuevo nombre (opcional)")]
+    name: Option<String>,
+    #[schemars(description = "Nueva descripción (opcional; cadena vacía la limpia)")]
+    description: Option<String>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+#[serde(untagged)]
+enum UserReference {
+    Id(u64),
+    Username(String),
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct ProjectTaskEditParams {
+    project_id: u64,
+    task_id: u64,
+    milestone: Option<u64>,
+    dependence: Option<u64>,
+    start_date: Option<String>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct ProjectMembersSetParams {
+    #[schemars(description = "ID del proyecto")]
+    project_id: u64,
+    #[schemars(description = "Lista completa de IDs de usuario que quedarán como miembros")]
+    member_ids: Vec<u64>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct ProjectTaskCreateParams {
+    project_id: u64,
+    milestone_id: u64,
+    name: String,
+    description: Option<String>,
+    estimate: Option<String>,
+    start_date: Option<String>,
+    dependence: Option<u64>,
+    responsible: Option<UserReference>,
+    priority: Option<u8>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 struct UsersSearchParams {
     #[schemars(description = "Texto a buscar en usernames")]
     query: String,
@@ -247,12 +333,15 @@ impl HteamMcpServer {
 impl HteamMcpServer {
     // ── boards / listas ──────────────────────────────────────────────────
 
-    #[tool(description = "Obtener las listas del board activo")]
+    #[tool(
+        description = "Obtener las listas del board activo (operation) o de un proyecto (family=project + board=project_id)"
+    )]
     async fn lists(
         &self,
-        Parameters(BoardParam { board }): Parameters<BoardParam>,
+        Parameters(BoardParam { board, family }): Parameters<BoardParam>,
     ) -> Result<CallToolResult, McpError> {
-        let lists = operations::cards::list_lists(&self.client, board)
+        let family = mcp_family(family.as_deref())?;
+        let lists = operations::cards::list_lists_for(&self.client, board, family)
             .await
             .map_err(err)?;
         ok(lists)
@@ -260,19 +349,24 @@ impl HteamMcpServer {
 
     // ── cards ────────────────────────────────────────────────────────────
 
-    #[tool(description = "Obtener cards de una lista específica")]
+    #[tool(description = "Obtener cards de una lista específica (soporta family=project)")]
     async fn cards_list(
         &self,
-        Parameters(ListCardsParams { list_id, board }): Parameters<ListCardsParams>,
+        Parameters(ListCardsParams {
+            list_id,
+            board,
+            family,
+        }): Parameters<ListCardsParams>,
     ) -> Result<CallToolResult, McpError> {
-        let (cards, _) = operations::cards::list_cards(&self.client, list_id, board)
+        let family = mcp_family(family.as_deref())?;
+        let (cards, _) = operations::cards::list_cards_for(&self.client, list_id, board, family)
             .await
             .map_err(err)?;
         ok(cards)
     }
 
     #[tool(
-        description = "Buscar y filtrar cards del board por texto, responsable, prioridad y/o labels. Devuelve hits con list_id, list_name y card."
+        description = "Buscar y filtrar cards del board por texto, responsable, prioridad y/o labels. Devuelve hits con list_id, list_name y card. Soporta family=project."
     )]
     async fn cards_search(
         &self,
@@ -283,49 +377,63 @@ impl HteamMcpServer {
             labels,
             list_id,
             board,
+            family,
         }): Parameters<SearchCardsParams>,
     ) -> Result<CallToolResult, McpError> {
+        let family = mcp_family(family.as_deref())?;
         let filters = operations::cards::CardSearchFilters {
             text: query,
             responsible,
             priority,
             labels: labels.unwrap_or_default(),
         };
-        let scope = operations::cards::CardSearchScope { board, list_id };
+        let scope = operations::cards::CardSearchScope {
+            board,
+            list_id,
+            family,
+        };
         let hits = operations::cards::search(&self.client, scope, filters)
             .await
             .map_err(err)?;
         ok(hits)
     }
 
-    #[tool(description = "Obtener cards abiertos (lista 1)")]
+    #[tool(
+        description = "Obtener cards abiertos (lista 1); family=project para tableros de proyecto"
+    )]
     async fn cards_open(
         &self,
-        Parameters(BoardParam { board }): Parameters<BoardParam>,
+        Parameters(BoardParam { board, family }): Parameters<BoardParam>,
     ) -> Result<CallToolResult, McpError> {
-        let cards = operations::cards::open_cards(&self.client, board)
+        let family = mcp_family(family.as_deref())?;
+        let cards = operations::cards::open_cards_for(&self.client, board, family)
             .await
             .map_err(err)?;
         ok(cards)
     }
 
-    #[tool(description = "Obtener cards cerrados (lista 2)")]
+    #[tool(
+        description = "Obtener cards cerrados (lista 2); family=project para tableros de proyecto"
+    )]
     async fn cards_closed(
         &self,
-        Parameters(BoardParam { board }): Parameters<BoardParam>,
+        Parameters(BoardParam { board, family }): Parameters<BoardParam>,
     ) -> Result<CallToolResult, McpError> {
-        let cards = operations::cards::closed_cards(&self.client, board)
+        let family = mcp_family(family.as_deref())?;
+        let cards = operations::cards::closed_cards_for(&self.client, board, family)
             .await
             .map_err(err)?;
         ok(cards)
     }
 
-    #[tool(description = "Obtener el detalle completo de un card por su ID")]
+    #[tool(
+        description = "Obtener el detalle completo de un card por su ID (infiere operation vs project desde title_url)"
+    )]
     async fn card_detail(
         &self,
         Parameters(CardParams { card_id }): Parameters<CardParams>,
     ) -> Result<CallToolResult, McpError> {
-        let detail = operations::cards::card_detail(&self.client, card_id)
+        let detail = operations::cards::card_detail_enriched(&self.client, card_id)
             .await
             .map_err(err)?;
         ok(detail)
@@ -663,6 +771,133 @@ impl HteamMcpServer {
         ok(milestones)
     }
 
+    #[tool(description = "Crear un milestone en un proyecto")]
+    async fn project_milestone_create(
+        &self,
+        Parameters(ProjectMilestoneCreateParams {
+            project_id,
+            name,
+            description,
+        }): Parameters<ProjectMilestoneCreateParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let milestone = operations::projects::create_milestone(
+            &self.client,
+            project_id,
+            &name,
+            description.as_deref(),
+        )
+        .await
+        .map_err(err)?;
+        ok(milestone)
+    }
+
+    #[tool(description = "Eliminar un milestone vacío de un proyecto")]
+    async fn project_milestone_delete(
+        &self,
+        Parameters(ProjectMilestoneDeleteParams {
+            project_id,
+            milestone_id,
+        }): Parameters<ProjectMilestoneDeleteParams>,
+    ) -> Result<CallToolResult, McpError> {
+        operations::projects::delete_milestone(&self.client, project_id, milestone_id)
+            .await
+            .map_err(err)?;
+        ok(
+            serde_json::json!({"project_id": project_id, "milestone_id": milestone_id, "deleted": true}),
+        )
+    }
+
+    #[tool(description = "Editar nombre y/o descripción de un milestone")]
+    async fn project_milestone_edit(
+        &self,
+        Parameters(ProjectMilestoneEditParams {
+            project_id,
+            milestone_id,
+            name,
+            description,
+        }): Parameters<ProjectMilestoneEditParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let milestone = operations::projects::edit_milestone(
+            &self.client,
+            project_id,
+            milestone_id,
+            name.as_deref(),
+            description.as_deref(),
+        )
+        .await
+        .map_err(err)?;
+        ok(milestone)
+    }
+
+    #[tool(description = "Crear una task dentro de un milestone de proyecto")]
+    async fn project_task_create(
+        &self,
+        Parameters(ProjectTaskCreateParams {
+            project_id,
+            milestone_id,
+            name,
+            description,
+            estimate,
+            start_date,
+            dependence,
+            responsible,
+            priority,
+        }): Parameters<ProjectTaskCreateParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let responsible = match responsible {
+            Some(UserReference::Id(id)) => Some(id),
+            Some(UserReference::Username(username)) => Some(
+                operations::projects::resolve_user_id(&self.client, &username)
+                    .await
+                    .map_err(err)?,
+            ),
+            None => None,
+        };
+        let task = operations::projects::create_task(
+            &self.client,
+            project_id,
+            milestone_id,
+            operations::projects::ProjectTaskCreate {
+                name: &name,
+                description: description.as_deref(),
+                time_estimated: estimate.as_deref(),
+                start_date: start_date.as_deref(),
+                dependence,
+                responsible,
+                priority,
+            },
+        )
+        .await
+        .map_err(err)?;
+        ok(task)
+    }
+
+    #[tool(description = "Editar milestone, dependencia o fecha de inicio de una task de proyecto")]
+    async fn project_task_edit(
+        &self,
+        Parameters(ProjectTaskEditParams {
+            project_id,
+            task_id,
+            milestone,
+            dependence,
+            start_date,
+        }): Parameters<ProjectTaskEditParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let task = operations::projects::edit_task(
+            &self.client,
+            project_id,
+            task_id,
+            operations::projects::ProjectTaskEdit {
+                milestone_id: milestone,
+                dependence,
+                start_date: start_date.as_deref(),
+            },
+        )
+        .await
+        .map_err(err)?;
+        ok(task)
+    }
+
     #[tool(description = "Ver las tasks de un proyecto con su estado y responsable")]
     async fn project_tasks(
         &self,
@@ -672,6 +907,42 @@ impl HteamMcpServer {
             .await
             .map_err(err)?;
         ok(resp)
+    }
+
+    #[tool(description = "Ver el árbol de dependencias de las tasks de un proyecto")]
+    async fn project_task_tree(
+        &self,
+        Parameters(ProjectParams { project_id }): Parameters<ProjectParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let tree = operations::projects::task_tree(&self.client, project_id)
+            .await
+            .map_err(err)?;
+        ok(tree)
+    }
+
+    #[tool(description = "Reemplazar la lista completa de miembros de un proyecto")]
+    async fn project_members_set(
+        &self,
+        Parameters(ProjectMembersSetParams {
+            project_id,
+            member_ids,
+        }): Parameters<ProjectMembersSetParams>,
+    ) -> Result<CallToolResult, McpError> {
+        operations::projects::set_members(&self.client, project_id, &member_ids)
+            .await
+            .map_err(err)?;
+        ok(serde_json::json!({"project_id": project_id, "member_ids": member_ids}))
+    }
+
+    #[tool(description = "Resumir progreso, fechas y tiempos de un proyecto")]
+    async fn project_status(
+        &self,
+        Parameters(ProjectParams { project_id }): Parameters<ProjectParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let summary = operations::projects::status(&self.client, project_id)
+            .await
+            .map_err(err)?;
+        ok(summary)
     }
 
     // ── usuarios / misc ──────────────────────────────────────────────────

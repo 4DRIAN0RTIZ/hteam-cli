@@ -8,7 +8,7 @@ use ratatui::{
 
 use crate::operations;
 
-use super::app::{App, DetailField, HelpContext};
+use super::app::{App, DetailField, HelpContext, ProjectDetailSection};
 use super::widgets::{centered_rect, draw_frame};
 
 pub fn draw(frame: &mut Frame, app: &App) {
@@ -252,11 +252,47 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
                 "Proyectos guardados",
                 "  a               agregar uno nuevo por ID",
                 "  Tab             alternar foco (guardados / detalle)",
-                "  j/k, ↓/↑        mover selección / scroll del detalle",
+                "  j/k, ↓/↑        mover selección / milestones del detalle",
                 "  Enter           elegir el resaltado",
                 "  c               copiar el link del resaltado",
                 "  L               listar proyectos en vivo",
                 "  Esc, q          cerrar",
+                "",
+                "Detalle (foco con Tab)",
+                "  h/l, ←/→        una sección a la vez (carga al entrar)",
+                "  j/k, ↓/↑        resaltar ítem / scroll del resumen",
+                "  n               crear (milestone o task; no en Árbol/Resumen)",
+                "  e               editar el resaltado (no en Árbol/Resumen)",
+                "  d               borrar milestone (dos veces confirma)",
+                "",
+                "Resumen de proyecto",
+                "  (lazy)          se carga al entrar a la sección",
+                "  j/k             scroll (vencidas / próximas)",
+                "",
+                "Miembros de proyecto",
+                "  (lazy)          se carga al entrar a la sección",
+                "  a / n           agregar username o id",
+                "  d / x           quitar el resaltado (sin guardar)",
+                "  s / Ctrl+S      guardar lista completa",
+                "",
+                "Árbol de dependencias",
+                "  (colapsado)     solo raíces al abrir",
+                "  Enter, Espacio  expandir / plegar el resaltado",
+                "  ▸ / ▾           tiene hijos (plegado / expandido)",
+                "  ·               hoja sin dependientes",
+                "",
+                "Formulario de milestone",
+                "  Tab             alternar nombre / descripción (solo al crear)",
+                "  Enter / Ctrl+S  guardar",
+                "  Esc             cancelar",
+                "  (edit)          nombre fijo — Hteam no permite renombrar",
+                "",
+                "Formulario de task",
+                "  (create)        nombre, desc, start_date, dependence",
+                "  (edit)          milestone, dependence, start_date",
+                "  Tab             siguiente campo",
+                "  Enter / Ctrl+S  guardar",
+                "  Esc             cancelar",
                 "",
                 "Escribiendo un project id nuevo",
                 "  Enter           confirmar",
@@ -1328,7 +1364,21 @@ fn wrapped_line_count(text: &str, width: u16) -> u16 {
 fn draw_projects_popup(frame: &mut Frame, app: &App) {
     let area = centered_rect(80, 75, frame.area());
 
-    let title = if app.composing_project {
+    let title = if app.composing_member {
+        " Agregar miembro ".to_string()
+    } else if app.composing_project_task {
+        if app.project_task_form_edit_id.is_some() {
+            " Editar task de proyecto ".to_string()
+        } else {
+            " Nueva task de proyecto ".to_string()
+        }
+    } else if app.composing_milestone {
+        if app.milestone_form_edit_id.is_some() {
+            " Editar milestone ".to_string()
+        } else {
+            " Nuevo milestone ".to_string()
+        }
+    } else if app.composing_project {
         " Nuevo project id ".to_string()
     } else if app.show_live_projects {
         format!(
@@ -1347,8 +1397,26 @@ fn draw_projects_popup(frame: &mut Frame, app: &App) {
         app.theme.foreground,
     );
 
-    let rows = if app.composing_project {
-        Layout::vertical([Constraint::Min(0), Constraint::Length(3)]).split(inner)
+    let form_rows = if app.composing_project_task {
+        if app.project_task_form_edit_id.is_some() {
+            3
+        } else {
+            4
+        }
+    } else if app.composing_milestone {
+        2
+    } else if app.composing_project || app.composing_member {
+        1
+    } else {
+        0
+    };
+
+    let rows = if form_rows > 0 {
+        let mut constraints = vec![Constraint::Min(0)];
+        for _ in 0..form_rows {
+            constraints.push(Constraint::Length(3));
+        }
+        Layout::vertical(constraints).split(inner)
     } else {
         Layout::vertical([Constraint::Min(0)]).split(inner)
     };
@@ -1361,7 +1429,13 @@ fn draw_projects_popup(frame: &mut Frame, app: &App) {
         draw_project_detail(frame, app, cols[1]);
     }
 
-    if app.composing_project {
+    if app.composing_project_task {
+        draw_project_task_form(frame, app, &rows[1..]);
+    } else if app.composing_milestone {
+        draw_milestone_form(frame, app, rows[1], rows[2]);
+    } else if app.composing_member {
+        draw_member_input(frame, app, rows[1]);
+    } else if app.composing_project {
         draw_project_input(frame, app, rows[1]);
     }
 }
@@ -1384,18 +1458,18 @@ fn draw_known_projects_list(frame: &mut Frame, app: &App, area: Rect) {
         app.known_projects
             .iter()
             .enumerate()
-            .map(|(i, id)| {
+            .map(|(i, p)| {
                 let marker = if i == app.selected_project_idx {
                     "▶"
                 } else {
                     " "
                 };
-                let active = if Some(*id) == app.active_project {
+                let active = if Some(p.id) == app.active_project {
                     " •"
                 } else {
                     ""
                 };
-                format!("{} #{}{}", marker, id, active)
+                format!("{marker} #{}{}", p.id, active)
             })
             .collect::<Vec<_>>()
             .join("\n")
@@ -1440,7 +1514,13 @@ fn draw_live_projects_list(frame: &mut Frame, app: &App, area: Rect) {
 
 fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
     let block = Block::default()
-        .title(" Milestones / Tasks ")
+        .title(match app.projects_detail_section {
+            ProjectDetailSection::Milestones => " Milestones ",
+            ProjectDetailSection::Tasks => " Tasks ",
+            ProjectDetailSection::Tree => " Árbol ",
+            ProjectDetailSection::Status => " Resumen ",
+            ProjectDetailSection::Members => " Miembros ",
+        })
         .borders(Borders::ALL)
         .border_style(if app.projects_detail_focused {
             Style::default().fg(app.theme.border_active)
@@ -1459,33 +1539,468 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
         return;
     };
 
-    let mut lines = vec![format!("Proyecto #{}", id), String::new()];
-
-    if app.project_milestones.is_empty() {
-        lines.push("Sin milestones.".to_string());
+    let composing = app.composing_milestone || app.composing_project_task || app.composing_member;
+    // Sticky footer so create/edit shortcuts stay visible while the body scrolls.
+    let body_area = if app.projects_detail_focused && !composing {
+        let rows = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(inner);
+        let section = match app.projects_detail_section {
+            ProjectDetailSection::Milestones => "milestones",
+            ProjectDetailSection::Tasks => "tasks",
+            ProjectDetailSection::Tree => "árbol",
+            ProjectDetailSection::Status => "resumen",
+            ProjectDetailSection::Members => "miembros",
+        };
+        let footer = if app.projects_detail_section == ProjectDetailSection::Tree {
+            Line::from(vec![
+                Span::styled(" h/l ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled(format!("{section}  "), Style::default().fg(app.theme.muted)),
+                Span::styled("j/k ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("sel  ", Style::default().fg(app.theme.muted)),
+                Span::styled("Enter ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("expande  ", Style::default().fg(app.theme.muted)),
+                Span::styled("? ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("ayuda", Style::default().fg(app.theme.muted)),
+            ])
+        } else if app.projects_detail_section == ProjectDetailSection::Status {
+            Line::from(vec![
+                Span::styled(" h/l ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled(format!("{section}  "), Style::default().fg(app.theme.muted)),
+                Span::styled("j/k ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("scroll  ", Style::default().fg(app.theme.muted)),
+                Span::styled("(solo lectura)  ", Style::default().fg(app.theme.muted)),
+                Span::styled("? ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("ayuda", Style::default().fg(app.theme.muted)),
+            ])
+        } else if app.projects_detail_section == ProjectDetailSection::Members {
+            let dirty = if super::events::project_members_dirty(app) {
+                "* "
+            } else {
+                ""
+            };
+            Line::from(vec![
+                Span::styled(" h/l ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!("{section}{dirty}  "),
+                    Style::default().fg(app.theme.muted),
+                ),
+                Span::styled("a ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("add  ", Style::default().fg(app.theme.muted)),
+                Span::styled("d ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("del  ", Style::default().fg(app.theme.muted)),
+                Span::styled("s ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("guardar  ", Style::default().fg(app.theme.muted)),
+                Span::styled("? ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("ayuda", Style::default().fg(app.theme.muted)),
+            ])
+        } else if app.projects_detail_section == ProjectDetailSection::Milestones {
+            Line::from(vec![
+                Span::styled(" h/l ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled(format!("{section}  "), Style::default().fg(app.theme.muted)),
+                Span::styled("n ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("crear  ", Style::default().fg(app.theme.muted)),
+                Span::styled("e ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("editar  ", Style::default().fg(app.theme.muted)),
+                Span::styled("d ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("borrar  ", Style::default().fg(app.theme.muted)),
+                Span::styled("j/k ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("sel  ", Style::default().fg(app.theme.muted)),
+                Span::styled("? ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("ayuda", Style::default().fg(app.theme.muted)),
+            ])
+        } else {
+            Line::from(vec![
+                Span::styled(" h/l ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled(format!("{section}  "), Style::default().fg(app.theme.muted)),
+                Span::styled("n ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("crear  ", Style::default().fg(app.theme.muted)),
+                Span::styled("e ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("editar  ", Style::default().fg(app.theme.muted)),
+                Span::styled("j/k ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("sel  ", Style::default().fg(app.theme.muted)),
+                Span::styled("? ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("ayuda", Style::default().fg(app.theme.muted)),
+            ])
+        };
+        frame.render_widget(Paragraph::new(footer), rows[1]);
+        rows[0]
+    } else if !app.projects_detail_focused && !composing {
+        let rows = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(inner);
+        let footer = Line::from(vec![
+            Span::styled(" Tab ", Style::default().add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "foco aquí · h/l cambia de sección",
+                Style::default().fg(app.theme.muted),
+            ),
+        ]);
+        frame.render_widget(Paragraph::new(footer), rows[1]);
+        rows[0]
     } else {
-        lines.push("Milestones:".to_string());
-        for m in &app.project_milestones {
-            lines.push(format!("  {} {}", progress_bar(m.progress), m.name));
+        inner
+    };
+
+    let header = match app.active_project_name.as_deref() {
+        Some(name) if !name.is_empty() => format!("{name} (#{id})"),
+        _ => format!("Proyecto #{id}"),
+    };
+    let mut lines = vec![header, String::new()];
+    match app.projects_detail_section {
+        ProjectDetailSection::Milestones => {
+            lines.extend(project_milestones_lines(app));
+        }
+        ProjectDetailSection::Tasks => {
+            lines.extend(project_tasks_lines(app));
+        }
+        ProjectDetailSection::Tree => {
+            lines.extend(project_tree_lines(app));
+        }
+        ProjectDetailSection::Status => {
+            lines.extend(project_status_lines(app));
+        }
+        ProjectDetailSection::Members => {
+            lines.extend(project_members_lines(app));
         }
     }
 
-    lines.push(String::new());
-
-    if app.project_tasks.is_empty() {
-        lines.push("Sin tasks.".to_string());
-    } else {
-        lines.push("Tasks:".to_string());
-        for t in &app.project_tasks {
-            let mark = if t.closed { "✅" } else { "🔲" };
-            lines.push(format!("  {} #{} {}", mark, t.number, t.name));
-        }
-    }
-
+    // trim:false keeps leading spaces and box-drawing columns of the tree.
     let p = Paragraph::new(lines.join("\n"))
-        .wrap(Wrap { trim: true })
+        .wrap(Wrap { trim: false })
         .scroll((app.projects_scroll.offset(), 0));
-    frame.render_widget(p, inner);
+    frame.render_widget(p, body_area);
+}
+
+fn project_milestones_lines(app: &App) -> Vec<String> {
+    let mut lines = Vec::new();
+    if !app.project_milestones_loaded {
+        lines.push("Milestones:".to_string());
+        lines.push("Cargando…".to_string());
+        return lines;
+    }
+    if app.project_milestones.is_empty() {
+        lines.push("Milestones: (vacío)".to_string());
+        lines.push("  n crear milestone".to_string());
+        return lines;
+    }
+    lines.push(format!("Milestones: ({})", app.project_milestones.len()));
+    for (i, m) in app.project_milestones.iter().enumerate() {
+        let marker = if i == app.selected_milestone_idx {
+            "▶"
+        } else {
+            " "
+        };
+        let id_suffix = m.id().map(|id| format!(" #{id}")).unwrap_or_default();
+        lines.push(format!(
+            "{} {} {}{}",
+            marker,
+            progress_bar(m.progress),
+            m.name,
+            id_suffix
+        ));
+    }
+    lines
+}
+
+fn project_tasks_lines(app: &App) -> Vec<String> {
+    let mut lines = Vec::new();
+    if !app.project_tasks_loaded {
+        lines.push("Tasks:".to_string());
+        lines.push("Cargando…".to_string());
+        return lines;
+    }
+    if app.project_tasks.is_empty() {
+        lines.push("Tasks: (vacío)".to_string());
+        lines.push("  n crear task (usa milestone resaltado en sección Milestones)".to_string());
+        return lines;
+    }
+    lines.push(format!("Tasks: ({})", app.project_tasks.len()));
+    for (i, t) in app.project_tasks.iter().enumerate() {
+        let marker = if i == app.selected_task_idx {
+            "▶"
+        } else {
+            " "
+        };
+        let mark = if t.closed { "✅" } else { "🔲" };
+        let ms = t
+            .milestone
+            .as_ref()
+            .map(|m| format!(" · m{}", m.id))
+            .unwrap_or_default();
+        lines.push(format!(
+            "{} {} #{} {}{}",
+            marker, mark, t.number, t.name, ms
+        ));
+    }
+    lines
+}
+
+fn project_tree_lines(app: &App) -> Vec<String> {
+    let mut lines = Vec::new();
+    if !app.project_task_tree_loaded {
+        lines.push("Árbol:".to_string());
+        lines.push("Cargando…".to_string());
+        return lines;
+    }
+    let tree_nodes = super::events::project_task_tree_len(&app.project_task_tree);
+    if app.project_task_tree.is_empty() {
+        lines.push("Árbol: (vacío)".to_string());
+        return lines;
+    }
+    let visible = super::events::project_task_tree_visible_len(
+        &app.project_task_tree,
+        &app.project_tree_expanded,
+    );
+    lines.push(format!("Árbol: ({visible}/{tree_nodes})  Enter expande"));
+    let mut row = 0usize;
+    append_task_tree_roots(
+        &mut lines,
+        &app.project_task_tree,
+        &app.project_tree_expanded,
+        true,
+        app.selected_tree_idx,
+        &mut row,
+    );
+    lines
+}
+
+fn project_members_lines(app: &App) -> Vec<String> {
+    let mut lines = Vec::new();
+    let dirty = if super::events::project_members_dirty(app) {
+        " *"
+    } else {
+        ""
+    };
+    let Some(members) = app.project_members.as_ref() else {
+        lines.push(format!("Miembros: ●{dirty}"));
+        lines.push("Cargando…".to_string());
+        return lines;
+    };
+    lines.push(format!("Miembros: ●{dirty} ({})", members.len()));
+    if members.is_empty() {
+        lines.push("  (vacío — a agrega, s guarda)".to_string());
+    } else {
+        for (i, m) in members.iter().enumerate() {
+            let marker = if i == app.selected_member_idx {
+                "▶"
+            } else {
+                " "
+            };
+            lines.push(format!("{marker} {}", m.label));
+        }
+    }
+    lines.push(String::new());
+    lines.push("a agregar · d quitar · s guardar lista".to_string());
+    lines
+}
+
+fn draw_member_input(frame: &mut Frame, app: &App, area: Rect) {
+    let block = Block::default()
+        .title(" Username o id ")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(app.theme.border_active));
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+    frame.render_widget(Paragraph::new(app.member_input.as_str()), inner);
+}
+
+fn project_status_lines(app: &App) -> Vec<String> {
+    let mut lines = Vec::new();
+    let Some(summary) = app.project_status.as_ref() else {
+        lines.push("Resumen: ●".to_string());
+        lines.push("Cargando…".to_string());
+        return lines;
+    };
+    let (estimated, spent) = crate::operations::projects::status_hours(&summary.times);
+    let progress = summary.project.progress;
+    lines.push(format!("Resumen: ●  {}", summary.project.name));
+    lines.push(format!("Progreso: {}", progress_bar(progress)));
+    lines.push(format!(
+        "Tasks: {}/{} cerradas",
+        summary.closed_tasks, summary.total_tasks
+    ));
+    lines.push(format!("Milestones: {}", summary.milestones.len()));
+    lines.push(format!(
+        "Tiempo: {:.1}h estimadas / {:.1}h reales",
+        estimated, spent
+    ));
+    lines.push(String::new());
+    lines.push(format!("Vencidas ({})", summary.overdue_tasks.len()));
+    if summary.overdue_tasks.is_empty() {
+        lines.push("  (ninguna)".to_string());
+    } else {
+        for t in &summary.overdue_tasks {
+            lines.push(format!(
+                "  #{} {} · {}",
+                t.number,
+                t.name,
+                truncate_date(&t.due_date)
+            ));
+        }
+    }
+    lines.push(String::new());
+    lines.push(format!(
+        "Próximas 7 días ({})",
+        summary.upcoming_tasks.len()
+    ));
+    if summary.upcoming_tasks.is_empty() {
+        lines.push("  (ninguna)".to_string());
+    } else {
+        for t in &summary.upcoming_tasks {
+            lines.push(format!(
+                "  #{} {} · {}",
+                t.number,
+                t.name,
+                truncate_date(&t.due_date)
+            ));
+        }
+    }
+    lines
+}
+
+fn truncate_date(raw: &str) -> &str {
+    raw.get(..10.min(raw.len())).unwrap_or(raw)
+}
+
+fn tree_expand_glyph(has_children: bool, expanded: bool) -> &'static str {
+    if !has_children {
+        "· "
+    } else if expanded {
+        "▾ "
+    } else {
+        "▸ "
+    }
+}
+
+fn append_task_tree_roots(
+    lines: &mut Vec<String>,
+    nodes: &[crate::models::ProjectTaskTreeNode],
+    expanded: &std::collections::HashSet<u64>,
+    active: bool,
+    selected_idx: usize,
+    row: &mut usize,
+) {
+    for node in nodes {
+        let marker = if active && *row == selected_idx {
+            "▶"
+        } else {
+            " "
+        };
+        let has_children = !node.children.is_empty();
+        let is_open = has_children && expanded.contains(&node.id);
+        let glyph = tree_expand_glyph(has_children, is_open);
+        lines.push(format!("{marker} {glyph}#{} {}", node.id, node.name));
+        *row += 1;
+        if is_open {
+            append_task_tree_children(
+                lines,
+                &node.children,
+                "",
+                expanded,
+                active,
+                selected_idx,
+                row,
+            );
+        }
+    }
+}
+
+/// Box-drawing children: `├─` / `└─` with `│` column continuations.
+/// Only walks into nodes present in `expanded`.
+fn append_task_tree_children(
+    lines: &mut Vec<String>,
+    nodes: &[crate::models::ProjectTaskTreeNode],
+    prefix: &str,
+    expanded: &std::collections::HashSet<u64>,
+    active: bool,
+    selected_idx: usize,
+    row: &mut usize,
+) {
+    let last = nodes.len().saturating_sub(1);
+    for (i, node) in nodes.iter().enumerate() {
+        let is_last = i == last;
+        let marker = if active && *row == selected_idx {
+            "▶"
+        } else {
+            " "
+        };
+        let has_children = !node.children.is_empty();
+        let is_open = has_children && expanded.contains(&node.id);
+        let elbow = if is_last { "└─ " } else { "├─ " };
+        let glyph = tree_expand_glyph(has_children, is_open);
+        lines.push(format!(
+            "{marker} {prefix}{elbow}{glyph}#{} {}",
+            node.id, node.name
+        ));
+        *row += 1;
+        if is_open {
+            let next_prefix = format!("{prefix}{}", if is_last { "   " } else { "│  " });
+            append_task_tree_children(
+                lines,
+                &node.children,
+                &next_prefix,
+                expanded,
+                active,
+                selected_idx,
+                row,
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod task_tree_draw_tests {
+    use super::*;
+    use crate::models::ProjectTaskTreeNode;
+    use std::collections::HashSet;
+
+    fn sample_tree() -> Vec<ProjectTaskTreeNode> {
+        vec![ProjectTaskTreeNode {
+            id: 1,
+            name: "Root".into(),
+            children: vec![
+                ProjectTaskTreeNode {
+                    id: 2,
+                    name: "Child A".into(),
+                    children: vec![ProjectTaskTreeNode {
+                        id: 3,
+                        name: "Grand".into(),
+                        children: Vec::new(),
+                    }],
+                },
+                ProjectTaskTreeNode {
+                    id: 4,
+                    name: "Child B".into(),
+                    children: Vec::new(),
+                },
+            ],
+        }]
+    }
+
+    #[test]
+    fn collapsed_roots_hide_children() {
+        let tree = sample_tree();
+        let expanded = HashSet::new();
+        let mut lines = Vec::new();
+        let mut row = 0;
+        append_task_tree_roots(&mut lines, &tree, &expanded, true, 0, &mut row);
+        assert_eq!(lines, vec!["▶ ▸ #1 Root".to_string()]);
+    }
+
+    #[test]
+    fn box_drawing_shows_nested_structure_when_expanded() {
+        let tree = sample_tree();
+        let expanded: HashSet<u64> = [1, 2].into_iter().collect();
+        let mut lines = Vec::new();
+        let mut row = 0;
+        append_task_tree_roots(&mut lines, &tree, &expanded, true, 2, &mut row);
+        assert_eq!(
+            lines,
+            vec![
+                "  ▾ #1 Root".to_string(),
+                "  ├─ ▾ #2 Child A".to_string(),
+                "▶ │  └─ · #3 Grand".to_string(),
+                "  └─ · #4 Child B".to_string(),
+            ]
+        );
+    }
 }
 
 fn draw_project_input(frame: &mut Frame, app: &App, area: Rect) {
@@ -1497,11 +2012,152 @@ fn draw_project_input(frame: &mut Frame, app: &App, area: Rect) {
     frame.render_widget(Paragraph::new(app.project_input.as_str()), inner);
 }
 
-/// Milestone progress comes as 0.0–1.0 from the API — a simple 10-segment bar.
+fn draw_project_task_form(frame: &mut Frame, app: &App, areas: &[Rect]) {
+    let edit = app.project_task_form_edit_id.is_some();
+    let dep_title = if edit {
+        match (
+            app.project_task_dependence_input.trim().is_empty(),
+            app.project_task_dependence_label.as_deref(),
+        ) {
+            (true, _) => " Dependence (sin dependencia · id para setear) ".to_string(),
+            (false, Some(label)) => format!(" Dependence id · {label} "),
+            (false, None) => " Dependence id (vacío = quitar) ".to_string(),
+        }
+    } else {
+        " Dependence id (opcional) ".to_string()
+    };
+    let fields: Vec<(&str, &str)> = if edit {
+        vec![
+            (" Milestone id ", app.project_task_milestone_input.as_str()),
+            (
+                dep_title.as_str(),
+                app.project_task_dependence_input.as_str(),
+            ),
+            (
+                " Start date YYYY-MM-DD ",
+                app.project_task_start_date_input.as_str(),
+            ),
+        ]
+    } else {
+        vec![
+            (" Nombre ", app.project_task_name_input.as_str()),
+            (
+                " Descripción (opcional) ",
+                app.project_task_desc_input.as_str(),
+            ),
+            (
+                " Start date YYYY-MM-DD (opcional) ",
+                app.project_task_start_date_input.as_str(),
+            ),
+            (
+                dep_title.as_str(),
+                app.project_task_dependence_input.as_str(),
+            ),
+        ]
+    };
+    for (i, area) in areas.iter().enumerate() {
+        let Some((title_base, value)) = fields.get(i).copied() else {
+            break;
+        };
+        let focused = app.project_task_form_field == i;
+        let title = if focused {
+            format!("{title_base}● ")
+        } else {
+            title_base.to_string()
+        };
+        let block = Block::default()
+            .title(title)
+            .borders(Borders::ALL)
+            .border_style(if focused {
+                Style::default().fg(app.theme.border_active)
+            } else {
+                Style::default()
+            });
+        let inner = block.inner(*area);
+        frame.render_widget(block, *area);
+        frame.render_widget(Paragraph::new(value), inner);
+    }
+}
+
+fn draw_milestone_form(frame: &mut Frame, app: &App, name_area: Rect, desc_area: Rect) {
+    let name_locked = app.milestone_form_edit_id.is_some();
+    let name_title = if name_locked {
+        " Nombre (fijo — Hteam no renombra) "
+    } else if app.milestone_desc_focused {
+        " Nombre "
+    } else {
+        " Nombre ● "
+    };
+    let name_block = Block::default()
+        .title(name_title)
+        .borders(Borders::ALL)
+        .border_style(if name_locked {
+            Style::default().fg(app.theme.muted)
+        } else if !app.milestone_desc_focused {
+            Style::default().fg(app.theme.border_active)
+        } else {
+            Style::default()
+        });
+    let name_inner = name_block.inner(name_area);
+    frame.render_widget(name_block, name_area);
+    let name_style = if name_locked {
+        Style::default().fg(app.theme.muted)
+    } else {
+        Style::default()
+    };
+    frame.render_widget(
+        Paragraph::new(app.milestone_name_input.as_str()).style(name_style),
+        name_inner,
+    );
+
+    let desc_hint = if name_locked {
+        " Descripción "
+    } else {
+        " Descripción (opcional) "
+    };
+    let desc_title = if app.milestone_desc_focused || name_locked {
+        format!("{desc_hint}● ")
+    } else {
+        desc_hint.to_string()
+    };
+    let desc_block = Block::default()
+        .title(desc_title)
+        .borders(Borders::ALL)
+        .border_style(if app.milestone_desc_focused || name_locked {
+            Style::default().fg(app.theme.border_active)
+        } else {
+            Style::default()
+        });
+    let desc_inner = desc_block.inner(desc_area);
+    frame.render_widget(desc_block, desc_area);
+    frame.render_widget(
+        Paragraph::new(app.milestone_desc_input.as_str()),
+        desc_inner,
+    );
+}
+
+/// Progress bar for milestones (0.0–1.0) and project `clc_project_progress` (0–100).
 fn progress_bar(v: f64) -> String {
-    let pct = (v.clamp(0.0, 1.0) * 100.0).round() as usize;
-    let filled = pct / 10;
+    let pct = if v <= 1.0 {
+        (v.clamp(0.0, 1.0) * 100.0).round() as usize
+    } else {
+        v.clamp(0.0, 100.0).round() as usize
+    };
+    let filled = (pct / 10).min(10);
     format!("{}{} {}%", "█".repeat(filled), "░".repeat(10 - filled), pct)
+}
+
+#[cfg(test)]
+mod progress_bar_tests {
+    use super::progress_bar;
+
+    #[test]
+    fn accepts_fraction_and_percentage_scales() {
+        assert!(progress_bar(0.08).contains("8%"));
+        assert!(progress_bar(8.3).contains("8%"));
+        assert!(progress_bar(100.0).contains("100%"));
+        assert!(progress_bar(1.0).contains("100%")); // fraction full
+    }
 }
 
 fn draw_board_switch_popup(frame: &mut Frame, app: &App) {

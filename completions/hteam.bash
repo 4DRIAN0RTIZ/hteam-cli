@@ -418,8 +418,32 @@ _hteam() {
             hteam__subcmd__help__subcmd__project,list)
                 cmd="hteam__subcmd__help__subcmd__project__subcmd__list"
                 ;;
+            hteam__subcmd__help__subcmd__project,members-set)
+                cmd="hteam__subcmd__help__subcmd__project__subcmd__members__subcmd__set"
+                ;;
+            hteam__subcmd__help__subcmd__project,milestone-create)
+                cmd="hteam__subcmd__help__subcmd__project__subcmd__milestone__subcmd__create"
+                ;;
+            hteam__subcmd__help__subcmd__project,milestone-delete)
+                cmd="hteam__subcmd__help__subcmd__project__subcmd__milestone__subcmd__delete"
+                ;;
+            hteam__subcmd__help__subcmd__project,milestone-edit)
+                cmd="hteam__subcmd__help__subcmd__project__subcmd__milestone__subcmd__edit"
+                ;;
             hteam__subcmd__help__subcmd__project,milestones)
                 cmd="hteam__subcmd__help__subcmd__project__subcmd__milestones"
+                ;;
+            hteam__subcmd__help__subcmd__project,status)
+                cmd="hteam__subcmd__help__subcmd__project__subcmd__status"
+                ;;
+            hteam__subcmd__help__subcmd__project,task-create)
+                cmd="hteam__subcmd__help__subcmd__project__subcmd__task__subcmd__create"
+                ;;
+            hteam__subcmd__help__subcmd__project,task-edit)
+                cmd="hteam__subcmd__help__subcmd__project__subcmd__task__subcmd__edit"
+                ;;
+            hteam__subcmd__help__subcmd__project,task-tree)
+                cmd="hteam__subcmd__help__subcmd__project__subcmd__task__subcmd__tree"
                 ;;
             hteam__subcmd__help__subcmd__project,tasks)
                 cmd="hteam__subcmd__help__subcmd__project__subcmd__tasks"
@@ -463,8 +487,32 @@ _hteam() {
             hteam__subcmd__project,list)
                 cmd="hteam__subcmd__project__subcmd__list"
                 ;;
+            hteam__subcmd__project,members-set)
+                cmd="hteam__subcmd__project__subcmd__members__subcmd__set"
+                ;;
+            hteam__subcmd__project,milestone-create)
+                cmd="hteam__subcmd__project__subcmd__milestone__subcmd__create"
+                ;;
+            hteam__subcmd__project,milestone-delete)
+                cmd="hteam__subcmd__project__subcmd__milestone__subcmd__delete"
+                ;;
+            hteam__subcmd__project,milestone-edit)
+                cmd="hteam__subcmd__project__subcmd__milestone__subcmd__edit"
+                ;;
             hteam__subcmd__project,milestones)
                 cmd="hteam__subcmd__project__subcmd__milestones"
+                ;;
+            hteam__subcmd__project,status)
+                cmd="hteam__subcmd__project__subcmd__status"
+                ;;
+            hteam__subcmd__project,task-create)
+                cmd="hteam__subcmd__project__subcmd__task__subcmd__create"
+                ;;
+            hteam__subcmd__project,task-edit)
+                cmd="hteam__subcmd__project__subcmd__task__subcmd__edit"
+                ;;
+            hteam__subcmd__project,task-tree)
+                cmd="hteam__subcmd__project__subcmd__task__subcmd__tree"
                 ;;
             hteam__subcmd__project,tasks)
                 cmd="hteam__subcmd__project__subcmd__tasks"
@@ -478,8 +526,32 @@ _hteam() {
             hteam__subcmd__project__subcmd__help,list)
                 cmd="hteam__subcmd__project__subcmd__help__subcmd__list"
                 ;;
+            hteam__subcmd__project__subcmd__help,members-set)
+                cmd="hteam__subcmd__project__subcmd__help__subcmd__members__subcmd__set"
+                ;;
+            hteam__subcmd__project__subcmd__help,milestone-create)
+                cmd="hteam__subcmd__project__subcmd__help__subcmd__milestone__subcmd__create"
+                ;;
+            hteam__subcmd__project__subcmd__help,milestone-delete)
+                cmd="hteam__subcmd__project__subcmd__help__subcmd__milestone__subcmd__delete"
+                ;;
+            hteam__subcmd__project__subcmd__help,milestone-edit)
+                cmd="hteam__subcmd__project__subcmd__help__subcmd__milestone__subcmd__edit"
+                ;;
             hteam__subcmd__project__subcmd__help,milestones)
                 cmd="hteam__subcmd__project__subcmd__help__subcmd__milestones"
+                ;;
+            hteam__subcmd__project__subcmd__help,status)
+                cmd="hteam__subcmd__project__subcmd__help__subcmd__status"
+                ;;
+            hteam__subcmd__project__subcmd__help,task-create)
+                cmd="hteam__subcmd__project__subcmd__help__subcmd__task__subcmd__create"
+                ;;
+            hteam__subcmd__project__subcmd__help,task-edit)
+                cmd="hteam__subcmd__project__subcmd__help__subcmd__task__subcmd__edit"
+                ;;
+            hteam__subcmd__project__subcmd__help,task-tree)
+                cmd="hteam__subcmd__project__subcmd__help__subcmd__task__subcmd__tree"
                 ;;
             hteam__subcmd__project__subcmd__help,tasks)
                 cmd="hteam__subcmd__project__subcmd__help__subcmd__tasks"
@@ -545,7 +617,7 @@ _hteam() {
 
     case "${cmd}" in
         hteam)
-            opts="-b -h -V --json --board --help --version login doctor dashboard board lists cards open closed working project objectives checkin reminders daily-work users interactive tui theme mcp update completions help"
+            opts="-b -h -V --json --board --family --help --version login doctor dashboard board lists cards open closed working project objectives checkin reminders daily-work users interactive tui theme mcp update completions help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -559,6 +631,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -567,7 +643,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__board)
-            opts="-b -h --json --board --help list switch current help"
+            opts="-b -h --json --board --family --help list switch current help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -581,6 +657,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -589,7 +669,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__board__subcmd__current)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -600,6 +680,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -681,7 +765,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__board__subcmd__list)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -695,6 +779,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -703,7 +791,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__board__subcmd__switch)
-            opts="-n -b -h --name --json --board --help"
+            opts="-n -b -h --name --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -725,6 +813,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -733,7 +825,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards)
-            opts="-b -h --json --board --help lists list search detail link create move close reopen dates time update-desc comment comments labels update remind follow-up follow-up-complete follow-up-cancel help"
+            opts="-b -h --json --board --family --help lists list search detail link create move close reopen dates time update-desc comment comments labels update remind follow-up follow-up-complete follow-up-cancel help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -744,6 +836,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -781,7 +877,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__comment)
-            opts="-t -b -f -d -h --text --board --follow --date --reply-to --json --help"
+            opts="-t -b -f -d -h --text --board --follow --date --reply-to --json --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -815,6 +911,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -823,7 +923,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__comments)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -837,6 +937,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -845,7 +949,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__create)
-            opts="-n -l -b -h --name --list-id --json --board --help"
+            opts="-n -l -b -h --name --list-id --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -875,6 +979,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -883,7 +991,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__dates)
-            opts="-b -h --start --due --json --board --help"
+            opts="-b -h --start --due --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -905,6 +1013,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -913,7 +1025,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__detail)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -924,6 +1036,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -935,7 +1051,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__follow__subcmd__up)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -946,6 +1062,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -957,7 +1077,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__follow__subcmd__up__subcmd__cancel)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -968,6 +1088,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -979,7 +1103,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__follow__subcmd__up__subcmd__complete)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -990,6 +1114,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -1351,7 +1479,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__labels)
-            opts="-b -h --json --board --help set add remove help"
+            opts="-b -h --json --board --family --help set add remove help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1365,6 +1493,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -1373,7 +1505,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__labels__subcmd__add)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1384,6 +1516,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -1465,7 +1601,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__labels__subcmd__remove)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1476,6 +1612,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -1487,7 +1627,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__labels__subcmd__set)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1501,6 +1641,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -1509,7 +1653,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__link)
-            opts="-b -h --no-copy --json --board --help"
+            opts="-b -h --no-copy --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1520,6 +1664,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -1531,7 +1679,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__list)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1542,6 +1690,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -1553,7 +1705,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__lists)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1567,6 +1719,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -1575,7 +1731,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__move)
-            opts="-t -f -b -h --to --from --json --board --help"
+            opts="-t -f -b -h --to --from --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1605,6 +1761,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -1613,7 +1773,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__remind)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1624,6 +1784,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -1661,7 +1825,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__search)
-            opts="-q -b -h --query --responsible --priority --label --list-id --json --board --help"
+            opts="-q -b -h --query --responsible --priority --label --list-id --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1699,6 +1863,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -1707,7 +1875,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__time)
-            opts="-b -h --estimate --spent --json --board --help"
+            opts="-b -h --estimate --spent --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1729,6 +1897,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -1737,7 +1909,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__update)
-            opts="-n -d -p -r -b -h --name --description --priority --responsible --json --board --help"
+            opts="-n -d -p -r -b -h --name --description --priority --responsible --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1783,6 +1955,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -1791,7 +1967,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__cards__subcmd__update__subcmd__desc)
-            opts="-d -b -h --description --json --board --help"
+            opts="-d -b -h --description --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1813,6 +1989,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -1821,7 +2001,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__checkin)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1832,6 +2012,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -1843,7 +2027,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__closed)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1854,6 +2038,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -1865,7 +2053,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__completions)
-            opts="-b -h --json --board --help bash elvish fish powershell zsh"
+            opts="-b -h --json --board --family --help bash elvish fish powershell zsh"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1879,6 +2067,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -1887,7 +2079,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__daily__subcmd__work)
-            opts="-u -t -r -b -h --user --type --range --json --board --help"
+            opts="-u -t -r -b -h --user --type --range --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1925,6 +2117,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -1933,7 +2129,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__dashboard)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1944,6 +2140,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -1955,7 +2155,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__doctor)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1966,6 +2166,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -2579,7 +2783,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__help__subcmd__project)
-            opts="list milestones tasks link"
+            opts="list milestones milestone-create milestone-edit milestone-delete task-create task-edit tasks status members-set task-tree link"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2620,7 +2824,119 @@ _hteam() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
+        hteam__subcmd__help__subcmd__project__subcmd__members__subcmd__set)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__help__subcmd__project__subcmd__milestone__subcmd__create)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__help__subcmd__project__subcmd__milestone__subcmd__delete)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__help__subcmd__project__subcmd__milestone__subcmd__edit)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
         hteam__subcmd__help__subcmd__project__subcmd__milestones)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__help__subcmd__project__subcmd__status)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__help__subcmd__project__subcmd__task__subcmd__create)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__help__subcmd__project__subcmd__task__subcmd__edit)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__help__subcmd__project__subcmd__task__subcmd__tree)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -2817,7 +3133,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__interactive)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2828,6 +3144,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -2839,7 +3159,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__lists)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2853,6 +3173,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -2861,7 +3185,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__login)
-            opts="-s -c -b -h --session-id --csrf-token --board --json --help"
+            opts="-s -c -b -h --session-id --csrf-token --board --json --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2891,6 +3215,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -2899,7 +3227,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__mcp)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2910,6 +3238,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -2921,7 +3253,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__objectives)
-            opts="-b -h --json --board --help show help"
+            opts="-b -h --json --board --family --help show help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2932,6 +3264,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -2985,7 +3321,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__objectives__subcmd__show)
-            opts="-v -b -h --force --verbose --json --board --help"
+            opts="-v -b -h --force --verbose --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2999,6 +3335,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -3007,7 +3347,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__open)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3018,6 +3358,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -3029,7 +3373,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__project)
-            opts="-b -h --json --board --help list milestones tasks link help"
+            opts="-b -h --json --board --family --help list milestones milestone-create milestone-edit milestone-delete task-create task-edit tasks status members-set task-tree link help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3043,6 +3387,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -3051,7 +3399,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__project__subcmd__help)
-            opts="list milestones tasks link help"
+            opts="list milestones milestone-create milestone-edit milestone-delete task-create task-edit tasks status members-set task-tree link help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3106,7 +3454,119 @@ _hteam() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
+        hteam__subcmd__project__subcmd__help__subcmd__members__subcmd__set)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__project__subcmd__help__subcmd__milestone__subcmd__create)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__project__subcmd__help__subcmd__milestone__subcmd__delete)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__project__subcmd__help__subcmd__milestone__subcmd__edit)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
         hteam__subcmd__project__subcmd__help__subcmd__milestones)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__project__subcmd__help__subcmd__status)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__project__subcmd__help__subcmd__task__subcmd__create)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__project__subcmd__help__subcmd__task__subcmd__edit)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__project__subcmd__help__subcmd__task__subcmd__tree)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -3135,7 +3595,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__project__subcmd__link)
-            opts="-b -h --no-copy --json --board --help"
+            opts="-b -h --no-copy --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3149,6 +3609,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -3157,7 +3621,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__project__subcmd__list)
-            opts="-s -b -h --status --json --board --help"
+            opts="-s -b -h --status --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3179,6 +3643,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -3186,8 +3654,8 @@ _hteam() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        hteam__subcmd__project__subcmd__milestones)
-            opts="-b -h --json --board --help"
+        hteam__subcmd__project__subcmd__members__subcmd__set)
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3198,6 +3666,274 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__project__subcmd__milestone__subcmd__create)
+            opts="-b -h --name --description --json --board --family --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --name)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --description)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --board)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__project__subcmd__milestone__subcmd__delete)
+            opts="-b -h --json --board --family --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --board)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__project__subcmd__milestone__subcmd__edit)
+            opts="-b -h --name --description --json --board --family --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --name)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --description)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --board)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__project__subcmd__milestones)
+            opts="-b -h --json --board --family --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --board)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__project__subcmd__status)
+            opts="-b -h --json --board --family --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --board)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__project__subcmd__task__subcmd__create)
+            opts="-b -h --name --description --estimate --start-date --dependence --responsible --priority --json --board --family --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --name)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --description)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --estimate)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --start-date)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --dependence)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --responsible)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --priority)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --board)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__project__subcmd__task__subcmd__edit)
+            opts="-b -h --milestone --dependence --start-date --json --board --family --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --milestone)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --dependence)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --start-date)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --board)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        hteam__subcmd__project__subcmd__task__subcmd__tree)
+            opts="-b -h --json --board --family --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --board)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -3209,7 +3945,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__project__subcmd__tasks)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3223,6 +3959,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -3231,7 +3971,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__reminders)
-            opts="-b -h --json --board --help cancel help"
+            opts="-b -h --json --board --family --help cancel help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3245,6 +3985,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -3253,7 +3997,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__reminders__subcmd__cancel)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3264,6 +4008,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -3317,7 +4065,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__theme)
-            opts="-b -h --json --board --help list set help"
+            opts="-b -h --json --board --family --help list set help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3328,6 +4076,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -3395,7 +4147,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__theme__subcmd__list)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3406,6 +4158,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -3417,7 +4173,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__theme__subcmd__set)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3431,6 +4187,10 @@ _hteam() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --family)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -3439,7 +4199,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__tui)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3450,6 +4210,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -3461,7 +4225,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__update)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3472,6 +4236,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -3483,7 +4251,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__users)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3494,6 +4262,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -3505,7 +4277,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__working)
-            opts="-b -h --json --board --help list start stop help"
+            opts="-b -h --json --board --family --help list start stop help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3516,6 +4288,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -3597,7 +4373,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__working__subcmd__list)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3608,6 +4384,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -3619,7 +4399,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__working__subcmd__start)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3630,6 +4410,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -3641,7 +4425,7 @@ _hteam() {
             return 0
             ;;
         hteam__subcmd__working__subcmd__stop)
-            opts="-b -h --json --board --help"
+            opts="-b -h --json --board --family --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3652,6 +4436,10 @@ _hteam() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --family)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;

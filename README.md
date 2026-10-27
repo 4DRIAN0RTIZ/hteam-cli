@@ -6,7 +6,7 @@ CLI en Rust para gestionar boards de Hteam, con REPL, TUI tipo kanban y servidor
 
 - Autenticación con cookies de sesión (`sessionid` + `csrftoken`)
 - REPL interactivo con historial (`~/.hteam_history`)
-- Servidor MCP sobre stdio: 35 tools
+- Servidor MCP sobre stdio: 43 tools
 - Multi-board, temas del TUI y self-update
 - `--json` en la mayoría de los comandos (ver abajo: no es universal)
 
@@ -119,7 +119,14 @@ hteam working stop 8954                      # ID del registro, no del card
 hteam project list                           # Por defecto status Execution
 hteam project list --status All
 hteam project milestones 99
+hteam project milestone-create 99 --name "Sprint 1" --description "Initial scope"
+hteam project milestone-edit 99 835 --name "Sprint 1.1"
+hteam project milestone-delete 99 835
+hteam project task-create 99 835 --name "Implement auth" --estimate "2h" --responsible egaleana --priority 2
 hteam project tasks 99
+hteam project status 99
+hteam project members-set 99 140 114  # Reemplaza la lista completa de miembros
+hteam project task-tree 99
 hteam project link 99
 hteam project link 99 --no-copy
 ```
@@ -209,7 +216,7 @@ cp completions/hteam.fish ~/.config/fish/completions/hteam.fish
 
 ## MCP
 
-35 tools, una por `#[tool]` en `src/mcp/mod.rs`:
+43 tools, una por `#[tool]` en `src/mcp/mod.rs`: 
 
 | Herramienta | Descripción |
 |---|---|
@@ -241,7 +248,15 @@ cp completions/hteam.fish ~/.config/fish/completions/hteam.fish
 | `working_start` | Empezar a trabajar |
 | `working_stop` | Dejar de trabajar |
 | `project_milestones` | Milestones de un proyecto |
+| `project_milestone_create` | Crear milestone |
+| `project_milestone_edit` | Editar milestone |
+| `project_milestone_delete` | Eliminar milestone vacío |
+| `project_task_create` | Crear una task dentro de un milestone |
+| `project_task_edit` | Editar milestone, dependencia o fecha de inicio de una task |
 | `project_tasks` | Tasks de un proyecto |
+| `project_task_tree` | Árbol de dependencias de tasks de un proyecto |
+| `project_members_set` | Reemplazar todos los miembros de un proyecto |
+| `project_status` | Progreso, fechas y tiempos de un proyecto |
 | `users_search` | Buscar usuarios |
 | `reminders` | Recordatorios pendientes |
 | `reminders_cancel` | Cancelar un reminder por ID |
@@ -308,7 +323,7 @@ Prompt: `hteam> `. Un subconjunto del CLI (no cubre theme, update, follow-up, se
 | `help`, `h`, `?` | Ayuda |
 | `exit`, `quit`, `q` | Salir |
 
-## `--json` y `--board`
+## `--json`, `--board` y `--family`
 
 Clap los marca como flags globales, así que aparecen en `hteam <cmd> --help` aunque el comando no los use.
 
@@ -316,12 +331,17 @@ Clap los marca como flags globales, así que aparecen en `hteam <cmd> --help` au
 
 No aplica (siguen siendo UI o JSON-RPC): `tui`, `interactive`, `mcp`, `completions`. `login`, `board switch` y `board current` ignoran `--json` y escriben texto.
 
-`--board` elige el board para listas/cards, `doctor` y `tui`. No cambia `working`, `reminders`, `checkin`, `users`, `daily-work`, `objectives`, `theme`, `update`, `login`, `mcp`, `completions` ni `project *` (estos últimos van por `project_id`).
+`--board` elige el id de operación o de proyecto para listas/cards, `doctor` y `tui`. No cambia `working`, `reminders`, `checkin`, `users`, `daily-work`, `objectives`, `theme`, `update`, `login`, `mcp`, `completions` ni `project *` (estos últimos van por `project_id`).
+
+`--family` elige el árbol de API del Board bundle: `operation` (default) usa `/operation/care/operations/{id}/…`; `project` usa `/project-new/care/projects/{id}/…`. Con `project` hay que pasar `--board <project_id>`. El detalle de una task (`cards detail`) infiere la familia desde `title_url` y, en proyectos, trae milestone y el `board_id` interno del kanban.
 
 ```bash
 hteam lists --json
 hteam --board 500 lists
 hteam --board 500 open
+hteam --family project --board 469 lists
+hteam --family project --board 469 cards list 1
+hteam cards detail 10702
 ```
 
 ## Configuración

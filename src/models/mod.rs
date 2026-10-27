@@ -156,10 +156,12 @@ pub struct CardDetail {
     pub created_at: Option<String>,
     #[serde(default)]
     pub updated_at: Option<String>,
-    #[serde(default)]
+    /// Operation detail often sends a human string; project detail may send
+    /// seconds as a number. Both become a display string here.
+    #[serde(default, deserialize_with = "deserialize_opt_stringish")]
     pub time_estimated: Option<String>,
     /// Present on some board-card payloads after a times POST; not always on detail.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_opt_stringish")]
     pub time_spend: Option<String>,
     #[serde(default)]
     pub start_date: Option<String>,
@@ -177,6 +179,12 @@ pub struct CardDetail {
     /// Used to pick the close/reopen API family.
     #[serde(default)]
     pub title_url: Option<String>,
+    /// Project-task milestone id (absent on operation tasks).
+    #[serde(default)]
+    pub milestone: Option<u64>,
+    /// Project-task milestone display name.
+    #[serde(default)]
+    pub milestone_name: Option<String>,
 }
 
 /// Response from `POST .../card/{id}/times/`.
@@ -194,6 +202,28 @@ pub struct CardTimesResult {
     pub estimated_time: Option<String>,
     #[serde(default)]
     pub time_spend: Option<String>,
+}
+
+/// Accept string or number (or null) as `Option<String>` for mixed Hteam payloads.
+fn deserialize_opt_stringish<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::Deserialize;
+
+    let value = Option::<serde_json::Value>::deserialize(deserializer)?;
+    Ok(match value {
+        None | Some(serde_json::Value::Null) => None,
+        Some(serde_json::Value::String(s)) => {
+            if s.is_empty() {
+                None
+            } else {
+                Some(s)
+            }
+        }
+        Some(serde_json::Value::Number(n)) => Some(n.to_string()),
+        Some(other) => Some(other.to_string()),
+    })
 }
 
 fn deserialize_labels<'de, D>(deserializer: D) -> Result<Vec<Label>, D::Error>
@@ -282,6 +312,23 @@ pub struct ProjectMilestone {
     pub url: String,
 }
 
+impl ProjectMilestone {
+    /// Numeric id parsed from the milestone detail URL (`.../milestones/{id}/`).
+    pub fn id(&self) -> Option<u64> {
+        let mut parts = self.url.split('/');
+        while let Some(part) = parts.next() {
+            if part == "milestones" {
+                if let Some(id) = parts.next() {
+                    if let Ok(n) = id.parse::<u64>() {
+                        return Some(n);
+                    }
+                }
+            }
+        }
+        None
+    }
+}
+
 impl<'de> serde::Deserialize<'de> for ProjectMilestone {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let (name, progress, url): (String, f64, String) =
@@ -313,8 +360,39 @@ pub struct ProjectTasksResponse {
     pub results: Vec<ProjectTask>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct ProjectTaskTreeNode {
+    pub id: u64,
+    pub name: String,
+    pub children: Vec<ProjectTaskTreeNode>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ProjectDueTask {
+    pub id: u64,
+    pub number: u64,
+    pub name: String,
+    pub due_date: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ProjectStatusSummary {
+    pub project: ProjectSummary,
+    pub milestones: Vec<ProjectMilestone>,
+    pub total_tasks: u64,
+    pub closed_tasks: u64,
+    pub overdue_tasks: Vec<ProjectDueTask>,
+    pub upcoming_tasks: Vec<ProjectDueTask>,
+    pub times: serde_json::Value,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Tabled)]
 pub struct ProjectTask {
+    /// Internal record ID used by task detail and mutation routes.
+    #[serde(default)]
+    #[tabled(rename = "ID")]
+    pub id: u64,
+    /// Human-facing task number within its project.
     #[tabled(rename = "#")]
     pub number: u64,
     #[tabled(rename = "Task")]
@@ -573,6 +651,9 @@ pub struct ProjectSummary {
     #[serde(default)]
     #[tabled(display_with = "display_due_date", rename = "Vence")]
     pub due_date: Option<String>,
+    #[serde(rename = "clc_time_deviation", default)]
+    #[tabled(skip)]
+    pub time_deviation: f64,
     #[serde(default)]
     #[tabled(skip)]
     pub priority: u8,
@@ -772,6 +853,7 @@ mod tests {
         assert_eq!(milestone.name, "Sprint 1");
         assert_eq!(milestone.progress, 0.5);
         assert_eq!(milestone.url, "/milestones/1");
+        assert_eq!(milestone.id(), Some(1));
     }
 
     #[test]

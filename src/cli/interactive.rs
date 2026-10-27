@@ -5,6 +5,7 @@ use rustyline::DefaultEditor;
 use std::process::Command as ProcessCommand;
 
 use crate::cli;
+use crate::client::TaskFamily;
 use crate::config::Config;
 
 pub async fn run() -> Result<()> {
@@ -98,13 +99,13 @@ async fn process_command(line: &str) -> Result<()> {
             cli::dashboard::execute(false).await?;
         }
         "lists" | "ls" => {
-            cli::cards::lists(None, false).await?;
+            cli::cards::lists(None, TaskFamily::Operation, false).await?;
         }
         "open" | "o" => {
-            cli::cards::open_cards(None, false).await?;
+            cli::cards::open_cards(None, TaskFamily::Operation, false).await?;
         }
         "closed" | "c" => {
-            cli::cards::closed_cards(None, false).await?;
+            cli::cards::closed_cards(None, TaskFamily::Operation, false).await?;
         }
         "cards" => {
             handle_cards_command(args).await?;
@@ -255,7 +256,13 @@ async fn handle_cards_command(args: &[&str]) -> Result<()> {
     }
 
     let list_id = args[0].parse::<u64>()?;
-    cli::cards::execute(CardsCommands::List(ListCardsArgs { list_id }), None, false).await?;
+    cli::cards::execute(
+        CardsCommands::List(ListCardsArgs { list_id }),
+        None,
+        TaskFamily::Operation,
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -274,6 +281,7 @@ async fn handle_create_command(args: &[&str]) -> Result<()> {
             list_id: None,
         }),
         None,
+        TaskFamily::Operation,
         false,
     )
     .await?;
@@ -323,6 +331,7 @@ async fn handle_time_command(args: &[&str]) -> Result<()> {
             spent,
         }),
         None,
+        TaskFamily::Operation,
         false,
     )
     .await?;
@@ -372,6 +381,7 @@ async fn handle_dates_command(args: &[&str]) -> Result<()> {
             due,
         }),
         None,
+        TaskFamily::Operation,
         false,
     )
     .await?;
@@ -409,7 +419,7 @@ async fn handle_lifecycle_command(action: &str, args: &[&str]) -> Result<()> {
         "reopen" => CardsCommands::Reopen(LifecycleArgs { card_id, family }),
         _ => unreachable!(),
     };
-    cli::cards::execute(cmd, None, false).await?;
+    cli::cards::execute(cmd, None, TaskFamily::Operation, false).await?;
     Ok(())
 }
 
@@ -459,6 +469,7 @@ async fn handle_move_command(args: &[&str]) -> Result<()> {
             from: from_list,
         }),
         None,
+        TaskFamily::Operation,
         false,
     )
     .await?;
@@ -474,7 +485,13 @@ async fn handle_detail_command(args: &[&str]) -> Result<()> {
     }
 
     let card_id = args[0].parse::<u64>()?;
-    cli::cards::execute(CardsCommands::Detail(DetailArgs { card_id }), None, false).await?;
+    cli::cards::execute(
+        CardsCommands::Detail(DetailArgs { card_id }),
+        None,
+        TaskFamily::Operation,
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -575,6 +592,7 @@ async fn handle_comment_command(args: &[&str]) -> Result<()> {
             reply_to,
         }),
         None,
+        TaskFamily::Operation,
         false,
     )
     .await?;
