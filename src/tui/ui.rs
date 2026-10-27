@@ -263,6 +263,7 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
                 "  j/k, ↓/↑        resaltar ítem / scroll del resumen",
                 "  n               crear (milestone o task; no en Árbol/Resumen)",
                 "  e               editar el resaltado (no en Árbol/Resumen)",
+                "  d               borrar milestone (dos veces confirma)",
                 "",
                 "Resumen de proyecto",
                 "  (lazy)          se carga al entrar a la sección",
@@ -1588,6 +1589,21 @@ fn draw_project_detail(frame: &mut Frame, app: &App, area: Rect) {
                 Span::styled("del  ", Style::default().fg(app.theme.muted)),
                 Span::styled("s ", Style::default().add_modifier(Modifier::BOLD)),
                 Span::styled("guardar  ", Style::default().fg(app.theme.muted)),
+                Span::styled("? ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("ayuda", Style::default().fg(app.theme.muted)),
+            ])
+        } else if app.projects_detail_section == ProjectDetailSection::Milestones {
+            Line::from(vec![
+                Span::styled(" h/l ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled(format!("{section}  "), Style::default().fg(app.theme.muted)),
+                Span::styled("n ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("crear  ", Style::default().fg(app.theme.muted)),
+                Span::styled("e ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("editar  ", Style::default().fg(app.theme.muted)),
+                Span::styled("d ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("borrar  ", Style::default().fg(app.theme.muted)),
+                Span::styled("j/k ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("sel  ", Style::default().fg(app.theme.muted)),
                 Span::styled("? ", Style::default().add_modifier(Modifier::BOLD)),
                 Span::styled("ayuda", Style::default().fg(app.theme.muted)),
             ])
