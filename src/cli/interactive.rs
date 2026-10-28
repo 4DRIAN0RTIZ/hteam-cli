@@ -10,6 +10,7 @@ use crate::config::Config;
 
 pub async fn run() -> Result<()> {
     println!("{}", "Hteam CLI - Modo Interactivo".bold());
+    println!("{}", crate::branding::made_by_line().dimmed());
     println!(
         "{}",
         "Escribe 'help' para ver los comandos disponibles.".dimmed()

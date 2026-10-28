@@ -2,7 +2,8 @@
 name = "hteam"
 version = "0.13.1"
 edition = "2021"
-license = "GPL-3.0-only"
+license = "MIT"
+authors = ["4DRIAN0RTIZ"]
 
 [dependencies]
 clap = { version = "4", features = ["derive", "cargo"] }
