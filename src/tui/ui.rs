@@ -153,15 +153,19 @@ fn draw_status_bar(frame: &mut Frame, app: &App, area: Rect) {
         }
     });
 
-    let version = format!("v{} ", env!("CARGO_PKG_VERSION"));
-    let version_width = version.chars().count() as u16;
+    let right = format!(
+        "{} · v{} ",
+        crate::branding::credit(),
+        env!("CARGO_PKG_VERSION")
+    );
+    let right_width = right.chars().count() as u16;
 
     let cols =
-        Layout::horizontal([Constraint::Min(0), Constraint::Length(version_width)]).split(area);
+        Layout::horizontal([Constraint::Min(0), Constraint::Length(right_width)]).split(area);
 
     frame.render_widget(Paragraph::new(status), cols[0]);
     frame.render_widget(
-        Paragraph::new(version)
+        Paragraph::new(right)
             .style(Style::default().fg(app.theme.muted))
             .alignment(Alignment::Right),
         cols[1],

@@ -398,4 +398,8 @@ src/
 
 ## Licencia
 
-GNU General Public License v3.0 (GPL-3.0-only). Consulta [`LICENSE`](LICENSE) para el texto completo.
+Copyright (C) 2026 4DRIAN0RTIZ
+
+MIT. Consulta [`LICENSE`](LICENSE) para el texto completo y [`COPYRIGHT`](COPYRIGHT) para el aviso de autoría.
+
+Quien redistribuya el programa (con o sin cambios) debe conservar el copyright y el aviso MIT. Usarlo sin redistribuir no obliga a dar créditos.

@@ -16,13 +16,14 @@ pub mod theme;
 pub mod update;
 pub mod working;
 
-use clap::{CommandFactory, Parser, Subcommand};
+use clap::{CommandFactory, FromArgMatches, Parser, Subcommand};
 use clap_complete::{generate, Shell};
 
 #[derive(Parser, Debug)]
 #[command(name = "hteam")]
 #[command(about = "CLI para gestionar boards de Hteam")]
-#[command(version)]
+#[command(author, version)]
+// Version/after-help strings are filled at parse time in `run()` (see `branding`).
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -146,7 +147,15 @@ pub struct DailyWorkArgs {
 }
 
 pub async fn run() -> Result<()> {
-    let cli = Cli::parse();
+    // Same text for -V and --version (copyright + license). Made by only on help.
+    let version = crate::branding::long_version();
+    let cli = Cli::from_arg_matches(
+        &Cli::command()
+            .version(version)
+            .long_version(version)
+            .after_help(crate::branding::made_by_line())
+            .get_matches(),
+    )?;
 
     // Mcp habla JSON-RPC por stdout y Completions/Tui no se benefician de un
     // aviso que se imprime después de que el comando ya terminó (Mcp/
@@ -191,7 +200,11 @@ pub async fn run() -> Result<()> {
         Commands::Mcp => crate::mcp::run().await,
         Commands::Update => update::execute(cli.json).await,
         Commands::Completions { shell } => {
-            let mut cmd = Cli::command();
+            let version = crate::branding::long_version();
+            let mut cmd = Cli::command()
+                .version(version)
+                .long_version(version)
+                .after_help(crate::branding::made_by_line());
             let name = cmd.get_name().to_string();
             generate(shell, &mut cmd, name, &mut io::stdout());
             Ok(())
