@@ -2,6 +2,9 @@
 name: Test Build (temporal)
 
 on:
+  push:
+    branches:
+      - test/release-matrix
   workflow_dispatch: {}
 
 jobs:
