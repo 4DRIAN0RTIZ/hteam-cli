@@ -1407,6 +1407,16 @@ impl HteamClient {
             .await
             .context("Error al obtener working on")?;
 
+        // La API devuelve 404 cuando el usuario no tiene ningún registro
+        // "working on it" activo, en vez de una lista vacía — verificado en
+        // vivo contra hteam.mx (issue reportada después de #120). Sin este
+        // caso especial, el refresh que sigue a un `stop_working` exitoso
+        // fallaba y `app.working_on` quedaba con el registro viejo, así que
+        // el borde de "trabajando en esto" nunca se apagaba en la TUI.
+        if response.status() == reqwest::StatusCode::NOT_FOUND {
+            return Ok(vec![]);
+        }
+
         if !response.status().is_success() {
             anyhow::bail!(
                 "Error HTTP {}: {}",
@@ -1476,10 +1486,14 @@ impl HteamClient {
 
     pub async fn stop_working(&self, working_id: u64) -> Result<()> {
         let config = self.config.lock().await;
-        let url = format!(
-            "{}/tr/workingonit/{}/content_type/99/",
-            self.api_base_url, working_id
-        );
+        // Issue #120: la ruta anterior traía un segmento extra
+        // `/content_type/99/` que no existe en la API (siempre 404). El
+        // detail route plano es el correcto — verificado en vivo contra la
+        // API real: PUT a esta URL con el mismo body devuelve 200 y marca
+        // `state: 4` en el registro, sin importar el valor de `object_id`
+        // (el servidor identifica el registro por el pk de la URL, no por
+        // el body).
+        let url = format!("{}/tr/workingonit/{}/", self.api_base_url, working_id);
         let headers = self.build_headers(&config)?;
 
         let body = format!("object_id={}&content_type=99&state=4", working_id);

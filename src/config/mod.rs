@@ -104,14 +104,22 @@ pub struct WorkingHoursConfig {
 }
 
 impl WorkingHoursConfig {
+    /// `true` sólo si `[working_hours]` está configurada (start y end
+    /// parsean) y `now` cae dentro del rango [start, end] — usado tanto por
+    /// `remaining_display` como por el aviso de "Sin Checkin" del header.
+    pub fn is_within(&self, now: chrono::NaiveTime) -> bool {
+        let start = self.start.as_deref().and_then(parse_time);
+        let end = self.end.as_deref().and_then(parse_time);
+        matches!((start, end), (Some(start), Some(end)) if now >= start && now <= end)
+    }
+
     /// Tiempo restante hasta `end`, formateado "Xh YYm restantes" — `None` si
     /// no está configurada o `now` cae fuera del rango [start, end].
     pub fn remaining_display(&self, now: chrono::NaiveTime) -> Option<String> {
-        let start = self.start.as_deref().and_then(parse_time)?;
-        let end = self.end.as_deref().and_then(parse_time)?;
-        if now < start || now > end {
+        if !self.is_within(now) {
             return None;
         }
+        let end = self.end.as_deref().and_then(parse_time)?;
         let remaining = end - now;
         Some(format!(
             " {}h {:02}m restantes ",
@@ -729,6 +737,36 @@ mod tests {
         let serialized = toml::to_string(&board).expect("serializes board info");
 
         assert!(!serialized.contains("last_used"));
+    }
+
+    #[test]
+    fn is_within_returns_false_when_unconfigured() {
+        let hours = WorkingHoursConfig::default();
+
+        assert!(!hours.is_within(NaiveTime::from_hms_opt(10, 0, 0).unwrap()));
+    }
+
+    #[test]
+    fn is_within_returns_false_outside_range() {
+        let hours = WorkingHoursConfig {
+            start: Some("09:00".to_string()),
+            end: Some("18:00".to_string()),
+        };
+
+        assert!(!hours.is_within(NaiveTime::from_hms_opt(8, 0, 0).unwrap()));
+        assert!(!hours.is_within(NaiveTime::from_hms_opt(19, 0, 0).unwrap()));
+    }
+
+    #[test]
+    fn is_within_returns_true_at_range_edges_and_middle() {
+        let hours = WorkingHoursConfig {
+            start: Some("09:00".to_string()),
+            end: Some("18:00".to_string()),
+        };
+
+        assert!(hours.is_within(NaiveTime::from_hms_opt(9, 0, 0).unwrap()));
+        assert!(hours.is_within(NaiveTime::from_hms_opt(18, 0, 0).unwrap()));
+        assert!(hours.is_within(NaiveTime::from_hms_opt(12, 30, 0).unwrap()));
     }
 
     #[test]
