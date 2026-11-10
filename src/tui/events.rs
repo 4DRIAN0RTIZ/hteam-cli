@@ -2875,11 +2875,33 @@ pub fn toggle_working_on(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
     let Some(card) = app.current_card().cloned() else {
         return;
     };
+    toggle_working_on_for(client, app, jobs, card.id, card.name);
+}
 
+/// Mismo toggle que `toggle_working_on`, pero para la task de proyecto
+/// seleccionada en la sección Tasks (issue #156). "Working on it" usa el
+/// mismo `content_type` para cards y project tasks — verificado en vivo
+/// contra la API real — así que no hace falta una ruta distinta, sólo
+/// resolver la task activa desde `app.project_tasks` en vez de `app.cards`.
+pub fn toggle_working_on_project_task(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
+    if app.projects_detail_section != ProjectDetailSection::Tasks {
+        return;
+    }
+    let Some(task) = app.project_tasks.get(app.selected_task_idx).cloned() else {
+        return;
+    };
+    toggle_working_on_for(client, app, jobs, task.id, task.name);
+}
+
+fn toggle_working_on_for(
+    client: Arc<HteamClient>,
+    app: &mut App,
+    jobs: &Jobs,
+    target_id: u64,
+    target_name: String,
+) {
     let id = app.requests.bump_working();
-    let card_name = card.name.clone();
-    let working_id = app.working_on_id_for(card.id);
-    let card_id = card.id;
+    let working_id = app.working_on_id_for(target_id);
     app.begin_busy(if working_id.is_some() {
         "Deteniendo working on..."
     } else {
@@ -2893,7 +2915,7 @@ pub fn toggle_working_on(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
                     let working_on = operations::working::list_working(&client).await.ok();
                     JobOutcome::WorkingToggled {
                         id,
-                        message: format!("Dejaste de trabajar en: {}", card_name),
+                        message: format!("Dejaste de trabajar en: {}", target_name),
                         working_on,
                         error: None,
                     }
@@ -2906,12 +2928,12 @@ pub fn toggle_working_on(client: Arc<HteamClient>, app: &mut App, jobs: &Jobs) {
                 },
             }
         } else {
-            match operations::working::start_working(&client, card_id).await {
+            match operations::working::start_working(&client, target_id).await {
                 Ok(()) => {
                     let working_on = operations::working::list_working(&client).await.ok();
                     JobOutcome::WorkingToggled {
                         id,
-                        message: format!("Working on: {}", card_name),
+                        message: format!("Working on: {}", target_name),
                         working_on,
                         error: None,
                     }
