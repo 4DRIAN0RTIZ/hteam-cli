@@ -634,6 +634,12 @@ impl App {
             .remaining_display(chrono::Local::now().time())
     }
 
+    /// `true` si `[working_hours]` está configurada y la hora local actual
+    /// cae dentro del rango — usado para decidir si avisar "Sin Checkin".
+    pub fn is_within_working_hours(&self) -> bool {
+        self.working_hours.is_within(chrono::Local::now().time())
+    }
+
     /// Sets a footer status message, starts its expiry timer, and appends it
     /// to `~/.config/hteam/tui.log` — the footer clears itself after
     /// `STATUS_TTL`, so this is the only place the message survives to be
