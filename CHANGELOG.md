@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bug Fixes
 - *(update)* Publish static musl binary and verify it runs before replacing
 - *(working)* Remove bogus /content_type/99/ segment from stop PUT
+- *(working)* Treat 404 from workingonit list as empty
 
 
 ### Features
