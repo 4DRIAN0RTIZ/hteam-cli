@@ -68,7 +68,7 @@ mod tests {
             .create_async()
             .await;
         let _stop = server
-            .mock("PUT", "/tr/workingonit/7/content_type/99/")
+            .mock("PUT", "/tr/workingonit/7/")
             .match_body("object_id=7&content_type=99&state=4")
             .with_status(204)
             .create_async()
