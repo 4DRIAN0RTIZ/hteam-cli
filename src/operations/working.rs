@@ -59,6 +59,23 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_list_working_treats_404_as_empty() {
+        // La API devuelve 404 (no un array vacío) cuando no hay ningún
+        // working-on-it activo — ver client::HteamClient::get_working_on.
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/tr/workingonit/user/")
+            .with_status(404)
+            .with_body(r#"{"detail":"Not found."}"#)
+            .create_async()
+            .await;
+
+        let working = list_working(&client(&server.url())).await.expect("working");
+
+        assert!(working.is_empty());
+    }
+
+    #[tokio::test]
     async fn test_start_and_stop_working_call_expected_endpoints() {
         let mut server = mockito::Server::new_async().await;
         let _start = server
