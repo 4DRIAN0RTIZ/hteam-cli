@@ -10,7 +10,8 @@ use std::env;
 use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use crate::client;
 use crate::config::Config;
@@ -116,7 +117,16 @@ pub struct SelfUpdateOutcome {
 /// reemplaza el binario en ejecución. El pipeline de release
 /// (`.github/workflows/release.yml`) sólo publica `hteam-linux-x86_64`, así
 /// que esto falla con un error claro (sin panic) si la plataforma actual no
-/// es linux-x86_64, en vez de asumir que el asset siempre existe.
+/// es linux-x86_64, en vez de asumir que el asset siempre existe. Desde que
+/// ese asset se compila contra musl (estático) en vez de la glibc del
+/// runner, corre sobre cualquier distro linux-x86_64 sin importar su
+/// versión de glibc (ver issue #144).
+///
+/// Antes de reemplazar el binario en ejecución, `verify_binary_runs` corre
+/// el binario descargado con `--version`; si no arranca (ej. arquitectura
+/// incompatible pese al chequeo de `env::consts`, o un asset corrupto),
+/// falla con un mensaje claro en vez de dejar `hteam` roto para la próxima
+/// invocación.
 ///
 /// Antes de descargar nada, compara la versión de la última release contra
 /// `env!("CARGO_PKG_VERSION")` con `is_newer_version`; si no hay una
@@ -192,6 +202,11 @@ pub async fn perform_self_update(api_base: &str) -> Result<SelfUpdateOutcome> {
             .with_context(|| format!("No se pudo marcar {} como ejecutable", tmp_path.display()))?;
     }
 
+    if let Err(err) = verify_binary_runs(&tmp_path) {
+        let _ = fs::remove_file(&tmp_path);
+        return Err(err);
+    }
+
     fs::rename(&tmp_path, &current_exe).with_context(|| {
         format!(
             "No se pudo reemplazar el binario en {}",
@@ -204,6 +219,33 @@ pub async fn perform_self_update(api_base: &str) -> Result<SelfUpdateOutcome> {
         binary_path: current_exe,
         updated: true,
     })
+}
+
+/// Corre el binario recién descargado con `--version` antes de que
+/// `perform_self_update` lo renombre sobre el binario en ejecución. Cubre el
+/// caso en que la detección de `env::consts::OS`/`ARCH` pasó pero el binario
+/// igual no arranca (asset corrupto, o incompatibilidad que esa detección no
+/// cubre) — sin esto, el usuario se queda con un `hteam` roto hasta la
+/// próxima actualización exitosa.
+fn verify_binary_runs(path: &Path) -> Result<()> {
+    let run_err = |detail: String| -> anyhow::Error {
+        anyhow::anyhow!(
+            "El binario descargado no corre en esta máquina ({detail}). Probá \
+             compilarlo localmente con `cargo install --git \
+             https://github.com/4DRIAN0RTIZ/hteam-cli --locked`."
+        )
+    };
+
+    let output = Command::new(path)
+        .arg("--version")
+        .output()
+        .map_err(|err| run_err(err.to_string()))?;
+
+    if !output.status.success() {
+        return Err(run_err(format!("salida: {}", output.status)));
+    }
+
+    Ok(())
 }
 
 /// Extrae, del changelog embebido, las secciones de versión estrictamente
@@ -554,5 +596,53 @@ mod tests {
             config.update.last_seen_version.as_deref(),
             Some(env!("CARGO_PKG_VERSION"))
         );
+    }
+
+    #[cfg(unix)]
+    fn write_fake_binary(name: &str, script: &str) -> PathBuf {
+        use std::io::Write;
+
+        let path = std::env::temp_dir().join(name);
+        let mut file = fs::File::create(&path).expect("no se pudo crear el binario fake");
+        file.write_all(script.as_bytes())
+            .expect("no se pudo escribir el binario fake");
+        let mut perms = fs::metadata(&path).unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&path, perms).unwrap();
+        path
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn verify_binary_runs_accepts_executable_that_exits_zero() {
+        let path = write_fake_binary("hteam-test-verify-ok.sh", "#!/bin/sh\nexit 0\n");
+
+        let result = verify_binary_runs(&path);
+        let _ = fs::remove_file(&path);
+
+        assert!(result.is_ok());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn verify_binary_runs_rejects_executable_that_exits_nonzero() {
+        let path = write_fake_binary("hteam-test-verify-fail.sh", "#!/bin/sh\nexit 1\n");
+
+        let result = verify_binary_runs(&path);
+        let _ = fs::remove_file(&path);
+
+        let err = result.expect_err("debería fallar: el script sale con código != 0");
+        assert!(err.to_string().contains("no corre en esta máquina"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn verify_binary_runs_rejects_missing_file() {
+        let path = std::env::temp_dir().join("hteam-test-verify-missing.sh");
+        let _ = fs::remove_file(&path);
+
+        let err = verify_binary_runs(&path).expect_err("debería fallar: el archivo no existe");
+
+        assert!(err.to_string().contains("no corre en esta máquina"));
     }
 }
