@@ -5,6 +5,18 @@ All notable changes to hteam-cli will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Bug Fixes
+- *(update)* Publish static musl binary and verify it runs before replacing
+- *(working)* Remove bogus /content_type/99/ segment from stop PUT
+- *(working)* Treat 404 from workingonit list as empty
+
+
+### Features
+- *(tui)* Warn Sin Checkin in header during working hours
+- *(tui)* Support working-on-it for project tasks
+
 ## [0.13.1] - 2026-10-27
 
 ### Documentation
