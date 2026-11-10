@@ -1407,6 +1407,16 @@ impl HteamClient {
             .await
             .context("Error al obtener working on")?;
 
+        // La API devuelve 404 cuando el usuario no tiene ningún registro
+        // "working on it" activo, en vez de una lista vacía — verificado en
+        // vivo contra hteam.mx (issue reportada después de #120). Sin este
+        // caso especial, el refresh que sigue a un `stop_working` exitoso
+        // fallaba y `app.working_on` quedaba con el registro viejo, así que
+        // el borde de "trabajando en esto" nunca se apagaba en la TUI.
+        if response.status() == reqwest::StatusCode::NOT_FOUND {
+            return Ok(vec![]);
+        }
+
         if !response.status().is_success() {
             anyhow::bail!(
                 "Error HTTP {}: {}",
