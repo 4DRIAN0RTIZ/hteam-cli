@@ -277,6 +277,7 @@ fn help_content(ctx: HelpContext) -> (&'static str, &'static [&'static str]) {
                 "  n               crear (milestone o task; no en Árbol/Resumen)",
                 "  e               editar el resaltado (no en Árbol/Resumen)",
                 "  d               borrar milestone (dos veces confirma)",
+                "  w               working on it (solo en Tasks)",
                 "",
                 "Resumen de proyecto",
                 "  (lazy)          se carga al entrar a la sección",
@@ -1732,17 +1733,64 @@ fn project_tasks_lines(app: &App) -> Vec<String> {
             " "
         };
         let mark = if t.closed { "✅" } else { "🔲" };
+        let working = if app.is_working_on(t.id) { " 🔧" } else { "" };
         let ms = t
             .milestone
             .as_ref()
             .map(|m| format!(" · m{}", m.id))
             .unwrap_or_default();
         lines.push(format!(
-            "{} {} #{} {}{}",
-            marker, mark, t.number, t.name, ms
+            "{} {} #{} {}{}{}",
+            marker, mark, t.number, t.name, ms, working
         ));
     }
     lines
+}
+
+#[cfg(test)]
+mod project_tasks_lines_tests {
+    use super::project_tasks_lines;
+    use crate::config::WorkingHoursConfig;
+    use crate::models::{ProjectTask, WorkingOnStatus};
+    use crate::tui::app::App;
+    use crate::tui::theme::Theme;
+    use std::collections::HashSet;
+
+    fn task(id: u64, number: u64, name: &str) -> ProjectTask {
+        ProjectTask {
+            id,
+            number,
+            name: name.to_string(),
+            milestone: None,
+            progress: 0.0,
+            closed: false,
+            responsible: None,
+        }
+    }
+
+    #[test]
+    fn marks_the_project_task_currently_being_worked_on() {
+        let mut app = App::new(
+            1,
+            HashSet::new(),
+            Vec::new(),
+            WorkingHoursConfig::default(),
+            Theme::default(),
+        );
+        app.project_tasks_loaded = true;
+        app.project_tasks = vec![task(11480, 61, "Debug task"), task(11481, 62, "Other task")];
+        app.working_on = vec![WorkingOnStatus {
+            id: 1,
+            card_id: 11480,
+            card_name: "Debug task".to_string(),
+            started_at: "now".to_string(),
+        }];
+
+        let lines = project_tasks_lines(&app);
+
+        assert!(lines[1].ends_with("🔧"), "got: {:?}", lines[1]);
+        assert!(!lines[2].contains('🔧'), "got: {:?}", lines[2]);
+    }
 }
 
 fn project_tree_lines(app: &App) -> Vec<String> {
@@ -1762,16 +1810,27 @@ fn project_tree_lines(app: &App) -> Vec<String> {
         &app.project_tree_expanded,
     );
     lines.push(format!("Árbol: ({visible}/{tree_nodes})  Enter expande"));
+    let working_ids: std::collections::HashSet<u64> =
+        app.working_on.iter().map(|w| w.card_id).collect();
+    let ctx = TreeRenderCtx {
+        expanded: &app.project_tree_expanded,
+        working_ids: &working_ids,
+        active: true,
+        selected_idx: app.selected_tree_idx,
+    };
     let mut row = 0usize;
-    append_task_tree_roots(
-        &mut lines,
-        &app.project_task_tree,
-        &app.project_tree_expanded,
-        true,
-        app.selected_tree_idx,
-        &mut row,
-    );
+    append_task_tree_roots(&mut lines, &app.project_task_tree, &ctx, &mut row);
     lines
+}
+
+/// Agrupa los parámetros compartidos de `append_task_tree_roots`/
+/// `_children` — sin esto, agregar `working_ids` (issue #156) hacía que la
+/// firma pasara de 7 a 8 argumentos (clippy::too_many_arguments).
+struct TreeRenderCtx<'a> {
+    expanded: &'a std::collections::HashSet<u64>,
+    working_ids: &'a std::collections::HashSet<u64>,
+    active: bool,
+    selected_idx: usize,
 }
 
 fn project_members_lines(app: &App) -> Vec<String> {
@@ -1885,32 +1944,30 @@ fn tree_expand_glyph(has_children: bool, expanded: bool) -> &'static str {
 fn append_task_tree_roots(
     lines: &mut Vec<String>,
     nodes: &[crate::models::ProjectTaskTreeNode],
-    expanded: &std::collections::HashSet<u64>,
-    active: bool,
-    selected_idx: usize,
+    ctx: &TreeRenderCtx,
     row: &mut usize,
 ) {
     for node in nodes {
-        let marker = if active && *row == selected_idx {
+        let marker = if ctx.active && *row == ctx.selected_idx {
             "▶"
         } else {
             " "
         };
         let has_children = !node.children.is_empty();
-        let is_open = has_children && expanded.contains(&node.id);
+        let is_open = has_children && ctx.expanded.contains(&node.id);
         let glyph = tree_expand_glyph(has_children, is_open);
-        lines.push(format!("{marker} {glyph}#{} {}", node.id, node.name));
+        let working = if ctx.working_ids.contains(&node.id) {
+            " 🔧"
+        } else {
+            ""
+        };
+        lines.push(format!(
+            "{marker} {glyph}#{} {}{working}",
+            node.id, node.name
+        ));
         *row += 1;
         if is_open {
-            append_task_tree_children(
-                lines,
-                &node.children,
-                "",
-                expanded,
-                active,
-                selected_idx,
-                row,
-            );
+            append_task_tree_children(lines, &node.children, "", ctx, row);
         }
     }
 }
@@ -1921,39 +1978,34 @@ fn append_task_tree_children(
     lines: &mut Vec<String>,
     nodes: &[crate::models::ProjectTaskTreeNode],
     prefix: &str,
-    expanded: &std::collections::HashSet<u64>,
-    active: bool,
-    selected_idx: usize,
+    ctx: &TreeRenderCtx,
     row: &mut usize,
 ) {
     let last = nodes.len().saturating_sub(1);
     for (i, node) in nodes.iter().enumerate() {
         let is_last = i == last;
-        let marker = if active && *row == selected_idx {
+        let marker = if ctx.active && *row == ctx.selected_idx {
             "▶"
         } else {
             " "
         };
         let has_children = !node.children.is_empty();
-        let is_open = has_children && expanded.contains(&node.id);
+        let is_open = has_children && ctx.expanded.contains(&node.id);
         let elbow = if is_last { "└─ " } else { "├─ " };
         let glyph = tree_expand_glyph(has_children, is_open);
+        let working = if ctx.working_ids.contains(&node.id) {
+            " 🔧"
+        } else {
+            ""
+        };
         lines.push(format!(
-            "{marker} {prefix}{elbow}{glyph}#{} {}",
+            "{marker} {prefix}{elbow}{glyph}#{} {}{working}",
             node.id, node.name
         ));
         *row += 1;
         if is_open {
             let next_prefix = format!("{prefix}{}", if is_last { "   " } else { "│  " });
-            append_task_tree_children(
-                lines,
-                &node.children,
-                &next_prefix,
-                expanded,
-                active,
-                selected_idx,
-                row,
-            );
+            append_task_tree_children(lines, &node.children, &next_prefix, ctx, row);
         }
     }
 }
@@ -1991,19 +2043,50 @@ mod task_tree_draw_tests {
     fn collapsed_roots_hide_children() {
         let tree = sample_tree();
         let expanded = HashSet::new();
+        let working_ids = HashSet::new();
+        let ctx = TreeRenderCtx {
+            expanded: &expanded,
+            working_ids: &working_ids,
+            active: true,
+            selected_idx: 0,
+        };
         let mut lines = Vec::new();
         let mut row = 0;
-        append_task_tree_roots(&mut lines, &tree, &expanded, true, 0, &mut row);
+        append_task_tree_roots(&mut lines, &tree, &ctx, &mut row);
         assert_eq!(lines, vec!["▶ ▸ #1 Root".to_string()]);
+    }
+
+    #[test]
+    fn marks_the_task_currently_being_worked_on() {
+        let tree = sample_tree();
+        let expanded = HashSet::new();
+        let working_ids: HashSet<u64> = [1].into_iter().collect();
+        let ctx = TreeRenderCtx {
+            expanded: &expanded,
+            working_ids: &working_ids,
+            active: true,
+            selected_idx: 0,
+        };
+        let mut lines = Vec::new();
+        let mut row = 0;
+        append_task_tree_roots(&mut lines, &tree, &ctx, &mut row);
+        assert_eq!(lines, vec!["▶ ▸ #1 Root 🔧".to_string()]);
     }
 
     #[test]
     fn box_drawing_shows_nested_structure_when_expanded() {
         let tree = sample_tree();
         let expanded: HashSet<u64> = [1, 2].into_iter().collect();
+        let working_ids = HashSet::new();
+        let ctx = TreeRenderCtx {
+            expanded: &expanded,
+            working_ids: &working_ids,
+            active: true,
+            selected_idx: 2,
+        };
         let mut lines = Vec::new();
         let mut row = 0;
-        append_task_tree_roots(&mut lines, &tree, &expanded, true, 2, &mut row);
+        append_task_tree_roots(&mut lines, &tree, &ctx, &mut row);
         assert_eq!(
             lines,
             vec![

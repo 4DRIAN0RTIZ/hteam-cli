@@ -678,6 +678,12 @@ async fn run_loop(
                     KeyCode::Enter if !app.projects_detail_focused => {
                         events::select_known_project(client.clone(), app, &jobs);
                     }
+                    KeyCode::Char('w')
+                        if app.projects_detail_focused
+                            && app.projects_detail_section == app::ProjectDetailSection::Tasks =>
+                    {
+                        events::toggle_working_on_project_task(client.clone(), app, &jobs);
+                    }
                     KeyCode::Char('c') => events::copy_project_link(&client, app),
                     KeyCode::Char('?') => events::open_help(app, HelpContext::Projects),
                     _ => {}
