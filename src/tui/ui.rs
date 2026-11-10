@@ -94,7 +94,7 @@ fn draw_title_bar(frame: &mut Frame, app: &App, area: Rect) {
 
     let user_width = user_line
         .as_ref()
-        .map(|s| s.chars().count() as u16)
+        .map(|(s, _)| s.chars().count() as u16)
         .unwrap_or(0);
     let gap_width = if user_line.is_some() && remaining.is_some() {
         2
@@ -116,8 +116,17 @@ fn draw_title_bar(frame: &mut Frame, app: &App, area: Rect) {
 
     frame.render_widget(title, cols[0]);
 
-    if let Some(line) = user_line {
-        frame.render_widget(Paragraph::new(line), cols[1]);
+    if let Some((line, is_warning)) = user_line {
+        let paragraph = if is_warning {
+            Paragraph::new(line).style(
+                Style::default()
+                    .fg(app.theme.danger)
+                    .add_modifier(Modifier::BOLD),
+            )
+        } else {
+            Paragraph::new(line)
+        };
+        frame.render_widget(paragraph, cols[1]);
     }
 
     if let Some(remaining) = remaining {
@@ -2424,25 +2433,164 @@ fn column_scroll_start(viewport_h: u16, heights: &[u16], selected: Option<usize>
 
 /// Texto del estado de turno mostrado a la derecha del header, p.ej.
 /// "adrian.ortiz · trabajando desde 07:55 " o "adrian.ortiz · salió a las 17:01 ".
-fn user_status_line(app: &App) -> Option<String> {
-    let shift = app.user_shift.as_ref()?;
-    let username = &shift.user.username;
-    let line = match (&shift.check_in, &shift.check_out) {
-        (Some(check_in), None) => {
-            format!("{} · trabajando desde {} ", username, format_time(check_in))
-        }
-        (Some(_), Some(check_out)) => {
-            format!("{} · salió a las {} ", username, format_time(check_out))
-        }
-        _ => format!("{} ", username),
-    };
-    Some(line)
+/// El `bool` es `true` cuando el texto debe resaltarse como aviso (issue
+/// #119: sin check-in del día, dentro del horario laboral).
+fn user_status_line(app: &App) -> Option<(String, bool)> {
+    let username = app
+        .user_shift
+        .as_ref()
+        .map(|shift| shift.user.username.as_str());
+    let check_in = app
+        .user_shift
+        .as_ref()
+        .and_then(|shift| shift.check_in.as_deref());
+    let check_out = app
+        .user_shift
+        .as_ref()
+        .and_then(|shift| shift.check_out.as_deref());
+
+    match (username, check_in, check_out) {
+        (Some(username), Some(check_in), None) => Some((
+            format!("{} · trabajando desde {} ", username, format_time(check_in)),
+            false,
+        )),
+        (Some(username), Some(_), Some(check_out)) => Some((
+            format!("{} · salió a las {} ", username, format_time(check_out)),
+            false,
+        )),
+        // Sin check-in (no hay `last`, o lo hay pero sin `check_in`): avisar
+        // sólo dentro del horario laboral — fuera de rango se queda como
+        // antes (nada, o sólo el username si hay registro de turno).
+        (username, None, _) if app.is_within_working_hours() => Some((
+            match username {
+                Some(username) => format!("{} · Sin Checkin ", username),
+                None => "Sin Checkin ".to_string(),
+            },
+            true,
+        )),
+        (Some(username), None, _) => Some((format!("{} ", username), false)),
+        (None, _, _) => None,
+    }
 }
 
 fn format_time(iso: &str) -> String {
     chrono::DateTime::parse_from_rfc3339(iso)
         .map(|dt| dt.format("%H:%M").to_string())
         .unwrap_or_else(|_| iso.to_string())
+}
+
+#[cfg(test)]
+mod header_status_tests {
+    use super::user_status_line;
+    use crate::config::WorkingHoursConfig;
+    use crate::models::{WorkShiftRecord, WorkShiftUser};
+    use crate::tui::app::App;
+    use crate::tui::theme::Theme;
+    use std::collections::HashSet;
+
+    fn app_with(working_hours: WorkingHoursConfig, shift: Option<WorkShiftRecord>) -> App {
+        let mut app = App::new(
+            1,
+            HashSet::new(),
+            Vec::new(),
+            working_hours,
+            Theme::default(),
+        );
+        app.user_shift = shift;
+        app
+    }
+
+    fn working_hours_covering_now() -> WorkingHoursConfig {
+        let now = chrono::Local::now().time();
+        WorkingHoursConfig {
+            start: Some(
+                (now - chrono::Duration::hours(1))
+                    .format("%H:%M")
+                    .to_string(),
+            ),
+            end: Some(
+                (now + chrono::Duration::hours(1))
+                    .format("%H:%M")
+                    .to_string(),
+            ),
+        }
+    }
+
+    #[test]
+    fn warns_sin_checkin_when_no_shift_and_within_working_hours() {
+        let app = app_with(working_hours_covering_now(), None);
+
+        let (line, is_warning) = user_status_line(&app).expect("debería avisar");
+
+        assert!(line.contains("Sin Checkin"));
+        assert!(is_warning);
+    }
+
+    #[test]
+    fn warns_sin_checkin_when_shift_has_no_check_in_and_within_working_hours() {
+        let shift = WorkShiftRecord {
+            id: 1,
+            user: WorkShiftUser {
+                id: 1,
+                username: "adrian.ortiz".to_string(),
+            },
+            check_in: None,
+            check_out: None,
+        };
+        let app = app_with(working_hours_covering_now(), Some(shift));
+
+        let (line, is_warning) = user_status_line(&app).expect("debería avisar");
+
+        assert!(line.contains("adrian.ortiz"));
+        assert!(line.contains("Sin Checkin"));
+        assert!(is_warning);
+    }
+
+    #[test]
+    fn does_not_warn_outside_working_hours_without_shift() {
+        let app = app_with(WorkingHoursConfig::default(), None);
+
+        assert_eq!(user_status_line(&app), None);
+    }
+
+    #[test]
+    fn does_not_warn_outside_working_hours_with_shift_but_no_check_in() {
+        let shift = WorkShiftRecord {
+            id: 1,
+            user: WorkShiftUser {
+                id: 1,
+                username: "adrian.ortiz".to_string(),
+            },
+            check_in: None,
+            check_out: None,
+        };
+        // Sin [working_hours] configurado -> nunca está "dentro de rango".
+        let app = app_with(WorkingHoursConfig::default(), Some(shift));
+
+        let (line, is_warning) = user_status_line(&app).expect("muestra el username");
+
+        assert_eq!(line, "adrian.ortiz ");
+        assert!(!is_warning);
+    }
+
+    #[test]
+    fn keeps_current_text_when_checked_in() {
+        let shift = WorkShiftRecord {
+            id: 1,
+            user: WorkShiftUser {
+                id: 1,
+                username: "adrian.ortiz".to_string(),
+            },
+            check_in: Some("2026-11-10T07:55:00-06:00".to_string()),
+            check_out: None,
+        };
+        let app = app_with(working_hours_covering_now(), Some(shift));
+
+        let (line, is_warning) = user_status_line(&app).expect("muestra el estado");
+
+        assert!(line.contains("trabajando desde"));
+        assert!(!is_warning);
+    }
 }
 
 #[cfg(test)]
